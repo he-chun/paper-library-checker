@@ -1,0 +1,572 @@
+{
+  "schemaVersion": 1,
+  "fileCount": 113,
+  "contentTreeSha256": "9042c1f49449fba5bcb3b8ca82f7d834cf3c27ec3e040ac8892bc616deef4436",
+  "files": [
+    {
+      "path": ".editorconfig",
+      "bytes": 78,
+      "sha256": "a38dc184aabf62d6bea89d602420a10eb74d0cf4c464968cf6b597670752e669"
+    },
+    {
+      "path": ".gitattributes",
+      "bytes": 465,
+      "sha256": "66102add910b325eeb5077be295cb0b61d90626d73beb109b7ba13ae96ae209a"
+    },
+    {
+      "path": ".github/ISSUE_TEMPLATE/bug_report.yml",
+      "bytes": 822,
+      "sha256": "16e9c76f1faecc84c96de97291af897a1071ca5a6bacbcfdf5c154351f03f3ef"
+    },
+    {
+      "path": ".github/ISSUE_TEMPLATE/feature_request.yml",
+      "bytes": 477,
+      "sha256": "48684d2af4248c4fc074e4e3068dbd7e095f7ca40786905866310d3cf2b55b26"
+    },
+    {
+      "path": ".github/PULL_REQUEST_TEMPLATE.md",
+      "bytes": 442,
+      "sha256": "0dc503f8bb6f97f71bbaef263ed87a021a7f761cfca5c14613a3e92d3a9235e7"
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "bytes": 6748,
+      "sha256": "18771e2912fe2aa78da4d4f70a58a1aefb9997fec4fe3212b49ae67edde66a9b"
+    },
+    {
+      "path": ".github/workflows/release.yml",
+      "bytes": 1191,
+      "sha256": "2dd1ca47a474d0be8fb1fedd74c5b9deded062b13c25661e21bf39144984055c"
+    },
+    {
+      "path": ".gitignore",
+      "bytes": 579,
+      "sha256": "6c53aa3079a5c6e89ef6498f01fa0f990b3012ce8e8cd35b591b17c98bf0a284"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "bytes": 3550,
+      "sha256": "0ec6e6e4067ad930957acd46d53b11a13e0977573981d9a8585ff98fe4ec97fe"
+    },
+    {
+      "path": "CONTRIBUTING.md",
+      "bytes": 1426,
+      "sha256": "60bbfb75498da0e295f51cbb4f41301e9469a03460f7e52b9584ef5f5b568412"
+    },
+    {
+      "path": "LICENSE",
+      "bytes": 11357,
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+    },
+    {
+      "path": "PRIVACY.md",
+      "bytes": 4744,
+      "sha256": "f4433ae534e62fa4ca6606c641a3b8fdaca380238333c5cc00f116ebcfc65501"
+    },
+    {
+      "path": "README.md",
+      "bytes": 7598,
+      "sha256": "59569f04446b9ce4fb2b933be6afaae3caddd91bcc080680234f013da73c1593"
+    },
+    {
+      "path": "SECURITY.md",
+      "bytes": 2145,
+      "sha256": "7889c81b3584dcad54629e873e906a74ba77d038108dab19a88e0279453e5a06"
+    },
+    {
+      "path": "THIRD_PARTY_NOTICES.md",
+      "bytes": 2383,
+      "sha256": "f45f1557228d7947fea9de1aa4f5e7a94346d5e43152941bfe1351273f3a063d"
+    },
+    {
+      "path": "browser-extension/manifest.json",
+      "bytes": 1495,
+      "sha256": "83ed951666c21d1ecc41b81f8d7c3d480d0443bfedef0a245ffd244e4ad403eb"
+    },
+    {
+      "path": "browser-extension/src/adapters/sciencedirect.js",
+      "bytes": 6909,
+      "sha256": "5ff908dedaf7399a6c4c93d70c948402f69f36e5c8f422013805d276e0db6274"
+    },
+    {
+      "path": "browser-extension/src/background.js",
+      "bytes": 10864,
+      "sha256": "d575cc894841ad60613c3a1e4880d5ac07be595c6cd9935d356cc0518ff06474"
+    },
+    {
+      "path": "browser-extension/src/common/candidate-normalization.js",
+      "bytes": 2459,
+      "sha256": "8c225901edf5a39d5dbe9124dd563978982087453278eacc66a6d6579426f137"
+    },
+    {
+      "path": "browser-extension/src/common/normalization.js",
+      "bytes": 2303,
+      "sha256": "f429b83f613f528a42f0d7d37bc0846d29797680cd7c207428e6ac6c246b3edf"
+    },
+    {
+      "path": "browser-extension/src/common/request-auth.js",
+      "bytes": 3540,
+      "sha256": "a9e8c10d712dbe33125077c68a7a79fcca031ce0470a13a64e7b8cdbc18e965b"
+    },
+    {
+      "path": "browser-extension/src/content.css",
+      "bytes": 2186,
+      "sha256": "6bcd3c5ddcadf038c1c19564f1a5cbf8ff3b5ab7ed09e2587bf4f9e1de622f88"
+    },
+    {
+      "path": "browser-extension/src/content.js",
+      "bytes": 37103,
+      "sha256": "fed46c9d8d89b554535d6d0247b268b630d389c24593cc73f4c4cb7e786c3c0c"
+    },
+    {
+      "path": "browser-extension/src/extractors/cnki.js",
+      "bytes": 5424,
+      "sha256": "e3ef507eddc2db108ce020e81cd4d6ed105c51a439a2704c9b0138054607d86e"
+    },
+    {
+      "path": "browser-extension/src/extractors/generic.js",
+      "bytes": 4589,
+      "sha256": "d0ae3a40f2b2f674b997af102ec5956dc8854307652b5b2811384e1dca9f0ea5"
+    },
+    {
+      "path": "browser-extension/src/extractors/runner.js",
+      "bytes": 845,
+      "sha256": "05bce44565754f9acd4c3c7a291532fee6d26c816e5ba70f14b563cdaac234a0"
+    },
+    {
+      "path": "browser-extension/src/options.html",
+      "bytes": 2673,
+      "sha256": "29ae898bef8fa659e6f25ca3c1d6bfc4bc64818cddf1ab04d634a8ee6658e670"
+    },
+    {
+      "path": "browser-extension/src/options.js",
+      "bytes": 5235,
+      "sha256": "137f64bdd2e838cf7e50118b6a256d3fc94c48db3fe3541a607b0c16c26d7afc"
+    },
+    {
+      "path": "docs/architecture.md",
+      "bytes": 1692,
+      "sha256": "a4430e10b961cca44677049946788edd9e44ac988456a4d2409b1c03ce7399d9"
+    },
+    {
+      "path": "docs/broad-detection-plan.md",
+      "bytes": 4411,
+      "sha256": "52df3d32c08e9993890968879a4af8fe7893d8a2599755a840b9bc4ca3fd5332"
+    },
+    {
+      "path": "docs/license-decision.md",
+      "bytes": 355,
+      "sha256": "8c44c530c156fdba85592df585a39f4e82f55e0a95fe496e26aa34476e2a5fed"
+    },
+    {
+      "path": "docs/matching.md",
+      "bytes": 2741,
+      "sha256": "cda8f8cb1394e7b07362667f741d859c36b3bade096f6c03e625cecba80586f5"
+    },
+    {
+      "path": "docs/migration-0.3.md",
+      "bytes": 1097,
+      "sha256": "a30220b5430211cc8f40775e5676c29e9646e67b262b49be2bfa643e30ee3c72"
+    },
+    {
+      "path": "docs/protocol.md",
+      "bytes": 7786,
+      "sha256": "0f11674bc0d995965353b91f39af3cf144e7d5bae244ccdf384891879dcd3e3c"
+    },
+    {
+      "path": "docs/releasing.md",
+      "bytes": 2735,
+      "sha256": "71d8acf9d706dc14bd07d072d4475748e0f5f5ee7a475029a6e4c60c75048ace"
+    },
+    {
+      "path": "docs/test-matrix.md",
+      "bytes": 4349,
+      "sha256": "1249d843fcff9409b205e3c5e74153e07d99ff3098dd130f06856304c82b999a"
+    },
+    {
+      "path": "docs/threat-model.md",
+      "bytes": 5860,
+      "sha256": "716fd99cf0f1ce93d3056be5b144acee8997e9000d8a29be6c00296e202aab47"
+    },
+    {
+      "path": "docs/verification/public-export-boundary.md",
+      "bytes": 1647,
+      "sha256": "6323d90d76b9ac777e3412f0ee752db30599cc74a3fea1e673dfdbe86ddf91e2"
+    },
+    {
+      "path": "docs/verification/release-qualification-0.3.0.json",
+      "bytes": 1027,
+      "sha256": "16b89d1577564a43e198f50c082b63b47642687fe4e132821f6b8ffa4426f199"
+    },
+    {
+      "path": "docs/verification/release-qualification-0.3.0.md",
+      "bytes": 2436,
+      "sha256": "dbd186b15fb04116619f8dead58a33273994561e9fa7a143678dedeafc62c5d4"
+    },
+    {
+      "path": "docs/verification/reproducible-artifact-policy.md",
+      "bytes": 1454,
+      "sha256": "e9483a4db53aae19fc050bcb67fb3ee38c3785276d99aa675bb1c3a056abd588"
+    },
+    {
+      "path": "package-lock.json",
+      "bytes": 20069,
+      "sha256": "907bdf3d591013289c9aa89f4400354fb7c46fa75648244231c7e0a337034832"
+    },
+    {
+      "path": "package.json",
+      "bytes": 1287,
+      "sha256": "0932deff6f1ce182f37d7edfb54b581ed25832ff119ddf9f58a6acfd446ba5da"
+    },
+    {
+      "path": "scripts/artifact-policy.mjs",
+      "bytes": 758,
+      "sha256": "cadd8e3cc2904c159d00051bc8cbf302f85c8bfe8a2ca0cba0a878bd3f977b54"
+    },
+    {
+      "path": "scripts/check-all.mjs",
+      "bytes": 1657,
+      "sha256": "93d2a5e623d479f385be96352595fd30669863d6c009b59a36c055ea02331fb1"
+    },
+    {
+      "path": "scripts/create-public-export.mjs",
+      "bytes": 6748,
+      "sha256": "314b62232af01517b0ca14945cd7a30e12bcf383eddf115d0c5d8f515880a4d5"
+    },
+    {
+      "path": "scripts/dependency-inventory.mjs",
+      "bytes": 485,
+      "sha256": "85178845ee7bea0945ee3f830f7b4ca918826f47af53006c91601adf5d98f97b"
+    },
+    {
+      "path": "scripts/generate-zotero-update-manifest.mjs",
+      "bytes": 2120,
+      "sha256": "995d728b5e2b18ec36102248d33e5e29f4ed75776957043851d18fc017d34a25"
+    },
+    {
+      "path": "scripts/inspect-artifacts.mjs",
+      "bytes": 1101,
+      "sha256": "2a274521cad0f5b8f5f6404acd8ec5c426e9567b53854bf2860a7cd3d7955c9e"
+    },
+    {
+      "path": "scripts/package-entries.mjs",
+      "bytes": 3885,
+      "sha256": "76cb9970720ed4d7ecee119d5f80c317545f3e3de95e31ff4ff6bd2597a3c41d"
+    },
+    {
+      "path": "scripts/package-zotero-plugin.ps1",
+      "bytes": 781,
+      "sha256": "d3de3ef3290252a3245ded506cf522c03e0a15a11d480ea7859bf17834707ece"
+    },
+    {
+      "path": "scripts/package.mjs",
+      "bytes": 883,
+      "sha256": "3b0fb47ec7ab5324910cd7e3a023a16e74d7c4c2c24b6cd92c09f770a9eb9337"
+    },
+    {
+      "path": "scripts/public-export-manifest.json",
+      "bytes": 1473,
+      "sha256": "5f1582b58a1253e3067a69316f5cef514ac177a83ed1a00bfe8a7828c40b79bc"
+    },
+    {
+      "path": "scripts/validate-archives.ps1",
+      "bytes": 2159,
+      "sha256": "3a9487ba0f070ecf27cfa9dbe847aeb862e87e6386eb7699bf67c96d31bd5d58"
+    },
+    {
+      "path": "scripts/validate-archives.py",
+      "bytes": 2737,
+      "sha256": "30c0058f83ee24213796647c298dc39a85bacc9423da1462e3087edc110e3263"
+    },
+    {
+      "path": "scripts/validate-zotero-update-manifest.mjs",
+      "bytes": 2771,
+      "sha256": "cbf5709cf9d82f9f80165c5a199d2343466915a9122db21be154dc877c344564"
+    },
+    {
+      "path": "scripts/verify-release.mjs",
+      "bytes": 6364,
+      "sha256": "869257ca8966f7768db460aa290f8c32ea856e30b4b9d726d1d8fefc729a5f73"
+    },
+    {
+      "path": "scripts/zip.mjs",
+      "bytes": 8120,
+      "sha256": "ae7786e05e6d1a025d61d23b8287f9278bde30e6383583547b11249e9b1e83e3"
+    },
+    {
+      "path": "test/background-security.test.mjs",
+      "bytes": 2606,
+      "sha256": "182872ed00ea8f091ce0008abc70ca95e235e9f8143ce8e5bc5160006b5ee093"
+    },
+    {
+      "path": "test/candidate-normalization.test.mjs",
+      "bytes": 3277,
+      "sha256": "84706c039d44d565649b40b888010750744c876e008b27f615c8e1b0809edd25"
+    },
+    {
+      "path": "test/extractors.test.mjs",
+      "bytes": 3744,
+      "sha256": "977b91ba8677645471d414ec2e238b23ae468ca537490133aad1f1d06d30b771"
+    },
+    {
+      "path": "test/fixtures/README.md",
+      "bytes": 263,
+      "sha256": "d558e74ef891756b4d625be955ea7724186f7e491b5a24732bc44a88f2aa8f27"
+    },
+    {
+      "path": "test/fixtures/cnki-detail.html",
+      "bytes": 313,
+      "sha256": "5b55c513cfc9f92a61ec9cbf42bd512a411ca770207617a066c4751c250b6645"
+    },
+    {
+      "path": "test/fixtures/cnki-references.html",
+      "bytes": 393,
+      "sha256": "978813191dcba905b6b26ae2c0a21fa589cbaab474c6cb697fc228578e9f6e97"
+    },
+    {
+      "path": "test/fixtures/coins.html",
+      "bytes": 206,
+      "sha256": "1d5fd4d4de49dd373e336db47c5090708749fc56c81a66dce7fcdf25a21d4f50"
+    },
+    {
+      "path": "test/fixtures/jsonld.html",
+      "bytes": 234,
+      "sha256": "e2c7b44ea2966442fa75e98ad04fe9b909cac71a42608fbc5c44c38260c3dcf5"
+    },
+    {
+      "path": "test/fixtures/mdpi-detail.html",
+      "bytes": 1635,
+      "sha256": "ba0af2bbbdf75be15ce2e358dd8a3cc950a9d38e33512792205c1b5509eba4fb"
+    },
+    {
+      "path": "test/fixtures/sciencedirect-detail.html",
+      "bytes": 240,
+      "sha256": "bed88e2a64ee4d5a64be7999364d4bbb12171ccdcaad1047c3c2b9eedbf7fa6c"
+    },
+    {
+      "path": "test/fixtures/sciencedirect-references.html",
+      "bytes": 383,
+      "sha256": "0725b00149a5df64c115174059e36602099701456d2b2df2c4731d22023ae501"
+    },
+    {
+      "path": "test/fixtures/unknown.html",
+      "bytes": 172,
+      "sha256": "3f43a8f5534b71206ccfb4e6f6d8b912273d92185cf7a285ce5939bd92ba151e"
+    },
+    {
+      "path": "test/indexer.test.mjs",
+      "bytes": 3291,
+      "sha256": "4bd971b40feacd004d3d9b45413df0e264d8e094650230c257d77d7257bf46e6"
+    },
+    {
+      "path": "test/manual-verification.test.mjs",
+      "bytes": 25758,
+      "sha256": "64d220ccf4b905fce5c0f6b1dbe2d889aa562c194d16fd560284b0b294be8efa"
+    },
+    {
+      "path": "test/matcher.test.mjs",
+      "bytes": 2142,
+      "sha256": "78e2cb231e0c0754343bd2d7e2622fac89896d32c08d18497366836820cffdec"
+    },
+    {
+      "path": "test/mdpi-creators-regression.test.mjs",
+      "bytes": 2605,
+      "sha256": "68fd40633f4779801f7d5981a5e7d43f613aa69bab1858a022e1109774538260"
+    },
+    {
+      "path": "test/options.test.mjs",
+      "bytes": 1360,
+      "sha256": "0ad153442ee6b7ed5a6d100f8142f77e2bd505b7fdca684130b9c751860de0c9"
+    },
+    {
+      "path": "test/package-canonicalization.test.mjs",
+      "bytes": 6161,
+      "sha256": "c57028a037fc55ae2763ec3fb98153ea5c1fe1a6864ec985efb87a2aeca8037e"
+    },
+    {
+      "path": "test/packaging.test.mjs",
+      "bytes": 5880,
+      "sha256": "5f47a336787467ceb32a31974af3e2efb2d77dece95ae00b67ce5330b1618c47"
+    },
+    {
+      "path": "test/public-export.test.mjs",
+      "bytes": 3705,
+      "sha256": "c1fc1d20f00f75e09b61da95a61a07e426159630091b2b3af2ba70a43e00c5d4"
+    },
+    {
+      "path": "test/release-metadata.test.mjs",
+      "bytes": 2763,
+      "sha256": "0ea747b159f2ac4ce02f68a15056e3cecd0c24b72fc8f367b1f22ecdabea06e2"
+    },
+    {
+      "path": "test/security.test.mjs",
+      "bytes": 16312,
+      "sha256": "f1f602e194393005c5e19bc8c56447550078a481ea29858fd4466161577ef0a3"
+    },
+    {
+      "path": "test/zotero-packaging-metadata.test.mjs",
+      "bytes": 12331,
+      "sha256": "05a5d4919d81e146e11fd1d04a3212fcf392053eda69d7b0cb614c79d2ace211"
+    },
+    {
+      "path": "test/zotero-update-manifest.test.mjs",
+      "bytes": 2914,
+      "sha256": "d5da67683418119235317da207af1b27f62b1c2dccc04de07e1c2bfa21ee953e"
+    },
+    {
+      "path": "tools/manual-verification/build-zotero-activation-variants.mjs",
+      "bytes": 3693,
+      "sha256": "fe0740fda3da19ad68628d054509dc6fca31bc9de824ba4ce177a387cab2a64f"
+    },
+    {
+      "path": "tools/manual-verification/build-zotero-canary-variants.mjs",
+      "bytes": 7230,
+      "sha256": "459a2cc2ad62991fee297a8c9d256589778ee3616eeb4d9124b190abf42c94f9"
+    },
+    {
+      "path": "tools/manual-verification/generate-zotero-core-capture-snippets.mjs",
+      "bytes": 3602,
+      "sha256": "58da2a3bb6539e2ff474a0ca132c5ccc7fa06f67811f01d726b172b4a0454059"
+    },
+    {
+      "path": "tools/manual-verification/install-zotero-plugin-profile.py",
+      "bytes": 7029,
+      "sha256": "6a00a4fb0c7a86bb65b5d7c008f0d758fb4e6410cf81f55d116e18ac4f7f259a"
+    },
+    {
+      "path": "tools/manual-verification/install-zotero-plugin.py",
+      "bytes": 9070,
+      "sha256": "e12169ecff1e57c10acba23bb520003f990e4d670d1bd68d4e614867ce8beae9"
+    },
+    {
+      "path": "tools/manual-verification/make-browser-marker-snippet.mjs",
+      "bytes": 2983,
+      "sha256": "1ea7fe99cf3bfb515490c25071677a25cb00b02867479c7265402a17049451af"
+    },
+    {
+      "path": "tools/manual-verification/plc-debug-probe.mjs",
+      "bytes": 11733,
+      "sha256": "e351cced4daabb8d2b5619411ec6bd89f9da7cbbd7e5b292bf274038e9369aea"
+    },
+    {
+      "path": "tools/manual-verification/run-zotero-activation-probe.ps1",
+      "bytes": 5783,
+      "sha256": "1cf268bfca1ed41473eaebef43f84f89125dbb46c68c760435bca50312fb0887"
+    },
+    {
+      "path": "tools/manual-verification/runtime-evidence-policy.mjs",
+      "bytes": 3873,
+      "sha256": "71cb35b802c86a5d37ec5c4a284084350a8be6426a7f349dd0b2b65f7551ccf8"
+    },
+    {
+      "path": "tools/manual-verification/scan-zotero-debug-log.mjs",
+      "bytes": 13035,
+      "sha256": "b4f7f9c6f24f8ca7e56a53f80864068d78103f12c58d8518407746d42d4a5372"
+    },
+    {
+      "path": "tools/manual-verification/synthetic-data.mjs",
+      "bytes": 1244,
+      "sha256": "bce6d402240024b5889c3af18d79074e1368aa6ce472a5b073709042f4202353"
+    },
+    {
+      "path": "tools/manual-verification/watch-zotero-activation-result.mjs",
+      "bytes": 632,
+      "sha256": "ba0624bea97611c8a7d5478b9e486a09fc09a855dbb0576c1fe5bbdef824be80"
+    },
+    {
+      "path": "tools/manual-verification/zotero-activation-result.mjs",
+      "bytes": 2771,
+      "sha256": "9c606cc1aa732fb49123cdf1f1c7166d81863f9caf5b8bac17d7b3809b3a35ea"
+    },
+    {
+      "path": "tools/manual-verification/zotero-activation-state.mjs",
+      "bytes": 2126,
+      "sha256": "fbfbfe3e8b9a5c96bfff523b5e852a1576932d77a24ce187ea8e420a0448bbdc"
+    },
+    {
+      "path": "tools/manual-verification/zotero-canary-install-inspector.js",
+      "bytes": 2131,
+      "sha256": "bb0515cb03a5e17887fa1327f4705752f965bab1c7258c5970ece9d57449328f"
+    },
+    {
+      "path": "tools/manual-verification/zotero-canary/LICENSE",
+      "bytes": 206,
+      "sha256": "84b1a45c1eb38848c727bcb59ab7bc6bf656006093eff03eba890d5275fdfeda"
+    },
+    {
+      "path": "tools/manual-verification/zotero-canary/bootstrap.js",
+      "bytes": 2785,
+      "sha256": "2b2cd2a76fd066ea91583f713180e8a6c5dc3e2a91b2ea79021dfc8a6c65edae"
+    },
+    {
+      "path": "tools/manual-verification/zotero-canary/manifest.json",
+      "bytes": 454,
+      "sha256": "715d55c657f2fe48fa7471258c4d8c5bd97b1653e9ac74c4cbee628c0d0bae20"
+    },
+    {
+      "path": "tools/manual-verification/zotero-core-debug-capture.js",
+      "bytes": 4615,
+      "sha256": "5b8c7d24f158574b18910b028dd9ba6570cf18c341f080c6105a170d0edfafc8"
+    },
+    {
+      "path": "updates.json",
+      "bytes": 560,
+      "sha256": "9f4bc8e052e7a8325b99a84375b9d81b2a2876b24fde1797a031f18c14573420"
+    },
+    {
+      "path": "zotero-plugin/bootstrap.js",
+      "bytes": 7620,
+      "sha256": "ea69549179eaaaf2379d67d367d27177fe2b5cafca1df6b22c2a0b1525704813"
+    },
+    {
+      "path": "zotero-plugin/chrome.manifest",
+      "bytes": 25,
+      "sha256": "bd57747f1380d9503cf4cf4ecc72e4dfc464da9cd87852213cdc4d301c307d43"
+    },
+    {
+      "path": "zotero-plugin/defaults/preferences/prefs.js",
+      "bytes": 186,
+      "sha256": "db5629c36ab73706aedb1a09f5c7b9e8576d596fafa941f8317f47bef7e1a53a"
+    },
+    {
+      "path": "zotero-plugin/install.rdf",
+      "bytes": 860,
+      "sha256": "1918f0ea70ccaacce91e09d82ed96986e3dc3f315ae3fd3880ebb3e2c6b53cc9"
+    },
+    {
+      "path": "zotero-plugin/manifest.json",
+      "bytes": 537,
+      "sha256": "2b21a4ff2bf19bdb36ae6173022c849f06508475fc81e55677da4c2178263f48"
+    },
+    {
+      "path": "zotero-plugin/prefs.js",
+      "bytes": 186,
+      "sha256": "db5629c36ab73706aedb1a09f5c7b9e8576d596fafa941f8317f47bef7e1a53a"
+    },
+    {
+      "path": "zotero-plugin/src/indexer.js",
+      "bytes": 12309,
+      "sha256": "9a802fce0f6a8d2b7fcc769c4f51c1048bc3ad211720cd7401e2e447c59cf110"
+    },
+    {
+      "path": "zotero-plugin/src/matcher.js",
+      "bytes": 10183,
+      "sha256": "4d0947fa7ebde18ec90e5e31f3dcb3011cdcca177d29b80fe9453b8093b729e7"
+    },
+    {
+      "path": "zotero-plugin/src/security.js",
+      "bytes": 13306,
+      "sha256": "75a1d57dfc097319530c905d45f419f675e120da9edf3f0a746c04727435fd4e"
+    },
+    {
+      "path": "zotero-plugin/src/server.js",
+      "bytes": 8338,
+      "sha256": "39024a68df1f65e5152006047f7114cf166a713659b6f32ca89db4fad6740bca"
+    },
+    {
+      "path": "zotero-plugin/src/utils.js",
+      "bytes": 4515,
+      "sha256": "d93e569220f40b2a562657fd9bea27feee90410f041ea4c68638e7a6b6b3b442"
+    }
+  ]
+}

@@ -1,0 +1,3 @@
+This diagnostic canary is licensed under Apache-2.0. The complete license
+text is the repository-root LICENSE file and is copied into every generated
+diagnostic XPI by build-zotero-activation-variants.mjs.

@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "version": "0.3.0",
+  "qualification": "PASS",
+  "testedRuntime": {
+    "zotero": "9.0.6",
+    "edge": "151.0.4129.78"
+  },
+  "artifactSha256": {
+    "xpi": "91331ef1bcee06c34bbcadaaf956866b5c06125999da630f48f0f6837234ef59",
+    "extensionZip": "ef69fec94e4ac8bb9de87b4b1c6ab42b226c50d895a6df893150da2f07dc9bd5",
+    "license": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+    "updatesJson": "9f4bc8e052e7a8325b99a84375b9d81b2a2876b24fde1797a031f18c14573420"
+  },
+  "canonicalBuildGate": "PASS",
+  "automatedTests": 140,
+  "crossPlatformReproducibility": "PASS",
+  "runtimeGate": "PASS",
+  "persistentEdgeInstall": "PASS",
+  "gitleaks": "PASS",
+  "dependencyAuditHigh": 0,
+  "publicExportRehearsal": "PASS",
+  "releaseScope": {
+    "cnkiChineseDetail": "SUPPORTED",
+    "mdpiDetail": "SUPPORTED",
+    "cnkiEnglish": "EXPERIMENTAL",
+    "cnkiReferences": "EXPERIMENTAL",
+    "scienceDirect": "BEST_EFFORT",
+    "chrome": "EXPERIMENTAL",
+    "translationServer": "OPTIONAL"
+  }
+}

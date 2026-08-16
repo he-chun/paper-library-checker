@@ -1,0 +1,19 @@
+{
+  "addons": {
+    "paper-library-checker@he-chun.github.io": {
+      "updates": [
+        {
+          "version": "0.3.0",
+          "update_link": "https://github.com/he-chun/paper-library-checker/releases/download/v0.3.0/paper-library-checker-zotero-0.3.0.xpi",
+          "update_hash": "sha256:91331ef1bcee06c34bbcadaaf956866b5c06125999da630f48f0f6837234ef59",
+          "applications": {
+            "zotero": {
+              "strict_min_version": "9.0",
+              "strict_max_version": "9.0.*"
+            }
+          }
+        }
+      ]
+    }
+  }
+}

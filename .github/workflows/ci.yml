@@ -1,0 +1,168 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20.19.x, 22.x, 24.x]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run check
+      - run: npm audit --audit-level=high --registry=https://registry.npmjs.org
+      - name: Whitespace check
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            base="$(git merge-base "${{ github.event.pull_request.base.sha }}" HEAD)"
+            git diff --check "$base"..HEAD
+          else
+            git diff --check HEAD^
+          fi
+      - name: Build and validate release candidate
+        if: matrix.node == '24.x'
+        run: |
+          npm run build
+          npm run generate:updates
+          npm run validate:updates
+          RELEASE_TAG="v$(node -p "require('./package.json').version")" npm run verify:release
+          npm run inspect:artifacts
+          unzip -t dist/paper-library-checker-zotero-0.3.0.xpi
+          unzip -t dist/paper-library-checker-extension-0.3.0.zip
+          npm run validate:archives:python
+          sha256sum dist/*.xpi dist/*.zip > "$RUNNER_TEMP/first-build.sha256"
+          npm run build
+          npm run validate:updates
+          sha256sum dist/*.xpi dist/*.zip > "$RUNNER_TEMP/second-build.sha256"
+          diff -u "$RUNNER_TEMP/first-build.sha256" "$RUNNER_TEMP/second-build.sha256"
+      - name: Full-history secret scan
+        if: matrix.node == '24.x'
+        shell: bash
+        run: |
+          archive="$RUNNER_TEMP/gitleaks_8.24.3_linux_x64.tar.gz"
+          curl --fail --silent --show-error --location \
+            https://github.com/gitleaks/gitleaks/releases/download/v8.24.3/gitleaks_8.24.3_linux_x64.tar.gz \
+            --output "$archive"
+          echo "9991e0b2903da4c8f6122b5c3186448b927a5da4deef1fe45271c3793f4ee29c  $archive" | sha256sum --check --strict
+          tar -xzf "$archive" -C "$RUNNER_TEMP" gitleaks
+          "$RUNNER_TEMP/gitleaks" detect --source . --redact --no-banner --log-opts="--all"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: matrix.node == '24.x'
+        with:
+          name: release-candidate-${{ github.sha }}
+          path: dist/
+          if-no-files-found: error
+
+  windows-archive-validation:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24.x
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm run validate:archives:windows
+
+  canonical-artifact-ubuntu:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24.x
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm run generate:updates
+      - run: PLC_INVENTORY_FILE=dist/inventory.json npm run inspect:artifacts
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: canonical-ubuntu-${{ github.sha }}
+          path: |
+            dist/paper-library-checker-zotero-0.3.0.xpi
+            dist/paper-library-checker-extension-0.3.0.zip
+            dist/SHA256SUMS.txt
+            dist/inventory.json
+            LICENSE
+            updates.json
+          if-no-files-found: error
+
+  canonical-artifact-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24.x
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm run generate:updates
+      - run: $env:PLC_INVENTORY_FILE='dist/inventory.json'; npm run inspect:artifacts
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: canonical-windows-${{ github.sha }}
+          path: |
+            dist/paper-library-checker-zotero-0.3.0.xpi
+            dist/paper-library-checker-extension-0.3.0.zip
+            dist/SHA256SUMS.txt
+            dist/inventory.json
+            LICENSE
+            updates.json
+          if-no-files-found: error
+
+  canonical-artifact-compare:
+    runs-on: ubuntu-latest
+    needs: [canonical-artifact-ubuntu, canonical-artifact-windows]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24.x
+          cache: npm
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: canonical-ubuntu-${{ github.sha }}
+          path: compare/ubuntu
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: canonical-windows-${{ github.sha }}
+          path: compare/windows
+      - name: Compare canonical artifacts and expected hashes
+        shell: bash
+        run: |
+          for file in \
+            dist/paper-library-checker-zotero-0.3.0.xpi \
+            dist/paper-library-checker-extension-0.3.0.zip \
+            dist/SHA256SUMS.txt \
+            dist/inventory.json \
+            LICENSE \
+            updates.json; do
+            cmp "compare/ubuntu/$file" "compare/windows/$file"
+          done
+          echo "91331ef1bcee06c34bbcadaaf956866b5c06125999da630f48f0f6837234ef59  compare/ubuntu/dist/paper-library-checker-zotero-0.3.0.xpi" | sha256sum -c -
+          echo "ef69fec94e4ac8bb9de87b4b1c6ab42b226c50d895a6df893150da2f07dc9bd5  compare/ubuntu/dist/paper-library-checker-extension-0.3.0.zip" | sha256sum -c -
+          echo "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4  compare/ubuntu/LICENSE" | sha256sum -c -
+          echo "9f4bc8e052e7a8325b99a84375b9d81b2a2876b24fde1797a031f18c14573420  compare/ubuntu/updates.json" | sha256sum -c -
+      - run: npm ci
+      - name: Validate canonical XPI/update closure
+        run: PLC_DIST_DIR="$PWD/compare/ubuntu/dist" PLC_UPDATES_FILE="$PWD/compare/ubuntu/updates.json" npm run validate:updates

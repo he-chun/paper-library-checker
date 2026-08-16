@@ -1,0 +1,46 @@
+# AI assistant local state
+.claude/
+.codex/
+.cursor/
+.aider*
+*.jsonl
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+credentials*
+secrets*
+*.local.json
+
+# Logs and local databases
+*.log
+*.sqlite
+*.sqlite3
+*.db
+
+# Build and dependencies
+node_modules/
+dist/
+*.xpi
+*.zip
+
+# IDE and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Python
+__pycache__/
+*.pyc
+
+# Local Zotero debug-log verification output
+tools/manual-verification/results/
+tools/manual-verification/*.local.json
+tools/manual-verification/*.local.js
+tools/manual-verification/*.debug.log

@@ -1,0 +1,54 @@
+{
+  "manifest_version": 3,
+  "name": "Paper Library Checker",
+  "version": "0.3.0",
+  "description": "A third-party add-on for Zotero that checks whether scholarly articles exist in a local library.",
+  "permissions": ["storage"],
+  "host_permissions": [
+    "http://127.0.0.1:23119/*",
+    "http://localhost:23119/*",
+    "http://127.0.0.1:1969/*",
+    "http://localhost:1969/*"
+  ],
+  "background": {
+    "service_worker": "src/background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.cnki.net/*",
+        "*://doi.org/*",
+        "*://*.doi.org/*",
+        "*://sciencedirect.com/*",
+        "*://*.sciencedirect.com/*",
+        "*://springer.com/*",
+        "*://*.springer.com/*",
+        "*://wiley.com/*",
+        "*://*.wiley.com/*",
+        "*://pubmed.ncbi.nlm.nih.gov/*",
+        "*://*.pubmed.ncbi.nlm.nih.gov/*",
+        "*://arxiv.org/*",
+        "*://*.arxiv.org/*",
+        "*://ieee.org/*",
+        "*://*.ieee.org/*",
+        "*://acm.org/*",
+        "*://*.acm.org/*",
+        "*://tandfonline.com/*",
+        "*://*.tandfonline.com/*",
+        "*://mdpi.com/*",
+        "*://*.mdpi.com/*"
+      ],
+      "css": ["src/content.css"],
+      "js": [
+        "src/common/normalization.js",
+        "src/extractors/cnki.js",
+        "src/extractors/generic.js",
+        "src/extractors/runner.js",
+        "src/adapters/sciencedirect.js",
+        "src/content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "options_page": "src/options.html"
+}

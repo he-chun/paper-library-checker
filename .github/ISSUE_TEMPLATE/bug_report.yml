@@ -1,0 +1,31 @@
+name: Bug report
+description: Report a reproducible problem without private data
+body:
+  - type: markdown
+    attributes:
+      value: Do not include pairing tokens, Zotero records, browsing history, or profile paths. Use SECURITY.md for vulnerabilities.
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+    validations:
+      required: true
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      options: [Browser extension, Zotero add-on, Packaging, Documentation]
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected and actual behavior
+    validations:
+      required: true

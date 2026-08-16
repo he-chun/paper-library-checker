@@ -1,0 +1,90 @@
+.zotero-check-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 10px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font: 12px/1.4 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  vertical-align: middle;
+  border: 1px solid transparent;
+}
+
+.zotero-check-badge[data-state="matched"] {
+  color: #8b1d1d;
+  background: #ffe7e7;
+  border-color: #ffb8b8;
+}
+
+.zotero-check-badge[data-state="missing"] {
+  color: #164b86;
+  background: #e7f1ff;
+  border-color: #b9d7ff;
+}
+
+.zotero-check-badge[data-state="possible"] {
+  color: #744100;
+  background: #fff1d6;
+  border-color: #f4c36c;
+}
+
+.zotero-check-badge[data-state="unknown"] {
+  color: #5c4a12;
+  background: #fff5d6;
+  border-color: #efd582;
+}
+
+.zotero-check-badge[data-state="error"] {
+  color: #6d1f6d;
+  background: #fae8ff;
+  border-color: #e9b8f5;
+}
+
+.zotero-check-link[data-zotero-check-state="matched"] {
+  color: #b42318 !important;
+}
+
+.zotero-check-link[data-zotero-check-state="possible"] {
+  color: #b15c00 !important;
+}
+
+.zotero-check-link[data-zotero-check-state="missing"] {
+  color: #155eef !important;
+}
+
+.zotero-check-link[data-zotero-check-state="checking"] {
+  color: #6b7280 !important;
+}
+
+.zotero-check-link[data-zotero-check-state="error"] {
+  color: #9333ea !important;
+}
+
+/* ScienceDirect reference batch-check states (applied via data-zotero-check-state) */
+.reference[data-zotero-check-state="matched"] {
+  background: #ffe7e7 !important;
+  border-left: 4px solid #ffb8b8 !important;
+  padding-left: 8px !important;
+  box-sizing: border-box !important;
+}
+
+.reference[data-zotero-check-state="possible_match"] {
+  background: #fff1d6 !important;
+  border-left: 4px solid #f4c36c !important;
+  padding-left: 8px !important;
+  box-sizing: border-box !important;
+}
+
+.reference[data-zotero-check-state="not_found"] {
+  background: #e7f1ff !important;
+  border-left: 4px solid #b9d7ff !important;
+  padding-left: 8px !important;
+  box-sizing: border-box !important;
+}
+
+.reference[data-zotero-check-state="error"] {
+  background: #f5f5f5 !important;
+  border-left: 4px solid #d0d0d0 !important;
+  padding-left: 8px !important;
+  box-sizing: border-box !important;
+}

@@ -1,0 +1,34 @@
+{
+  "name": "paper-library-checker",
+  "version": "0.3.0",
+  "private": true,
+  "description": "A local-first browser extension and third-party Zotero add-on for checking scholarly articles against a local library.",
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/he-chun/paper-library-checker",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/he-chun/paper-library-checker.git"
+  },
+  "bugs": {
+    "url": "https://github.com/he-chun/paper-library-checker/issues"
+  },
+  "engines": {
+    "node": ">=20.19"
+  },
+  "scripts": {
+    "test": "node --test",
+    "check": "node scripts/check-all.mjs",
+    "build": "node scripts/package.mjs",
+    "generate:updates": "node scripts/generate-zotero-update-manifest.mjs",
+    "validate:updates": "node scripts/validate-zotero-update-manifest.mjs",
+    "inspect:artifacts": "node scripts/inspect-artifacts.mjs",
+    "inventory:dependencies": "node scripts/dependency-inventory.mjs",
+    "validate:archives:python": "python scripts/validate-archives.py",
+    "validate:archives:windows": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/validate-archives.ps1",
+    "verify:release": "node scripts/verify-release.mjs"
+  },
+  "devDependencies": {
+    "fflate": "0.8.3",
+    "jsdom": "^29.1.1"
+  }
+}

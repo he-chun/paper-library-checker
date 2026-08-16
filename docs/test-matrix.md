@@ -1,0 +1,37 @@
+# Paper Library Checker Manual Test Matrix
+
+Use this matrix to verify the browser extension and Zotero plugin together.
+Before testing, install the Zotero plugin, reload the unpacked browser
+extension, and confirm the extension options point to the local plugin endpoint.
+
+For pages where `translationServerMode=auto` applies, follow the source
+expectation in each row. Pages with embedded citation metadata can use local
+extractors in auto mode even when the local Zotero translation-server is
+running.
+
+For the first 0.3.0 public alpha, CNKI Chinese detail, MDPI detail, generic
+metadata fixtures, and the unknown/malformed-page behavior are required.
+CNKI English detail and CNKI reference/citation batches are experimental.
+ScienceDirect is best effort: a normal accessible article DOM exposes adapter
+failures, while a publisher challenge or access wall is recorded separately and
+does not establish a product PASS. Edge is the only release-gated browser.
+
+| Test item | URL | Expected metadata source: extractor / translation-server | Expected identifier: DOI / title / PMID / arXiv | Zotero expected result: saved / not saved | Actual result | Notes | Performance observation |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Zotero plugin health check | `http://127.0.0.1:23119/zotero-checker/health` | n/a | n/a | n/a | PASS (2026-08-15 final v4) | The extension Test connection used an HMAC-signed empty-body request and returned only the expected minimized health fields. | Zotero 9.0.6 and Edge 151.0.4129.78. |
+| CNKI Chinese detail page | redacted public article | extractor | DOI / title | saved / not saved | PASS (2026-08-15 final v4) | `cnki-kcms` produced a valid candidate; controlled `matched` and `not_found` states both passed and reload retained one badge. | No content-script exception or visible freeze. |
+| CNKI English detail page |  | extractor | DOI / title | saved / not saved | EXPERIMENTAL_NOT_ESTABLISHED | **Experimental.** No qualifying result was established; this does not gate the first alpha. |  |
+| CNKI reference / citation batch checking | redacted public article | extractor | DOI / title | saved / not saved | EXPERIMENTAL_NO_LINKS | **Experimental.** The tested detail page exposed no qualifying reference/citation links; this does not gate the first alpha. | No content-script exception. |
+| ScienceDirect detail page | redacted public article attempt | extractor in auto mode; translation-server in always mode or when citation metadata is missing | DOI / title | saved / not saved | BEST_EFFORT_ACCESS_CHALLENGED | The publisher challenge replaced the normal article DOM, so no live adapter PASS is claimed. | No product exception observed on the challenge page. |
+| ScienceDirect References batch checking | redacted public article attempt | extractor | DOI / title | saved / not saved | BEST_EFFORT_ACCESS_CHALLENGED | The normal References DOM was unavailable behind the publisher challenge. |  |
+| MDPI single article detail page | redacted public article | extractor in auto mode; translation-server in always mode or when citation metadata is missing | DOI / title | saved / not saved | PASS (2026-08-15 targeted rerun) | The generic extractor detected metadata whose repeated creator tags exceeded the protocol limit. The shared serialization boundary sent at most 20 deduplicated creators, received HTTP 200 without `invalid_creators`, rendered one non-error badge after reload, and did not scan MDPI References. | No unhandled runtime or service-worker console error observed. |
+| PubMed detail page |  | translation-server | PMID / DOI / title | saved / not saved |  | With translation-server running, PubMed metadata should prefer Zotero translators. |  |
+| DOI.org page |  | translation-server | DOI / title | saved / not saved |  | Use a DOI resolver page and verify redirect/resolved metadata behavior. |  |
+| arXiv page |  | translation-server | arXiv / DOI / title | saved / not saved |  | Use an arXiv abstract page. Verify arXiv identifier or title matching. |  |
+
+Generic COinS, JSON-LD, citation, and DC extraction plus malformed metadata are
+required automated fixture gates. Live translation-server and Chrome smoke are
+optional for this alpha.
+
+The complete redacted result is recorded in
+[`verification/final-release-gates-v4.md`](verification/final-release-gates-v4.md).

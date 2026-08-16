@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Paper Library Checker Options</title>
+    <style>
+      body {
+        max-width: 680px;
+        margin: 32px auto;
+        font: 14px/1.5 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+      label {
+        display: block;
+        margin: 18px 0 6px;
+        font-weight: 600;
+      }
+      input {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 8px;
+      }
+      input[type="radio"] {
+        width: auto;
+      }
+      input[type="checkbox"] {
+        width: auto;
+      }
+      button {
+        margin-top: 18px;
+        padding: 8px 14px;
+      }
+      .token-row {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 8px;
+      }
+      .token-row button {
+        margin-top: 0;
+      }
+      #status {
+        margin-left: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Paper Library Checker</h1>
+    <p>A third-party add-on for Zotero</p>
+    <label for="endpoint">Zotero plugin endpoint</label>
+    <input id="endpoint" type="url" value="http://127.0.0.1:23119/zotero-checker">
+    <label for="token">Pairing token</label>
+    <div class="token-row">
+      <input id="token" type="password" value="" autocomplete="off" spellcheck="false">
+      <button id="toggleToken" type="button" aria-pressed="false">Show</button>
+    </div>
+    <label>Translation-server mode</label>
+    <label>
+      <input type="radio" name="translationServerMode" value="off">
+      Off — never use translation-server
+    </label>
+    <label>
+      <input type="radio" name="translationServerMode" value="auto" checked>
+      Auto — try on priority academic domains (default)
+    </label>
+    <label>
+      <input type="radio" name="translationServerMode" value="always">
+      Always — try on all pages
+    </label>
+    <label>
+      <input type="checkbox" id="enablePageGlow">
+      Enable page edge glow — show a colored border around the viewport based on check result
+    </label>
+    <label>
+      <input type="checkbox" id="autoCheckReferenceLists">
+      Auto-check reference lists — automatically scan CNKI / ScienceDirect references on page load and scroll
+    </label>
+    <label>
+      <input type="checkbox" id="broadPageDetection">
+      Detect article details on supported injected websites
+    </label>
+    <button id="save" type="button">Save</button>
+    <button id="testConnection" type="button">Test connection</button>
+    <span id="status" role="status" aria-live="polite"></span>
+    <script src="common/request-auth.js"></script>
+    <script src="options.js"></script>
+  </body>
+</html>

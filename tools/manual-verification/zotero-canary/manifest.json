@@ -1,0 +1,14 @@
+{
+  "manifest_version": 2,
+  "name": "Paper Library Checker Activation Canary",
+  "version": "1.0.0",
+  "description": "Project-owned local-only Zotero activation diagnostic canary.",
+  "applications": {
+    "zotero": {
+      "id": "paper-library-checker-canary@he-chun.github.io",
+      "update_url": "https://example.invalid/paper-library-checker-canary-updates.json",
+      "strict_min_version": "9.0",
+      "strict_max_version": "9.0.*"
+    }
+  }
+}

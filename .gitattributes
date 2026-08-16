@@ -1,0 +1,29 @@
+* text=auto eol=lf
+
+*.js text eol=lf
+*.mjs text eol=lf
+*.json text eol=lf
+*.rdf text eol=lf
+*.manifest text eol=lf
+*.html text eol=lf
+*.css text eol=lf
+*.md text eol=lf
+*.txt text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.ps1 text eol=lf
+LICENSE text eol=lf
+NOTICE text eol=lf
+THIRD_PARTY_NOTICES.md text eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.zip binary
+*.xpi binary
+*.pdf binary

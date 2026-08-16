@@ -1,0 +1,21 @@
+name: Feature request
+description: Propose a focused workflow improvement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Research workflow problem
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+    validations:
+      required: true
+  - type: textarea
+    id: privacy
+    attributes:
+      label: Privacy, permissions, and site-adapter impact
+    validations:
+      required: true
