@@ -111,14 +111,118 @@ use `chrome.storage.sync`. The Zotero Tools menu can reset or revoke the token.
 Upgrading from a 0.2 development build requires
 [the 0.3 migration](docs/migration-0.3.md).
 
+## How to use
+
+### First use
+
+Keep Zotero running whenever you use Paper Library Checker. In Zotero's
+**Tools** menu, the disabled `Paper Library Checker (0.3.0)` item confirms that
+the add-on has loaded.
+
+1. Choose **Tools > Paper Library Checker: Copy pairing token**.
+2. Open the extension **Options**, paste the token into **Pairing token**, and
+   click **Save**.
+3. Click **Test connection**. A successful setup displays
+   `Connected to Paper Library Checker 0.3.0`.
+
+Most users should leave the endpoint at its default value:
+`http://127.0.0.1:23119/zotero-checker`.
+
+### Check an article
+
+1. Keep Zotero running.
+2. Open an article-detail page covered by the [support matrix](#support-matrix).
+3. Wait for a status badge near the page title or in the lower-right corner.
+
+The extension extracts metadata from the page and compares it with the Zotero
+add-on's local in-memory index. The floating `↻` button manually re-checks the
+article, manually starts a batch check on supported list pages, and can be
+dragged to another position. After saving an item with Zotero Connector or
+editing an item in Zotero, click `↻` or refresh the page.
+
+### Status legend
+
+| UI text | State |
+| --- | --- |
+| `Library: checking` | A check is in progress. |
+| `Library: saved` | A matching item was found in the local library. |
+| `Library: possible match` | A fuzzy match was found and requires manual confirmation. |
+| `Library: not saved` | No match was found using the metadata supplied by the current page. |
+| `Library: unrecognized` | No supported metadata was recognized. |
+| `Library: choose item` | translation-server returned multiple candidates. |
+| `Library: offline` | The extension could not connect to the add-on or pairing failed. |
+| `Library: indexing` | The local index is not ready yet. |
+
+Badge and page-glow colors use red for saved/matched, orange for possible
+matches, blue for not saved, yellow for checking/unrecognized/choice, and
+purple for offline/indexing/error. `Library: not saved` means that no match was
+found using the metadata supplied by the current page; it is not absolute proof
+about the entire Zotero library.
+
+### Re-check after saving
+
+The add-on listens for Zotero item additions, modifications, deletions, and
+trash events, and updates its local index automatically. The open web page does
+not always start a new request by itself, so after saving or changing an item,
+click `↻` or refresh the page. You do not need to rebuild the Zotero index
+manually.
+
+### Reference-list checks
+
+**Auto-check reference lists** is off by default. When enabled, supported pages
+are checked automatically as they load and scroll; when it is off, click `↻`
+to start a supported list check manually. A single page currently processes at
+most 80 candidates.
+
+Reference links or rows use red for saved, orange for possible match, blue for
+not found, gray for checking, and purple for error. Support levels remain those
+in the matrix: CNKI reference/list checks are experimental, ScienceDirect is
+best effort, and MDPI References are not supported.
+
+### Page glow
+
+**Enable page edge glow** is off by default. When enabled, the viewport edge
+uses the result color as a visual cue; it does not change the match result. The
+`prefers-reduced-motion` setting disables the animation.
+
+### Pairing-token actions
+
+- **Copy pairing token** copies the current token.
+- **Reset pairing token** generates and automatically copies a new token; the
+  old token stops working.
+- **Revoke pairing token** immediately revokes the current token.
+
+After **Reset pairing token**, open extension Options, paste the new token,
+click **Save**, and then click **Test connection**. After **Revoke pairing
+token**, the extension cannot connect until a new token has been generated and
+saved.
+
+### Common problems
+
+| Problem | What to check |
+| --- | --- |
+| No badge appears | Confirm that Zotero is running, the add-on is loaded, and the extension is enabled. Check that the page is on a site where the manifest injects the extension and provides citation, DC, COinS, JSON-LD, or CNKI metadata. Refresh the page or click `↻`. `broadPageDetection` works only on websites where the extension is already injected. |
+| `Library: offline` | Confirm that Zotero is running, keep the default endpoint, click **Save**, and check whether the token was reset or revoked. Click **Test connection** and copy the token again if necessary. |
+| `Library: indexing` | Zotero is building the local index during initial startup. Wait and click `↻`; restart Zotero if the status persists. |
+| `Library: possible match` | This is a fuzzy title match, not a confirmed saved item. It requires manual confirmation in Zotero by comparing the title, year, and authors. |
+| `Library: unrecognized` | The page did not provide usable supported metadata, so this state cannot determine whether the article is saved. PDF pages are especially likely to lack enough metadata. |
+| Reference links are not colored | Enable **Auto-check reference lists** or click `↻`, and confirm that the site and page have a supported list adapter. List support may still be experimental or best effort. |
+| Edge extension disappears after restart | The unpacked extension directory must remain in its original location; do not move, rename, or delete it. If it moved, use **Load unpacked** again in `edge://extensions` and pair the extension again. |
+
 ## Options
 
-- `translationServerMode`: `off`, `auto`, or `always`.
-- `enablePageGlow`: optional saved-state page edge; default `false`.
-- `autoCheckReferenceLists`: automatic supported-site batch checks; default `false`.
-- `broadPageDetection`: article-detail detection on the supported websites where
-  this extension is injected; default `false`. It does not grant access to sites
-  outside the manifest.
+- `endpoint`: most users should keep the default
+  `http://127.0.0.1:23119/zotero-checker`.
+- `translationServerMode=off`: never use translation-server.
+- `translationServerMode=auto`: try translation-server only when needed on
+  priority academic domains; if it fails, the local extractor can still be used.
+- `translationServerMode=always`: try translation-server first.
+- `enablePageGlow`: change only the visual result cue; default `false`.
+- `autoCheckReferenceLists`: control automatic supported-site batch checks;
+  default `false`. It does not disable manual checks with `↻`.
+- `broadPageDetection`: control article-detail detection only on websites where
+  the manifest already injects this extension; default `false`. It does not
+  expand host permissions.
 
 ScienceDirect and MDPI pages with `citation_doi` normally use the generic
 extractor in `auto` mode. `always` forces translation-server first. MDPI

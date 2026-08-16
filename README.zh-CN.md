@@ -106,13 +106,107 @@ unpacked 安装方式。移动或删除解压目录可能导致扩展失效。Ch
 `chrome.storage.sync`。可以通过 Zotero Tools 菜单重置或撤销令牌。从 0.2
 开发构建升级时需要遵循 [0.3 迁移说明](docs/migration-0.3.md)。
 
+## 使用方法
+
+### 首次使用
+
+使用 Paper Library Checker 期间必须保持 Zotero 运行。Zotero **Tools** 菜单中
+禁用的 `Paper Library Checker (0.3.0)` 菜单项表示附加组件已经加载。
+
+1. 选择 **Tools > Paper Library Checker: Copy pairing token**。
+2. 打开扩展的 **Options**，把令牌粘贴到 **Pairing token**，然后点击 **Save**。
+3. 点击 **Test connection**。连接成功时会显示
+   `Connected to Paper Library Checker 0.3.0`。
+
+普通用户通常应保留默认 endpoint：
+`http://127.0.0.1:23119/zotero-checker`。
+
+### 检查文章详情页
+
+1. 保持 Zotero 运行。
+2. 打开[支持矩阵](#支持矩阵)覆盖的文章详情页。
+3. 等待页面标题附近或右下角出现状态徽标。
+
+扩展会提取页面元数据，并与 Zotero 附加组件的本地内存索引匹配。页面上的浮动
+`↻` 按钮可以手动重新检查文章、在受支持的列表页面手动触发批量检查，也可以拖动
+改变位置。如果刚通过 Zotero Connector 保存条目或在 Zotero 中修改条目，请点击
+`↻` 或刷新页面。
+
+### 状态说明
+
+| UI text | 状态 |
+| --- | --- |
+| `Library: checking` | 正在检查。 |
+| `Library: saved` | 在本地文献库中找到匹配。 |
+| `Library: possible match` | 找到模糊匹配，需要人工确认。 |
+| `Library: not saved` | 使用当前页面提供的元数据没有找到匹配。 |
+| `Library: unrecognized` | 没有识别到受支持元数据。 |
+| `Library: choose item` | translation-server 返回多个候选。 |
+| `Library: offline` | 无法连接附加组件或配对失败。 |
+| `Library: indexing` | 本地索引尚未准备好。 |
+
+徽标和页面边缘效果使用以下颜色：red 表示 saved/matched，orange 表示 possible
+match，blue 表示 not saved，yellow 表示 checking/unrecognized/choice，purple 表示
+offline/indexing/error。`Library: not saved` 表示使用当前页面提供的元数据没有找到
+匹配，不是对整个 Zotero 文献库的绝对证明。
+
+### 收藏后重新检查
+
+附加组件会监听 Zotero item 的新增、修改、删除和 trash 事件，并自动更新本地索引。
+已经打开的网页不会始终自动重新发起请求，因此保存或修改条目后请点击 `↻` 或刷新
+页面。无需手动重建 Zotero 索引。
+
+### 参考文献和列表检查
+
+**Auto-check reference lists** 默认关闭。开启后，受支持页面会在加载和滚动时自动
+检查列表；未开启时，可以点击 `↻` 手动触发受支持的列表检查。单个页面当前最多
+处理 80 个候选。
+
+参考文献链接或行使用以下颜色：red 表示 saved，orange 表示 possible match，blue
+表示 not found，gray 表示 checking，purple 表示 error。功能级别仍以支持矩阵为准：
+CNKI reference/list 为 experimental，ScienceDirect 为 best effort，MDPI References
+不支持。
+
+### 页面边缘效果
+
+**Enable page edge glow** 默认关闭。开启后，视口边缘会使用与结果对应的颜色作为
+视觉提示，但不会改变匹配结果。`prefers-reduced-motion` 会禁用动画效果。
+
+### 配对令牌操作
+
+- **Copy pairing token**：复制当前令牌。
+- **Reset pairing token**：生成并自动复制新令牌，旧令牌随即失效。
+- **Revoke pairing token**：立即撤销当前令牌。
+
+执行 **Reset pairing token** 后，打开扩展 Options，粘贴新令牌，点击 **Save**，
+再点击 **Test connection**。执行 **Revoke pairing token** 后，在重新生成并保存新
+令牌前，扩展无法连接。
+
+### 常见问题
+
+| 问题 | 检查方法 |
+| --- | --- |
+| 没有状态徽标 | 确认 Zotero 正在运行、附加组件已经加载且扩展已经启用。确认当前页面属于 manifest 注入站点，并具有 citation、DC、COinS、JSON-LD 或 CNKI 元数据。刷新页面或点击 `↻`。`broadPageDetection` 只在扩展已经注入的网站中生效。 |
+| `Library: offline` | 确认 Zotero 正在运行、endpoint 保持默认，并已点击 **Save**。检查是否重置或撤销过令牌；点击 **Test connection**，必要时重新复制令牌。 |
+| `Library: indexing` | Zotero 初次启动时正在建立本地索引。等待后点击 `↻`；如果持续出现，再重启 Zotero。 |
+| `Library: possible match` | 这是模糊题名匹配，不是确定已收藏；需要人工确认，在 Zotero 中核对题名、年份和作者。 |
+| `Library: unrecognized` | 当前页面没有提供可用的受支持元数据，不能据此判定是否已收藏；PDF 页面尤其可能没有足够元数据。 |
+| 列表没有变色 | 开启 **Auto-check reference lists** 或点击 `↻`，并确认当前站点和页面支持列表 adapter。列表功能可能仍为 experimental 或 best effort。 |
+| Edge 扩展重启后消失 | unpacked 扩展目录必须保持在原位置，不能移动、改名或删除。如已移动，请在 `edge://extensions` 中重新执行 **Load unpacked** 并重新配对。 |
+
 ## 配置选项
 
-- `translationServerMode`：`off`、`auto` 或 `always`。
-- `enablePageGlow`：可保存状态的可选页面边缘效果；默认为 `false`。
-- `autoCheckReferenceLists`：自动检查受支持站点的批量列表；默认为 `false`。
-- `broadPageDetection`：在本扩展已注入的受支持网站上检测文章详情页；默认为
-  `false`。它不会授予对 manifest 之外站点的访问权限。
+- `endpoint`：普通用户应保留默认值
+  `http://127.0.0.1:23119/zotero-checker`。
+- `translationServerMode=off`：从不使用 translation-server。
+- `translationServerMode=auto`：仅在优先学术域名需要时尝试 translation-server；
+  失败后仍可回退到本地 extractor。
+- `translationServerMode=always`：优先调用 translation-server。
+- `enablePageGlow`：只改变视觉提示；默认为 `false`。
+- `autoCheckReferenceLists`：控制自动批量检查；默认为 `false`，不影响手动点击
+  `↻` 检查。
+- `broadPageDetection`：只影响 manifest 已经注入的网站；默认为 `false`，不会扩大
+  host 权限。
 
 在 `auto` 模式下，带有 `citation_doi` 的 ScienceDirect 和 MDPI 页面通常使用
 通用 extractor。`always` 会强制优先使用 translation-server。MDPI References

@@ -69,6 +69,54 @@ test("both READMEs retain installation and pairing instructions", () => {
   assert(chinese.includes("配对令牌"));
 });
 
+test("localized READMEs place complete usage sections before options", () => {
+  const sections = [
+    [english, "## Install and pair the browser extension", "## How to use", "## Options"],
+    [chinese, "## 安装并配对浏览器扩展", "## 使用方法", "## 配置选项"]
+  ];
+  for (const [content, installation, usage, options] of sections) {
+    assert(content.includes(usage), usage);
+    assert(content.indexOf(installation) < content.indexOf(usage), `${usage} follows installation`);
+    assert(content.indexOf(usage) < content.indexOf(options), `${usage} precedes options`);
+  }
+});
+
+test("both usage sections preserve exact UI status and action text", () => {
+  const statuses = [
+    "Library: checking",
+    "Library: saved",
+    "Library: possible match",
+    "Library: not saved",
+    "Library: unrecognized",
+    "Library: choose item",
+    "Library: offline",
+    "Library: indexing"
+  ];
+  const actions = [
+    "↻",
+    "Test connection",
+    "Copy pairing token",
+    "Reset pairing token",
+    "Revoke pairing token",
+    "Auto-check reference lists"
+  ];
+  for (const content of [english, chinese]) {
+    for (const marker of [...statuses, ...actions]) assert(content.includes(marker), marker);
+  }
+});
+
+test("localized usage guidance keeps matching and support qualifications", () => {
+  assert.match(english, /it is not absolute proof\s+about the entire Zotero library/);
+  assert(english.includes("requires manual confirmation"));
+  assert(english.includes("unpacked extension directory must remain in its original location"));
+  assert(english.includes("MDPI References are not supported"));
+
+  assert(chinese.includes("不是对整个 Zotero 文献库的绝对证明"));
+  assert(chinese.includes("需要人工确认"));
+  assert(chinese.includes("unpacked 扩展目录必须保持在原位置"));
+  assert.match(chinese, /MDPI References\s+不支持/);
+});
+
 test("both READMEs retain privacy and protocol boundaries", () => {
   for (const content of [english, chinese]) {
     for (const marker of ["HMAC-SHA256", "chrome.storage.local", "token-in-JSON", "SECURITY.md"]) {
