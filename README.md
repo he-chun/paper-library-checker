@@ -1,5 +1,7 @@
 # Paper Library Checker
 
+**English** | [简体中文](README.zh-CN.md)
+
 **A third-party add-on for Zotero**
 
 Paper Library Checker marks scholarly articles that are already present in a

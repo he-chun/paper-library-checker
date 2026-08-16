@@ -40,3 +40,14 @@ are accepted under Apache-2.0 unless explicitly stated otherwise.
 Explain user impact, data-flow changes, tests performed, fixture provenance,
 and migration steps. A maintainer must manually verify supported sites before
 merging adapter changes.
+
+## Translations
+
+- `README.md` is the canonical source for product facts.
+- `README.zh-CN.md` is the maintainer-approved Simplified Chinese version.
+- Changes to versions, tested environments, the support matrix, Release links,
+  checksums, installation steps, or security and privacy statements must be
+  checked in both README files.
+- Translation wording need not correspond sentence by sentence, but it must not
+  change product facts or support scope.
+- Translation changes must pass the localization consistency tests.
