@@ -28,14 +28,10 @@ jobs:
       - run: npm run check
       - run: npm audit --audit-level=high --registry=https://registry.npmjs.org
       - name: Whitespace check
-        shell: bash
-        run: |
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            base="$(git merge-base "${{ github.event.pull_request.base.sha }}" HEAD)"
-            git diff --check "$base"..HEAD
-          else
-            git diff --check HEAD^
-          fi
+        env:
+          PLC_EVENT_NAME: ${{ github.event_name }}
+          PLC_PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: node .github/scripts/check-whitespace.mjs
       - name: Build and validate release candidate
         if: matrix.node == '24.x'
         run: |
