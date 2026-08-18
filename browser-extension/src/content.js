@@ -1,5 +1,8 @@
 (function () {
   const api = window.ZoteroCheck;
+  const i18n = window.PLCI18n;
+  const uiState = window.PLCUIState;
+  const senderSecurity = window.PLCSenderSecurity;
   const SKIPPED_HOSTS = new Set([
     "chatgpt.com",
     "chat.openai.com",
@@ -62,6 +65,28 @@
     broadPageDetection: false
   };
   var _batchUserInitiated = false;
+  const pageController = window.PLCPageController.createPageController({
+    onManualCheck: function () {
+      lastSuccessfulCandidateKey = "";
+      lastSuccessfulBatchKey = "";
+      setBadge("unknown", i18n.t("badgeChecking"), "", uiState.PAGE_STATES.CHECKING);
+      scheduleDetailCheck({ force: true });
+      scheduleManualBatchCheck();
+    }
+  });
+
+  chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
+    if (!senderSecurity.isTrustedExtensionPageSender(sender, chrome.runtime)) return false;
+    if (message?.type === "zotero-check:get-page-state") {
+      sendResponse({ ok: true, pageState: pageController.getState() });
+      return false;
+    }
+    if (message?.type === "zotero-check:manual-page-check") {
+      sendResponse({ ok: true, pageState: pageController.manualCheck() });
+      return false;
+    }
+    return false;
+  });
 
   chrome.storage.sync.get(_options, function (loaded) {
     Object.assign(_options, loaded);
@@ -296,7 +321,7 @@
     badge.dataset.state = "unknown";
     const label = document.createElement("span");
     label.className = "zotero-check-label";
-    label.textContent = "Library: checking";
+    label.textContent = i18n.t("badgeChecking");
     badge.appendChild(label);
     const choices = document.createElement("div");
     choices.className = "zotero-check-choices";
@@ -306,7 +331,8 @@
     const floatBtn = document.createElement("button");
     floatBtn.className = "zotero-check-float-btn";
     floatBtn.textContent = "↻";
-    floatBtn.title = "Re-check this page (drag to move)";
+    floatBtn.title = i18n.t("recheckTooltip");
+    floatBtn.setAttribute("aria-label", i18n.t("recheckAriaLabel"));
     let floatDragging = false;
     let floatStartX = 0;
     let floatStartY = 0;
@@ -362,11 +388,7 @@
       }
       event.stopPropagation();
       event.preventDefault();
-      lastSuccessfulCandidateKey = "";
-      lastSuccessfulBatchKey = "";
-      setBadge("unknown", "Library: checking");
-      scheduleDetailCheck({ force: true });
-      scheduleManualBatchCheck();
+      pageController.manualCheck();
     });
 
     shadow.appendChild(floatBtn);
@@ -388,7 +410,7 @@
     edgeGlow.dataset.state = state;
   }
 
-  function setBadge(state, text, title = "") {
+  function setBadge(state, text, title = "", pageState) {
     const badge = ensureBadge();
     clearChoices();
     badge.dataset.state = state;
@@ -399,7 +421,10 @@
     setPageGlowState(state);
     if (title) {
       badge.title = title;
+    } else {
+      badge.removeAttribute("title");
     }
+    if (pageState) pageController.setState(pageState);
   }
 
   function clearChoices() {
@@ -498,10 +523,20 @@
     if (!extraction.candidates.length) {
       if (checkCount === 1 && isLikelyAcademicPage()) {
         if (extraction.choices?.length) {
-          setBadge("unknown", "Library: choose item", "translation-server returned multiple choices.");
+          setBadge(
+            "unknown",
+            i18n.t("badgeChooseItem"),
+            i18n.t("translationChoicesDescription"),
+            uiState.PAGE_STATES.CHOOSE_ITEM
+          );
           renderTranslationChoices(extraction.choices);
         } else {
-          setBadge("unknown", "Library: unrecognized", "No supported metadata was found on this page.");
+          setBadge(
+            "unknown",
+            i18n.t("badgeUnrecognized"),
+            i18n.t("unsupportedMetadataDescription"),
+            uiState.PAGE_STATES.UNRECOGNIZED
+          );
         }
       }
       return;
@@ -514,7 +549,12 @@
       return;
     }
 
-    setBadge("unknown", `Library: checking (${extraction.metadataSource})`);
+    setBadge(
+      "unknown",
+      i18n.t("badgeCheckingSource", extraction.metadataSource),
+      "",
+      uiState.PAGE_STATES.CHECKING
+    );
 
     const response = await sendMatch(extraction.candidates);
     if (runSerial !== detailRunSerial) {
@@ -523,8 +563,9 @@
     if (!response || !response.ok) {
       setBadge(
         "error",
-        "Library: offline",
-        response?.error || "Could not reach the Paper Library Checker add-on."
+        i18n.t("badgeOffline"),
+        response?.error || i18n.t("addonConnectionError"),
+        uiState.PAGE_STATES.ERROR
       );
       scheduleDetailRetry();
       return;
@@ -551,7 +592,7 @@
 
     const title = document.createElement("p");
     title.className = "zotero-check-choice-title";
-    title.textContent = "Choose metadata";
+    title.textContent = i18n.t("translationChoicesTitle");
     choicesElement.appendChild(title);
 
     choices.slice(0, 8).forEach((choice) => {
@@ -568,7 +609,7 @@
     const creators = Array.isArray(choice.creators)
       ? choice.creators.map((creator) => creator.name || creator.lastName || "").filter(Boolean).slice(0, 2).join(", ")
       : "";
-    return [choice.choiceLabel || choice.title || "Untitled", choice.date, creators]
+    return [choice.choiceLabel || choice.title || i18n.t("untitled"), choice.date, creators]
       .filter(Boolean)
       .join(" - ");
   }
@@ -579,10 +620,15 @@
       ...choice,
       metadataSource: "translation-server"
     };
-    setBadge("unknown", "Library: checking (translation-server)");
+    setBadge("unknown", i18n.t("badgeCheckingSource", "translation-server"), "", uiState.PAGE_STATES.CHECKING);
     const response = await sendMatch(candidate);
     if (!response || !response.ok) {
-      setBadge("error", "Library: offline", response?.error || "Could not reach the Paper Library Checker add-on.");
+      setBadge(
+        "error",
+        i18n.t("badgeOffline"),
+        response?.error || i18n.t("addonConnectionError"),
+        uiState.PAGE_STATES.ERROR
+      );
       scheduleDetailRetry();
       return;
     }
@@ -593,22 +639,29 @@
 
   function applyDetailResult(result, metadataSource) {
     if (result && result.status === "error") {
-      setBadge("error", "Library: indexing", result.error || "Local library index is not ready");
+      setBadge(
+        "error",
+        i18n.t("badgeIndexing"),
+        result.error || i18n.t("localIndexNotReady"),
+        uiState.PAGE_STATES.ERROR
+      );
       scheduleDetailRetry();
       return;
     }
     if (isPositiveResult(result)) {
       setBadge(
         result.status === "possible_match" ? "possible" : "matched",
-        result.status === "possible_match" ? "Library: possible match" : "Library: saved",
-        `metadataSource: ${metadataSource}`
+        i18n.t(result.status === "possible_match" ? "badgePossibleMatch" : "badgeSaved"),
+        `metadataSource: ${metadataSource}`,
+        result.status === "possible_match" ? uiState.PAGE_STATES.POSSIBLE_MATCH : uiState.PAGE_STATES.SAVED
       );
       return;
     }
     setBadge(
       "missing",
-      "Library: not saved",
-      `metadataSource: ${metadataSource}\n${result?.reason || result?.error || "No matching Zotero item."}`
+      i18n.t("badgeNotSaved"),
+      `metadataSource: ${metadataSource}\n${result?.reason || result?.error || i18n.t("noMatchingItem")}`,
+      uiState.PAGE_STATES.NOT_SAVED
     );
   }
 
@@ -710,11 +763,11 @@
       if (adapter) {
         adapter.applyBatchResults(
           targets.map(function (t) {
-            return { sourceId: t.sourceId, status: "error", error: response?.error || "Paper Library Checker is offline" };
+            return { sourceId: t.sourceId, status: "error", error: response?.error || i18n.t("checkerOffline") };
           })
         );
       } else {
-        targets.forEach(function (target) { applyTargetState(target, "error", response?.error || "Paper Library Checker is offline"); });
+        targets.forEach(function (target) { applyTargetState(target, "error", response?.error || i18n.t("checkerOffline")); });
       }
       scheduleBatchRetry();
       return;
@@ -839,22 +892,22 @@
 
   function applyTargetResult(target, result) {
     if (!result) {
-      applyTargetState(target, "missing", "No result returned");
+      applyTargetState(target, "missing", i18n.t("noResultReturned"));
       return;
     }
     if (result.status === "matched") {
-      applyTargetState(target, "matched", "Saved in local library");
+      applyTargetState(target, "matched", i18n.t("savedInLibrary"));
       return;
     }
     if (result.status === "possible_match") {
-      applyTargetState(target, "possible", "Possible match in local library");
+      applyTargetState(target, "possible", i18n.t("possibleInLibrary"));
       return;
     }
     if (result.status === "error") {
-      applyTargetState(target, "error", result.error || result.reason || "Paper Library Checker error");
+      applyTargetState(target, "error", result.error || result.reason || i18n.t("checkerError"));
       return;
     }
-    applyTargetState(target, "missing", result.reason || "No matching Zotero item");
+    applyTargetState(target, "missing", result.reason || i18n.t("noMatchingItem"));
   }
 
   function applyTargetState(target, state, title = "") {

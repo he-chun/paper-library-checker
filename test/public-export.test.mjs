@@ -48,6 +48,20 @@ test("public export manifest excludes superseded engineering reports", async () 
   );
 });
 
+test("public export includes new production popup, locale, and Zotero i18n files", async () => {
+  const manifest = await loadPublicExportManifest(root);
+  const productionFiles = [
+    "browser-extension/src/popup.html",
+    "browser-extension/src/popup.js",
+    "browser-extension/_locales/en/messages.json",
+    "browser-extension/_locales/zh_CN/messages.json",
+    "zotero-plugin/src/i18n.js"
+  ];
+  for (const file of productionFiles) {
+    assert(manifest.directories.some((directory) => file === directory || file.startsWith(`${directory}/`)), file);
+  }
+});
+
 test("public privacy scanner rejects synthetic private content", () => {
   assert.doesNotThrow(() => scanPublicDocument("safe.md", "Synthetic public-safe report"));
   assert.doesNotThrow(() => scanPublicDocument("updates.json", '{"addons":{"paper-library-checker@he-chun.github.io":{}}}'));

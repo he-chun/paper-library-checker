@@ -36,16 +36,18 @@ jobs:
         if: matrix.node == '24.x'
         run: |
           npm run build
-          npm run generate:updates
-          npm run validate:updates
+          npm run generate:candidate-updates
+          npm run validate:candidate-updates
           RELEASE_TAG="v$(node -p "require('./package.json').version")" npm run verify:release
           npm run inspect:artifacts
-          unzip -t dist/paper-library-checker-zotero-0.3.0.xpi
-          unzip -t dist/paper-library-checker-extension-0.3.0.zip
+          version="$(node -p "require('./package.json').version")"
+          unzip -t "dist/paper-library-checker-zotero-${version}.xpi"
+          unzip -t "dist/paper-library-checker-extension-${version}.zip"
           npm run validate:archives:python
           sha256sum dist/*.xpi dist/*.zip > "$RUNNER_TEMP/first-build.sha256"
           npm run build
-          npm run validate:updates
+          npm run generate:candidate-updates
+          npm run validate:candidate-updates
           sha256sum dist/*.xpi dist/*.zip > "$RUNNER_TEMP/second-build.sha256"
           diff -u "$RUNNER_TEMP/first-build.sha256" "$RUNNER_TEMP/second-build.sha256"
       - name: Full-history secret scan
@@ -88,18 +90,18 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
-      - run: npm run generate:updates
+      - run: npm run generate:candidate-updates
       - run: PLC_INVENTORY_FILE=dist/inventory.json npm run inspect:artifacts
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: canonical-ubuntu-${{ github.sha }}
           path: |
-            dist/paper-library-checker-zotero-0.3.0.xpi
-            dist/paper-library-checker-extension-0.3.0.zip
+            dist/*.xpi
+            dist/*.zip
             dist/SHA256SUMS.txt
             dist/inventory.json
+            dist/candidate-updates.json
             LICENSE
-            updates.json
           if-no-files-found: error
 
   canonical-artifact-windows:
@@ -112,18 +114,18 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
-      - run: npm run generate:updates
+      - run: npm run generate:candidate-updates
       - run: $env:PLC_INVENTORY_FILE='dist/inventory.json'; npm run inspect:artifacts
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: canonical-windows-${{ github.sha }}
           path: |
-            dist/paper-library-checker-zotero-0.3.0.xpi
-            dist/paper-library-checker-extension-0.3.0.zip
+            dist/*.xpi
+            dist/*.zip
             dist/SHA256SUMS.txt
             dist/inventory.json
+            dist/candidate-updates.json
             LICENSE
-            updates.json
           if-no-files-found: error
 
   canonical-artifact-compare:
@@ -143,22 +145,40 @@ jobs:
         with:
           name: canonical-windows-${{ github.sha }}
           path: compare/windows
-      - name: Compare canonical artifacts and expected hashes
+      - name: Compare current candidate artifacts
         shell: bash
         run: |
+          version="$(node -p "require('./package.json').version")"
           for file in \
-            dist/paper-library-checker-zotero-0.3.0.xpi \
-            dist/paper-library-checker-extension-0.3.0.zip \
+            "dist/paper-library-checker-zotero-${version}.xpi" \
+            "dist/paper-library-checker-extension-${version}.zip" \
             dist/SHA256SUMS.txt \
             dist/inventory.json \
-            LICENSE \
-            updates.json; do
+            dist/candidate-updates.json \
+            LICENSE; do
             cmp "compare/ubuntu/$file" "compare/windows/$file"
           done
-          echo "91331ef1bcee06c34bbcadaaf956866b5c06125999da630f48f0f6837234ef59  compare/ubuntu/dist/paper-library-checker-zotero-0.3.0.xpi" | sha256sum -c -
-          echo "ef69fec94e4ac8bb9de87b4b1c6ab42b226c50d895a6df893150da2f07dc9bd5  compare/ubuntu/dist/paper-library-checker-extension-0.3.0.zip" | sha256sum -c -
           echo "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4  compare/ubuntu/LICENSE" | sha256sum -c -
-          echo "9f4bc8e052e7a8325b99a84375b9d81b2a2876b24fde1797a031f18c14573420  compare/ubuntu/updates.json" | sha256sum -c -
       - run: npm ci
-      - name: Validate canonical XPI/update closure
-        run: PLC_DIST_DIR="$PWD/compare/ubuntu/dist" PLC_UPDATES_FILE="$PWD/compare/ubuntu/updates.json" npm run validate:updates
+      - name: Validate candidate XPI/update closure
+        run: PLC_DIST_DIR="$PWD/compare/ubuntu/dist" PLC_UPDATES_FILE="$PWD/compare/ubuntu/dist/candidate-updates.json" npm run validate:candidate-updates
+      - name: Verify published v0.3.0 tag, prerelease, assets, and hashes
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          test "$(git ls-remote origin refs/tags/v0.3.0 | cut -f1)" = "f70d2aab85ceaa7c4f312c77c7e97accccace3c6"
+          gh api repos/he-chun/paper-library-checker/releases/tags/v0.3.0 \
+            --jq 'select(.tag_name == "v0.3.0" and .prerelease == true) | [.assets[].name] | sort | join("\n")' \
+            > "$RUNNER_TEMP/v0.3.0-assets.txt"
+          grep -Fx 'paper-library-checker-extension-0.3.0.zip' "$RUNNER_TEMP/v0.3.0-assets.txt"
+          grep -Fx 'paper-library-checker-zotero-0.3.0.xpi' "$RUNNER_TEMP/v0.3.0-assets.txt"
+          curl --fail --location --silent --show-error \
+            https://github.com/he-chun/paper-library-checker/releases/download/v0.3.0/paper-library-checker-zotero-0.3.0.xpi \
+            --output "$RUNNER_TEMP/published.xpi"
+          curl --fail --location --silent --show-error \
+            https://github.com/he-chun/paper-library-checker/releases/download/v0.3.0/paper-library-checker-extension-0.3.0.zip \
+            --output "$RUNNER_TEMP/published.zip"
+          echo "91331ef1bcee06c34bbcadaaf956866b5c06125999da630f48f0f6837234ef59  $RUNNER_TEMP/published.xpi" | sha256sum -c -
+          echo "ef69fec94e4ac8bb9de87b4b1c6ab42b226c50d895a6df893150da2f07dc9bd5  $RUNNER_TEMP/published.zip" | sha256sum -c -
+          echo "9f4bc8e052e7a8325b99a84375b9d81b2a2876b24fde1797a031f18c14573420  updates.json" | sha256sum -c -

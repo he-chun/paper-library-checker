@@ -5,7 +5,12 @@ Versioning while remaining pre-1.0.
 
 ## [Unreleased]
 
-- No changes yet.
+- Adds a browser toolbar popup for Zotero connectivity, index readiness, current
+  page status, manual checks, and direct access to Options.
+- Localizes the browser extension and Zotero Tools menu in English and
+  Simplified Chinese, with English fallback for unsupported locales.
+- Separates development candidate update manifests from the tracked published
+  `updates.json` while retaining deterministic cross-platform artifact checks.
 
 ## [0.3.0] - 2026-08-14
 

@@ -27,8 +27,11 @@ jobs:
           RELEASE_TAG: ${{ github.ref_name }}
         run: npm run verify:release
       - run: npm run inspect:artifacts
-      - run: unzip -t dist/paper-library-checker-zotero-0.3.0.xpi
-      - run: unzip -t dist/paper-library-checker-extension-0.3.0.zip
+      - name: Validate dynamically named archives
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          unzip -t "dist/paper-library-checker-zotero-${version}.xpi"
+          unzip -t "dist/paper-library-checker-extension-${version}.zip"
       - run: npm run validate:archives:python
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:

@@ -52,10 +52,27 @@ test("CNKI reference and citation blocks produce a batch message", async () => {
   const messages = [];
   const dom = new JSDOM(html, { url: "https://kns.cnki.net/kcms2/article/abstract?v=HOST", runScripts: "outside-only", pretendToBeVisual: true });
   dom.window.chrome = {
+    i18n: { getMessage: () => "", getUILanguage: () => "en" },
     storage: { sync: { get: (_defaults, callback) => callback({ autoCheckReferenceLists: true, translationServerMode: "off" }) } },
-    runtime: { sendMessage: (message, callback) => { messages.push(message); callback?.({ ok: true, result: { results: [] } }); } }
+    runtime: {
+      id: "test-extension",
+      getURL: (value) => `chrome-extension://test-extension/${value}`,
+      onMessage: { addListener: () => {} },
+      sendMessage: (message, callback) => { messages.push(message); callback?.({ ok: true, result: { results: [] } }); }
+    }
   };
-  for (const name of ["common/normalization.js", "extractors/cnki.js", "extractors/generic.js", "extractors/runner.js", "adapters/sciencedirect.js", "content.js"]) dom.window.eval(await source(name));
+  for (const name of [
+    "common/i18n.js",
+    "common/ui-state.js",
+    "common/page-controller.js",
+    "common/sender-security.js",
+    "common/normalization.js",
+    "extractors/cnki.js",
+    "extractors/generic.js",
+    "extractors/runner.js",
+    "adapters/sciencedirect.js",
+    "content.js"
+  ]) dom.window.eval(await source(name));
   await new Promise((resolve) => setTimeout(resolve, 700));
   const batch = messages.find((message) => Array.isArray(message.candidates) && message.candidates.some((candidate) => candidate.source === "cnki-list"));
   assert.equal(batch.candidates.length, 2);

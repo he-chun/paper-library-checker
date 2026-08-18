@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en" data-i18n-title="popupHeading">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="popup.css">
+    <title>Paper Library Checker</title>
+  </head>
+  <body>
+    <main>
+      <h1 data-i18n="popupHeading">Paper Library Checker</h1>
+      <dl class="status-grid">
+        <dt data-i18n="zoteroLabel">Zotero</dt>
+        <dd id="zoteroState" data-state="pending">…</dd>
+        <dt data-i18n="indexLabel">Index</dt>
+        <dd id="indexState" data-state="pending">…</dd>
+        <dt data-i18n="currentPageLabel">Current page</dt>
+        <dd id="pageState" data-state="pending">…</dd>
+      </dl>
+      <div class="actions">
+        <button id="checkPage" type="button" data-i18n="checkThisPage">Check this page</button>
+        <button id="openOptions" type="button" class="secondary" data-i18n="openOptions">Open options</button>
+      </div>
+      <p id="liveStatus" class="sr-only" role="status" aria-live="polite" data-i18n="popupStatusLoading">Checking Zotero and the current page</p>
+    </main>
+    <script src="common/i18n.js"></script>
+    <script src="common/ui-state.js"></script>
+    <script src="popup.js"></script>
+  </body>
+</html>

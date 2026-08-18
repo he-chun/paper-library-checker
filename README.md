@@ -140,6 +140,25 @@ article, manually starts a batch check on supported list pages, and can be
 dragged to another position. After saving an item with Zotero Connector or
 editing an item in Zotero, click `↻` or refresh the page.
 
+### Toolbar popup
+
+Select **Paper Library Checker** in the browser toolbar to see three independent
+states: **Zotero** (`Connected` or `Offline`), **Index** (`Ready` or
+`Indexing`), and **Current page** (`Saved`, `Possible match`, `Not saved`,
+`Unrecognized`, `Not checked`, `Unsupported page`, or `Error`). **Check this
+page** uses the same manual-check entry point as the floating `↻` control, and
+**Open options** opens the standard extension Options page.
+
+`Unsupported page` means the extension has no content script on the active tab,
+for example on a browser-internal page or a website outside the existing
+manifest site list. It is not a new site-support claim. The popup does not read
+or display the pairing token and does not add broad site access.
+
+Browser UI follows the browser display language; the Zotero Tools menu follows
+the Zotero/Gecko locale. English and Simplified Chinese are included, and other
+locales fall back to English. This language selection is independent of the
+language of the article page.
+
 ### Status legend
 
 | UI text | State |
