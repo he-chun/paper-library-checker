@@ -48,9 +48,9 @@ profile; it does not replace or expand the release support matrix.
 | Supported and unsupported pages | Supported pages show their current state; unsupported pages show an explicit message | PASS (2026-08-19) |
 | **Check this page** | Reuses the page `↻` manual-check path and refreshes status | PASS (2026-08-19) |
 | **Open options** | Opens the standard extension Options page | PASS (2026-08-19) |
-| English browser UI | Popup, Options, badge, tooltip, and errors are English | NOT_RUN — the dedicated Edge profile could not switch UI language |
+| English browser UI | Popup, Options, badge, tooltip, and errors are English | PASS (2026-08-19) |
 | Simplified Chinese browser UI | Popup, Options, badge, tooltip, and errors are Chinese | PASS (2026-08-19) |
 | English Zotero UI | The Paper Library Checker Tools menu is English | PASS (2026-08-19) |
-| Simplified Chinese Zotero UI | The Paper Library Checker Tools menu is Chinese | NOT_RUN — the dedicated Zotero profile could not switch UI language |
+| Simplified Chinese Zotero UI | The Paper Library Checker Tools menu is Chinese | PASS (2026-08-19) |
 | Token reset and re-pair | Old token fails; pasting the new token restores `Connected` | PASS (2026-08-19) |
 | Edge restart persistence | Extension and popup remain installed after a normal restart | PASS (2026-08-19) — dedicated profile restarted normally; extension path, popup manifest, and local extension storage persisted |
