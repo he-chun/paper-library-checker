@@ -1,0 +1,86 @@
+:root {
+  color-scheme: light dark;
+  font: 14px/1.4 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+body {
+  min-width: 300px;
+  margin: 0;
+  color: CanvasText;
+  background: Canvas;
+}
+
+main {
+  padding: 16px;
+}
+
+h1 {
+  margin: 0 0 14px;
+  font-size: 17px;
+}
+
+.status-grid {
+  display: grid;
+  grid-template-columns: minmax(92px, auto) 1fr;
+  gap: 10px 14px;
+  margin: 0;
+}
+
+dt {
+  color: GrayText;
+}
+
+dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+dd[data-state="good"] { color: #176b32; }
+dd[data-state="warning"] { color: #8a5200; }
+dd[data-state="error"] { color: #a40000; }
+
+.actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+button {
+  min-height: 36px;
+  border: 1px solid #175cd3;
+  border-radius: 6px;
+  padding: 7px 10px;
+  background: #175cd3;
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+
+button.secondary {
+  background: transparent;
+  color: CanvasText;
+  border-color: ButtonBorder;
+}
+
+button:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+button:focus-visible {
+  outline: 3px solid Highlight;
+  outline-offset: 2px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

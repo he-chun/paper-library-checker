@@ -50,6 +50,18 @@ test("builds and inspects release artifacts", () => {
   assert(inventory.extension.entries.includes("LICENSE"));
   assert(inventory.plugin.entries.includes("THIRD_PARTY_NOTICES.md"));
   assert(inventory.extension.entries.includes("THIRD_PARTY_NOTICES.md"));
+  for (const name of [
+    "src/popup.html",
+    "src/popup.js",
+    "src/popup.css",
+    "_locales/en/messages.json",
+    "_locales/zh_CN/messages.json",
+    "src/common/i18n.js",
+    "src/common/ui-state.js",
+    "src/common/page-controller.js",
+    "src/common/sender-security.js"
+  ]) assert(inventory.extension.entries.includes(name), name);
+  assert(inventory.plugin.entries.includes("src/i18n.js"));
   assert.equal(inventory.plugin.dataDescriptorEntries, 0);
   assert.equal(inventory.extension.dataDescriptorEntries, 0);
   for (const artifact of Object.values(inventory)) {

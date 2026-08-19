@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-i18n-title="optionsTitle">
   <head>
     <meta charset="utf-8">
     <title>Paper Library Checker Options</title>
@@ -43,43 +43,44 @@
     </style>
   </head>
   <body>
-    <h1>Paper Library Checker</h1>
-    <p>A third-party add-on for Zotero</p>
-    <label for="endpoint">Zotero plugin endpoint</label>
+    <h1 data-i18n="optionsHeading">Paper Library Checker</h1>
+    <p data-i18n="productTagline">A third-party add-on for Zotero</p>
+    <label for="endpoint" data-i18n="endpointLabel">Zotero plugin endpoint</label>
     <input id="endpoint" type="url" value="http://127.0.0.1:23119/zotero-checker">
-    <label for="token">Pairing token</label>
+    <label for="token" data-i18n="pairingTokenLabel">Pairing token</label>
     <div class="token-row">
       <input id="token" type="password" value="" autocomplete="off" spellcheck="false">
-      <button id="toggleToken" type="button" aria-pressed="false">Show</button>
+      <button id="toggleToken" type="button" aria-pressed="false" data-i18n="showToken">Show</button>
     </div>
-    <label>Translation-server mode</label>
+    <label data-i18n="translationModeLabel">Translation-server mode</label>
     <label>
       <input type="radio" name="translationServerMode" value="off">
-      Off — never use translation-server
+      <span data-i18n="translationModeOff">Off — never use translation-server</span>
     </label>
     <label>
       <input type="radio" name="translationServerMode" value="auto" checked>
-      Auto — try on priority academic domains (default)
+      <span data-i18n="translationModeAuto">Auto — try on priority academic domains (default)</span>
     </label>
     <label>
       <input type="radio" name="translationServerMode" value="always">
-      Always — try on all pages
+      <span data-i18n="translationModeAlways">Always — try on all pages</span>
     </label>
     <label>
       <input type="checkbox" id="enablePageGlow">
-      Enable page edge glow — show a colored border around the viewport based on check result
+      <span data-i18n="enablePageGlow">Enable page edge glow — show a colored border around the viewport based on check result</span>
     </label>
     <label>
       <input type="checkbox" id="autoCheckReferenceLists">
-      Auto-check reference lists — automatically scan CNKI / ScienceDirect references on page load and scroll
+      <span data-i18n="autoCheckReferenceLists">Auto-check reference lists — automatically scan CNKI / ScienceDirect references on page load and scroll</span>
     </label>
     <label>
       <input type="checkbox" id="broadPageDetection">
-      Detect article details on supported injected websites
+      <span data-i18n="broadPageDetection">Detect article details on supported injected websites</span>
     </label>
-    <button id="save" type="button">Save</button>
-    <button id="testConnection" type="button">Test connection</button>
+    <button id="save" type="button" data-i18n="save">Save</button>
+    <button id="testConnection" type="button" data-i18n="testConnection">Test connection</button>
     <span id="status" role="status" aria-live="polite"></span>
+    <script src="common/i18n.js"></script>
     <script src="common/request-auth.js"></script>
     <script src="options.js"></script>
   </body>

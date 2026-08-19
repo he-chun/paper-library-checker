@@ -44,6 +44,7 @@ async function startup({ id, version, rootURI }, reason) {
   };
   ZoteroCheckScope._globalThis = ZoteroCheckScope;
 
+  loadSubScriptWithLog(rootURI, "src/i18n.js");
   loadSubScriptWithLog(rootURI, "src/security.js");
   loadSubScriptWithLog(rootURI, "src/utils.js");
   ZoteroCheckScope.ZoteroCheck.Utils.log("info", "utils loaded", { rootURI });
@@ -168,25 +169,26 @@ function addStartupMarker(win, version) {
 
   const item = doc.createXULElement("menuitem");
   item.id = ZoteroCheckMenuItemID;
-  item.setAttribute("label", `Paper Library Checker (${version})`);
+  const t = ZoteroCheckScope.ZoteroCheck.I18n.t;
+  item.setAttribute("label", t("loadedVersion", version));
   item.setAttribute("disabled", "true");
   menu.appendChild(item);
 
   const copyToken = doc.createXULElement("menuitem");
   copyToken.id = PaperLibraryCheckerCopyTokenID;
-  copyToken.setAttribute("label", "Paper Library Checker: Copy pairing token");
+  copyToken.setAttribute("label", t("copyPairingToken"));
   copyToken.addEventListener("command", copyPairingToken);
   menu.appendChild(copyToken);
 
   const rotateToken = doc.createXULElement("menuitem");
   rotateToken.id = PaperLibraryCheckerRotateTokenID;
-  rotateToken.setAttribute("label", "Paper Library Checker: Reset pairing token");
+  rotateToken.setAttribute("label", t("resetPairingToken"));
   rotateToken.addEventListener("command", rotatePairingToken);
   menu.appendChild(rotateToken);
 
   const revokeToken = doc.createXULElement("menuitem");
   revokeToken.id = PaperLibraryCheckerRevokeTokenID;
-  revokeToken.setAttribute("label", "Paper Library Checker: Revoke pairing token");
+  revokeToken.setAttribute("label", t("revokePairingToken"));
   revokeToken.addEventListener("command", revokePairingToken);
   menu.appendChild(revokeToken);
 }

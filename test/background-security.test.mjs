@@ -4,7 +4,11 @@ import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
 global.chrome = {
-  runtime: { id: "extension-id", onMessage: { addListener() {} } },
+  runtime: {
+    id: "extension-id",
+    getURL: (value) => `chrome-extension://extension-id/${value}`,
+    onMessage: { addListener() {} }
+  },
   storage: { sync: { get: async () => ({}) }, local: { get: async () => ({}) } }
 };
 const background = require("../browser-extension/src/background.js");
@@ -15,6 +19,34 @@ test("accepts only messages tied to the sender tab", () => {
   assert.equal(background.isTrustedMessage({ type: "zotero-check:translate-url", url: sender.tab.url }, sender), true);
   assert.equal(background.isTrustedMessage({ type: "zotero-check:translate-url", url: "https://other.example/article" }, sender), false);
   assert.equal(background.isTrustedMessage({ type: "zotero-check:match", candidate: {} }, { ...sender, id: "other" }), false);
+});
+
+test("popup-only health messages require the extension origin", () => {
+  const message = { type: "zotero-check:popup-health" };
+  assert.equal(background.isTrustedExtensionMessage(message, {
+    id: "extension-id",
+    url: "chrome-extension://extension-id/src/popup.html"
+  }), true);
+  assert.equal(background.isTrustedExtensionMessage(message, {
+    id: "extension-id",
+    url: "https://evil.example/"
+  }), false);
+  assert.equal(background.isTrustedExtensionMessage(message, {
+    id: "extension-id",
+    tab: { url: "https://journal.example/article" }
+  }), false);
+});
+
+test("popup health response exposes only connection and index readiness", async () => {
+  const originalFetch = global.fetch;
+  global.chrome.storage.sync.get = async () => ({ endpoint: "http://127.0.0.1:23119/zotero-checker" });
+  global.chrome.storage.local.get = async () => ({ token: "a".repeat(64) });
+  global.fetch = async () => ({ ok: true, json: async () => ({ indexReady: true, version: "0.3.0", token: "secret" }) });
+  try {
+    assert.deepEqual(await background.getPopupHealth(), { connected: true, indexReady: true });
+  } finally {
+    global.fetch = originalFetch;
+  }
 });
 
 test("allows only the fixed loopback Zotero endpoint shape", () => {

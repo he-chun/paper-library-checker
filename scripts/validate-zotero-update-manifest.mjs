@@ -5,8 +5,11 @@ import { fileURLToPath } from "node:url";
 import { inspectZip } from "./zip.mjs";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
+const candidate = process.argv.includes("--candidate");
 const dist = process.env.PLC_DIST_DIR ? path.resolve(root, process.env.PLC_DIST_DIR) : path.join(root, "dist");
-const updatesFile = process.env.PLC_UPDATES_FILE ? path.resolve(root, process.env.PLC_UPDATES_FILE) : path.join(root, "updates.json");
+const updatesFile = process.env.PLC_UPDATES_FILE
+  ? path.resolve(root, process.env.PLC_UPDATES_FILE)
+  : candidate ? path.join(dist, "candidate-updates.json") : path.join(root, "updates.json");
 const packageJson = JSON.parse(await readFile(path.join(root, "package.json"), "utf8"));
 const manifest = JSON.parse(await readFile(path.join(root, "zotero-plugin", "manifest.json"), "utf8"));
 const updates = JSON.parse(await readFile(updatesFile, "utf8"));
@@ -20,7 +23,9 @@ const update = updates.addons?.[zotero.id]?.updates;
 if (!Array.isArray(update) || update.length !== 1) throw new Error("updates.json must contain one update for the production ID");
 const item = update[0];
 const xpiName = `paper-library-checker-zotero-${packageJson.version}.xpi`;
-const expectedLink = `https://github.com/he-chun/paper-library-checker/releases/download/v${packageJson.version}/${xpiName}`;
+const expectedLink = candidate
+  ? `https://candidate.invalid/${xpiName}`
+  : `https://github.com/he-chun/paper-library-checker/releases/download/v${packageJson.version}/${xpiName}`;
 if (item.version !== packageJson.version || manifest.version !== packageJson.version) throw new Error("Update version mismatch");
 if (item.update_link !== expectedLink) throw new Error("Update link mismatch");
 if (item.applications?.zotero?.strict_min_version !== zotero.strict_min_version || item.applications?.zotero?.strict_max_version !== zotero.strict_max_version) throw new Error("Update compatibility mismatch");

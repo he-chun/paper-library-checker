@@ -1,3 +1,5 @@
+var optionsI18n = globalThis.PLCI18n || (typeof require === "function" ? require("./common/i18n.js") : null);
+
 var DEFAULT_OPTIONS = {
   endpoint: "http://127.0.0.1:23119/zotero-checker",
   translationServerMode: "auto",
@@ -11,7 +13,7 @@ function validateEndpoint(value) {
   if (url.protocol !== "http:" || url.username || url.password || url.search || url.hash ||
       !["127.0.0.1", "localhost"].includes(url.hostname) ||
       url.pathname.replace(/\/$/, "") !== "/zotero-checker") {
-    throw new Error("Endpoint must use 127.0.0.1 or localhost and the Paper Library Checker path");
+    throw new Error(optionsI18n.t("endpointError"));
   }
   return url.href.replace(/\/$/, "");
 }
@@ -19,7 +21,7 @@ function validateEndpoint(value) {
 function readPairingToken() {
   var token = document.querySelector("#token").value.trim();
   if (!PLCRequestAuth.isUsableSecret(token)) {
-    throw new Error("Pairing token must be the 64-character value copied from Zotero");
+    throw new Error(optionsI18n.t("pairingTokenError"));
   }
   return token;
 }
@@ -64,20 +66,20 @@ async function save() {
     });
     await chrome.storage.local.set({ token });
     await chrome.storage.sync.remove("token");
-    setStatus("Saved", false);
+    setStatus(optionsI18n.t("saved"), false);
   } catch (error) {
     setStatus(error.message, true);
   }
 }
 
 function connectionMessage(status, payload) {
-  if (status === 401 && payload.error === "protocol_incompatible") return "Protocol incompatible: update the extension and Zotero add-on together";
-  if (status === 401) return "Pairing failed: the token or signed request was rejected";
-  if (status === 429) return "Too many requests: wait and test again";
+  if (status === 401 && payload.error === "protocol_incompatible") return optionsI18n.t("protocolIncompatibleUpdate");
+  if (status === 401) return optionsI18n.t("pairingFailed");
+  if (status === 429) return optionsI18n.t("tooManyRequests");
   if (status === 503) return payload.error === "pairing_not_configured"
-    ? "Zotero add-on is not paired: copy a new token from Zotero"
-    : "Zotero add-on is temporarily unavailable";
-  return `Connection failed (HTTP ${status})`;
+    ? optionsI18n.t("addonNotPaired")
+    : optionsI18n.t("addonUnavailable");
+  return optionsI18n.t("connectionFailed", status);
 }
 
 async function testConnection() {
@@ -89,9 +91,9 @@ async function testConnection() {
     var response = await fetch(`${endpoint}/health`, { method: "GET", headers });
     var payload = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(connectionMessage(response.status, payload));
-    if (payload.indexReady !== true) throw new Error("Connected, but the Zotero index is not ready");
-    if (typeof payload.version !== "string" || !payload.version.startsWith("0.3.")) throw new Error("Protocol incompatible: unexpected add-on version");
-    setStatus(`Connected to Paper Library Checker ${payload.version}`, false);
+    if (payload.indexReady !== true) throw new Error(optionsI18n.t("indexNotReady"));
+    if (typeof payload.version !== "string" || !payload.version.startsWith("0.3.")) throw new Error(optionsI18n.t("unexpectedAddonVersion"));
+    setStatus(optionsI18n.t("connectedVersion", payload.version), false);
   } catch (error) {
     setStatus(error.message, true);
   }
@@ -102,11 +104,12 @@ function toggleToken() {
   var button = document.querySelector("#toggleToken");
   var show = input.type === "password";
   input.type = show ? "text" : "password";
-  button.textContent = show ? "Hide" : "Show";
+  button.textContent = optionsI18n.t(show ? "hideToken" : "showToken");
   button.setAttribute("aria-pressed", String(show));
 }
 
 if (typeof document !== "undefined") {
+  optionsI18n.localizeDocument(document);
   document.querySelector("#save").addEventListener("click", save);
   document.querySelector("#testConnection").addEventListener("click", testConnection);
   document.querySelector("#toggleToken").addEventListener("click", toggleToken);

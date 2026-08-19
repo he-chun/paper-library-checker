@@ -1,9 +1,11 @@
 if (typeof importScripts === "function") {
-  importScripts("common/request-auth.js", "common/candidate-normalization.js");
+  importScripts("common/request-auth.js", "common/candidate-normalization.js", "common/sender-security.js");
 }
 const PLCRequestAuth = globalThis.PLCRequestAuth || (typeof require === "function" ? require("./common/request-auth.js") : null);
 const PLCCandidateNormalization = globalThis.PLCCandidateNormalization ||
   (typeof require === "function" ? require("./common/candidate-normalization.js") : null);
+const PLCSenderSecurity = globalThis.PLCSenderSecurity ||
+  (typeof require === "function" ? require("./common/sender-security.js") : null);
 
 const DEFAULT_OPTIONS = {
   endpoint: "http://127.0.0.1:23119/zotero-checker",
@@ -92,6 +94,12 @@ function makeLocalApiError(status, code) {
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message?.type === "zotero-check:popup-health") {
+    if (!isTrustedExtensionMessage(message, sender)) return false;
+    getPopupHealth().then(sendResponse);
+    return true;
+  }
+
   if (!isTrustedMessage(message, sender)) {
     return false;
   }
@@ -133,7 +141,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 function isTrustedMessage(message, sender) {
   if (!message || typeof message !== "object" || typeof message.type !== "string") return false;
-  if (!sender || sender.id !== chrome.runtime.id || !sender.tab || typeof sender.tab.url !== "string") return false;
+  if (!PLCSenderSecurity.isTrustedContentScriptSender(sender, chrome.runtime.id)) return false;
   if (message.type === "zotero-check:translate-url") {
     return typeof message.url === "string" && urlsMatch(message.url, sender.tab.url);
   }
@@ -141,6 +149,20 @@ function isTrustedMessage(message, sender) {
     return Boolean(message.candidate && typeof message.candidate === "object") || Array.isArray(message.candidates);
   }
   return false;
+}
+
+function isTrustedExtensionMessage(message, sender) {
+  return message?.type === "zotero-check:popup-health" &&
+    PLCSenderSecurity.isTrustedExtensionPageSender(sender, chrome.runtime);
+}
+
+async function getPopupHealth() {
+  try {
+    const result = await callZotero("/health", null, "GET");
+    return { connected: true, indexReady: result.indexReady === true };
+  } catch (_error) {
+    return { connected: false, indexReady: false };
+  }
 }
 
 function urlsMatch(left, right) {
@@ -327,6 +349,8 @@ function makeTranslationServerError(message, details = {}) {
 if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     callZotero,
+    getPopupHealth,
+    isTrustedExtensionMessage,
     isTrustedMessage,
     makeLocalApiError,
     urlsMatch,

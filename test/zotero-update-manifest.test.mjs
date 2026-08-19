@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -9,14 +10,27 @@ import { inspectZip } from "../scripts/zip.mjs";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 
-test("production manifest and generated update channel close over the built XPI", async () => {
+test("published manifest remains bound to the qualified v0.3.0 release", async () => {
+  const published = await readFile(path.join(root, "updates.json"));
+  const qualification = JSON.parse(await readFile(path.join(root, "docs", "verification", "release-qualification-0.3.0.json"), "utf8"));
+  const updates = JSON.parse(published);
+  const item = updates.addons["paper-library-checker@he-chun.github.io"].updates[0];
+  assert.equal(item.version, "0.3.0");
+  assert.equal(item.update_hash, "sha256:91331ef1bcee06c34bbcadaaf956866b5c06125999da630f48f0f6837234ef59");
+  assert.equal(createHash("sha256").update(published).digest("hex"), "9f4bc8e052e7a8325b99a84375b9d81b2a2876b24fde1797a031f18c14573420");
+  assert.equal(qualification.artifactSha256.xpi, "91331ef1bcee06c34bbcadaaf956866b5c06125999da630f48f0f6837234ef59");
+  assert.equal(qualification.artifactSha256.extensionZip, "ef69fec94e4ac8bb9de87b4b1c6ab42b226c50d895a6df893150da2f07dc9bd5");
+});
+
+test("development candidate manifest closes over the current built XPI without changing the published channel", async () => {
   const directory = await mkdtemp(path.join(tmpdir(), "plc-updates-"));
   const updatesFile = path.join(directory, "updates.json");
   try {
     const env = { ...process.env, PLC_DIST_DIR: directory, PLC_UPDATES_FILE: updatesFile };
     execFileSync(process.execPath, [path.join(root, "scripts", "package.mjs")], { env });
-    execFileSync(process.execPath, [path.join(root, "scripts", "generate-zotero-update-manifest.mjs")], { env });
-    execFileSync(process.execPath, [path.join(root, "scripts", "validate-zotero-update-manifest.mjs")], { env });
+    const publishedBefore = await readFile(path.join(root, "updates.json"));
+    execFileSync(process.execPath, [path.join(root, "scripts", "generate-zotero-update-manifest.mjs"), "--candidate"], { env });
+    execFileSync(process.execPath, [path.join(root, "scripts", "validate-zotero-update-manifest.mjs"), "--candidate"], { env });
     const manifest = JSON.parse(await readFile(path.join(root, "zotero-plugin", "manifest.json"), "utf8"));
     const updates = JSON.parse(await readFile(updatesFile, "utf8"));
     const item = updates.addons[manifest.applications.zotero.id].updates[0];
@@ -26,6 +40,8 @@ test("production manifest and generated update channel close over the built XPI"
     assert.equal(manifest.applications.zotero.update_url, "https://raw.githubusercontent.com/he-chun/paper-library-checker/main/updates.json");
     assert.match(item.update_hash, /^sha256:[0-9a-f]{64}$/);
     assert.equal(item.version, manifest.version);
+    assert.equal(item.update_link, "https://candidate.invalid/paper-library-checker-zotero-0.3.0.xpi");
+    assert.deepEqual(await readFile(path.join(root, "updates.json")), publishedBefore);
     for (const name of [
       "paper-library-checker-zotero-0.3.0.xpi",
       "paper-library-checker-extension-0.3.0.zip"
@@ -37,15 +53,15 @@ test("production manifest and generated update channel close over the built XPI"
   }
 });
 
-test("update generation is deterministic for unchanged artifacts", async () => {
+test("candidate update generation is deterministic for unchanged artifacts", async () => {
   const directory = await mkdtemp(path.join(tmpdir(), "plc-updates-deterministic-"));
   const updatesFile = path.join(directory, "updates.json");
   try {
     const env = { ...process.env, PLC_DIST_DIR: directory, PLC_UPDATES_FILE: updatesFile };
     execFileSync(process.execPath, [path.join(root, "scripts", "package.mjs")], { env });
-    execFileSync(process.execPath, [path.join(root, "scripts", "generate-zotero-update-manifest.mjs")], { env });
+    execFileSync(process.execPath, [path.join(root, "scripts", "generate-zotero-update-manifest.mjs"), "--candidate"], { env });
     const first = await readFile(updatesFile);
-    execFileSync(process.execPath, [path.join(root, "scripts", "generate-zotero-update-manifest.mjs")], { env });
+    execFileSync(process.execPath, [path.join(root, "scripts", "generate-zotero-update-manifest.mjs"), "--candidate"], { env });
     assert.deepEqual(await readFile(updatesFile), first);
   } finally {
     await rm(directory, { recursive: true, force: true });

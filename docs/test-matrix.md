@@ -35,3 +35,22 @@ optional for this alpha.
 
 The complete redacted result is recorded in
 [`verification/final-release-gates-v4.md`](verification/final-release-gates-v4.md).
+
+## Toolbar popup and localization smoke
+
+Run this targeted feature smoke with Zotero 9.0.6 and the dedicated Edge
+profile; it does not replace or expand the release support matrix.
+
+| Test item | Expected result | Actual result |
+| --- | --- | --- |
+| Zotero 9.0.6 add-on install | Add-on installs and starts normally | PASS (2026-08-19) |
+| Popup with paired Zotero | `Connected`, `Ready`, and current-page state are visible | PASS (2026-08-19) |
+| Supported and unsupported pages | Supported pages show their current state; unsupported pages show an explicit message | PASS (2026-08-19) |
+| **Check this page** | Reuses the page `↻` manual-check path and refreshes status | PASS (2026-08-19) |
+| **Open options** | Opens the standard extension Options page | PASS (2026-08-19) |
+| English browser UI | Popup, Options, badge, tooltip, and errors are English | PASS (2026-08-19) |
+| Simplified Chinese browser UI | Popup, Options, badge, tooltip, and errors are Chinese | PASS (2026-08-19) |
+| English Zotero UI | The Paper Library Checker Tools menu is English | PASS (2026-08-19) |
+| Simplified Chinese Zotero UI | The Paper Library Checker Tools menu is Chinese | PASS (2026-08-19) |
+| Token reset and re-pair | Old token fails; pasting the new token restores `Connected` | PASS (2026-08-19) |
+| Edge restart persistence | Extension and popup remain installed after a normal restart | PASS (2026-08-19) — dedicated profile restarted normally; extension path, popup manifest, and local extension storage persisted |
