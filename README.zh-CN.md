@@ -37,6 +37,9 @@ Chrome 仍处于实验性范围，未用于 0.3.0 alpha 的发布资格验证。
 [发布资格报告](docs/verification/release-qualification-0.3.0.md)。由于发布者访问
 验证页面替代了正常文章 DOM，ScienceDirect 不被声明为已通过真实站点验证的功能。
 
+开发说明：工具栏 popup 和双语界面变更已进入尚未发布的 0.4.0 候选分支。
+下面的安装链接、校验和与更新通道仍有意保持在已发布的 v0.3.0 Release。
+
 规范 Release 校验和：
 
 | 资产 | SHA-256 |

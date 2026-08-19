@@ -97,7 +97,7 @@ hook would be needed for that stronger guarantee.
 Authenticated response:
 
 ```json
-{ "ok": true, "version": "0.3.0", "indexReady": true }
+{ "ok": true, "version": "0.4.0", "indexReady": true }
 ```
 
 ### POST /check

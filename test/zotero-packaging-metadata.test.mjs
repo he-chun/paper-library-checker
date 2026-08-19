@@ -13,7 +13,7 @@ import { loadPublicExportManifest, resolveExportFiles, scanPublicDocument, track
 test("Zotero manifest compatibility covers the exact diagnostic runtimes", async () => {
   const manifest = JSON.parse(await readFile(new URL("../zotero-plugin/manifest.json", import.meta.url)));
   assert.equal(manifest.applications.zotero.id, "paper-library-checker@he-chun.github.io");
-  assert.equal(manifest.version, "0.3.0");
+  assert.equal(manifest.version, "0.4.0");
   assert.equal(manifest.applications.zotero.update_url, "https://raw.githubusercontent.com/he-chun/paper-library-checker/main/updates.json");
   assert.equal(manifest.applications.zotero.strict_min_version, "9.0");
   assert.equal(manifest.applications.zotero.strict_max_version, "9.0.*");

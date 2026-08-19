@@ -248,7 +248,7 @@ test("core capture snippets and binding reject stale, mismatched, and drifted ev
 const PACKAGE_INVENTORY = ["LICENSE", "THIRD_PARTY_NOTICES.md", "bootstrap.js", "manifest.json"];
 function reuseRecords() {
   const candidate = {
-    xpiSha256: "a".repeat(64), pluginVersion: "0.3.0", zoteroVersion: "9.0.6",
+    xpiSha256: "a".repeat(64), pluginVersion: "0.4.0", zoteroVersion: "9.0.6",
     packageInventory: PACKAGE_INVENTORY, productionCodeChanged: false, packagingCodeChanged: false
   };
   const evidence = {
@@ -269,7 +269,7 @@ test("exact artifact evidence reuse accepts only the complete unchanged lifecycl
 test("exact artifact evidence reuse rejects artifact, runtime, inventory, code, and lifecycle drift", () => {
   const mutations = [
     ({ evidence }) => { evidence.xpiSha256 = "b".repeat(64); },
-    ({ evidence }) => { evidence.pluginVersion = "0.3.1"; },
+    ({ evidence }) => { evidence.pluginVersion = "0.4.1"; },
     ({ evidence }) => { evidence.zoteroVersion = "9.0.7"; },
     ({ evidence }) => { evidence.packageInventory.push("unexpected.js"); },
     ({ candidate }) => { candidate.productionCodeChanged = true; },
@@ -356,7 +356,7 @@ test("synthetic remediation reuses only exact XPI lifecycle evidence and leaves 
   assert.equal(validateRuntimeResultSchema(remediation, { forNewPass: true }).valid, true);
   const candidate = {
     xpiSha256: remediation.artifactSha256.xpi,
-    pluginVersion: "0.3.0",
+    pluginVersion: "0.4.0",
     zoteroVersion: "9.0.6",
     packageInventory: remediation.evidenceReuse.packageInventory,
     productionCodeChanged: remediation.evidenceReuse.productionCodeChanged,
@@ -364,7 +364,7 @@ test("synthetic remediation reuses only exact XPI lifecycle evidence and leaves 
   };
   const evidence = {
     xpiSha256: remediation.artifactSha256.xpi,
-    pluginVersion: "0.3.0",
+    pluginVersion: "0.4.0",
     zoteroVersion: "9.0.6",
     packageInventory: remediation.evidenceReuse.packageInventory,
     pluginsUiInstall: remediation.evidenceReuse.pluginsUiInstall,

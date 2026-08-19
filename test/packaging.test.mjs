@@ -33,9 +33,11 @@ test("manifests and package versions agree", async () => {
   const browser = JSON.parse(await readFile(new URL("../browser-extension/manifest.json", import.meta.url)));
   const plugin = JSON.parse(await readFile(new URL("../zotero-plugin/manifest.json", import.meta.url)));
   const rdf = await readFile(new URL("../zotero-plugin/install.rdf", import.meta.url), "utf8");
+  const server = await readFile(new URL("../zotero-plugin/src/server.js", import.meta.url), "utf8");
   assert.equal(browser.version, packageJson.version);
   assert.equal(plugin.version, packageJson.version);
   assert.match(rdf, new RegExp(`<em:version>${packageJson.version.replaceAll(".", "\\.")}</em:version>`));
+  assert.match(server, new RegExp(`this\\.pluginVersion = "${packageJson.version.replaceAll(".", "\\.")}"`));
 });
 
 test("builds and inspects release artifacts", () => {
