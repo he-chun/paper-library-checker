@@ -521,7 +521,7 @@
       return;
     }
     if (!extraction.candidates.length) {
-      if (checkCount === 1 && isLikelyAcademicPage()) {
+      if (force || (checkCount === 1 && isLikelyAcademicPage())) {
         if (extraction.choices?.length) {
           setBadge(
             "unknown",

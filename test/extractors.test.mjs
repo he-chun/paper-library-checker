@@ -79,3 +79,50 @@ test("CNKI reference and citation blocks produce a batch message", async () => {
   assert.equal(Array.from(batch.candidates, (candidate) => candidate.title).sort().join("|"), "Synthetic Citation Two|Synthetic Reference One");
   dom.window.close();
 });
+
+test("manual recheck returns an unrecognized page to its final state", async () => {
+  const dom = new JSDOM("<!doctype html><h1>Synthetic article without metadata</h1>", {
+    url: "https://www.mdpi.com/synthetic/no-metadata",
+    runScripts: "outside-only",
+    pretendToBeVisual: true
+  });
+  let messageListener;
+  dom.window.chrome = {
+    i18n: { getMessage: () => "", getUILanguage: () => "en" },
+    storage: { sync: { get: (_defaults, callback) => callback({ translationServerMode: "off" }) } },
+    runtime: {
+      id: "test-extension",
+      getURL: (value) => `chrome-extension://test-extension/${value}`,
+      onMessage: { addListener: (listener) => { messageListener = listener; } },
+      sendMessage: (_message, callback) => callback?.({ ok: false, error: "not_found" })
+    }
+  };
+  for (const name of [
+    "common/i18n.js",
+    "common/ui-state.js",
+    "common/page-controller.js",
+    "common/sender-security.js",
+    "common/normalization.js",
+    "extractors/cnki.js",
+    "extractors/generic.js",
+    "extractors/runner.js",
+    "adapters/sciencedirect.js",
+    "content.js"
+  ]) dom.window.eval(await source(name));
+
+  await new Promise((resolve) => setTimeout(resolve, 450));
+  const sender = { id: "test-extension", url: "chrome-extension://test-extension/src/popup.html" };
+  messageListener({ type: "zotero-check:manual-page-check" }, sender, () => {});
+  let response;
+  const deadline = Date.now() + 2000;
+  do {
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    messageListener(
+      { type: "zotero-check:get-page-state" },
+      sender,
+      (value) => { response = value; }
+    );
+  } while (response.pageState.state === "checking" && Date.now() < deadline);
+  assert.equal(response.pageState.state, "unrecognized");
+  dom.window.close();
+});
