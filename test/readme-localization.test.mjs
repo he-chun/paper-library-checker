@@ -69,15 +69,135 @@ test("both READMEs retain installation and pairing instructions", () => {
   assert(chinese.includes("配对令牌"));
 });
 
-test("localized READMEs place complete usage sections before options", () => {
+test("localized READMEs follow the user-first section order", () => {
   const sections = [
-    [english, "## Install and pair the browser extension", "## How to use", "## Options"],
-    [chinese, "## 安装并配对浏览器扩展", "## 使用方法", "## 配置选项"]
+    [
+      english,
+      "## Why use it?",
+      "## Quick start",
+      "## Supported sites and status",
+      "## How to use",
+      "## How it differs from Zotero Connector",
+      "## FAQ",
+      "## Local data flow and privacy",
+      "## Advanced configuration",
+      "## Release verification",
+      "## Development",
+      "## Contributing",
+      "## License"
+    ],
+    [
+      chinese,
+      "## 为什么使用？",
+      "## 快速开始",
+      "## 支持的网站与状态",
+      "## 使用方法",
+      "## 与 Zotero Connector 的区别",
+      "## FAQ",
+      "## 本地数据流和隐私",
+      "## 高级配置",
+      "## Release 验证",
+      "## 开发",
+      "## 贡献",
+      "## 许可证"
+    ]
   ];
-  for (const [content, installation, usage, options] of sections) {
-    assert(content.includes(usage), usage);
-    assert(content.indexOf(installation) < content.indexOf(usage), `${usage} follows installation`);
-    assert(content.indexOf(usage) < content.indexOf(options), `${usage} precedes options`);
+  for (const [content, ...headings] of sections) {
+    let previous = -1;
+    for (const heading of headings) {
+      const position = content.indexOf(heading);
+      assert(position > previous, `${heading} follows the preceding section`);
+      previous = position;
+    }
+  }
+});
+
+test("both README first screens state the local-first value proposition", () => {
+  assert.match(
+    english,
+    /A local-first Zotero browser extension that tells you whether the paper you are viewing is already saved—before you create a duplicate item/
+  );
+  for (const marker of [
+    "CNKI",
+    "local Zotero 9 library",
+    "`Saved`",
+    "`Possible match`",
+    "`Not saved`",
+    "prevent duplicate Zotero items"
+  ]) assert(english.slice(0, 1500).includes(marker), marker);
+
+  assert.match(
+    chinese,
+    /一个本地优先的 Zotero 浏览器扩展：在保存前判断当前论文是否已经存在于 Zotero 文献库，避免重复收藏和重复条目/
+  );
+  for (const marker of [
+    "知网（CNKI）",
+    "本地 Zotero 9 文献库",
+    "检查论文是否已收藏",
+    "Zotero 重复收藏",
+    "知网 Zotero 插件"
+  ]) assert(chinese.slice(0, 1000).includes(marker), marker);
+});
+
+test("both README first screens provide localized quick links", () => {
+  for (const marker of [
+    "[Download v0.4.0]",
+    "[Quick start](#quick-start)",
+    "[Supported sites](#supported-sites-and-status)",
+    "[How it works](#local-data-flow-and-privacy)",
+    "[简体中文](README.zh-CN.md)"
+  ]) assert(english.slice(0, 1500).includes(marker), marker);
+
+  for (const marker of [
+    "[下载 v0.4.0]",
+    "[快速开始](#快速开始)",
+    "[支持的网站](#支持的网站与状态)",
+    "[工作原理](#本地数据流和隐私)",
+    "[English](README.md)"
+  ]) assert(chinese.slice(0, 1200).includes(marker), marker);
+});
+
+test("both support matrices preserve qualified support levels", () => {
+  const englishRows = [
+    "| CNKI Chinese | Supported and tested | Experimental |",
+    "| CNKI English | Experimental | Experimental |",
+    "| ScienceDirect | Best effort; live access may be challenged | Best effort |",
+    "| MDPI | Supported and tested | Not supported |",
+    "| Generic COinS/JSON-LD/citation/DC | Automated regression coverage | Not supported |"
+  ];
+  for (const row of englishRows) assert(english.includes(row), row);
+});
+
+test("both READMEs answer the five discovery FAQ questions", () => {
+  for (const question of [
+    "How do I check whether a paper is already saved in Zotero?",
+    "How can I prevent duplicate Zotero items?",
+    "Does Paper Library Checker work with CNKI?",
+    "Does it upload my Zotero library?",
+    "Is this a plagiarism checker?"
+  ]) assert(english.includes(question), question);
+
+  for (const question of [
+    "如何检查一篇论文是否已经收藏到 Zotero？",
+    "如何避免 Zotero 出现重复条目？",
+    "是否支持知网（CNKI）？",
+    "是否会上传 Zotero 文献库？",
+    "这是论文内容查重工具吗？"
+  ]) assert(chinese.includes(question), question);
+});
+
+test("both READMEs reject full-text plagiarism claims", () => {
+  assert.match(english, /does not inspect paper full text, calculate text similarity, or detect plagiarism/);
+  assert(chinese.includes("不检测论文正文、文字重复率或抄袭"));
+  assert(chinese.includes("“Zotero 文献查重”仅指收藏条目重复检测"));
+});
+
+test("both READMEs keep Release verification in localized disclosure blocks", () => {
+  assert(english.includes("<summary>Release verification and SHA-256 checksums</summary>"));
+  assert(chinese.includes("<summary>Release 验证与 SHA-256 校验和</summary>"));
+  for (const content of [english, chinese]) {
+    assert(content.includes("<details>"));
+    assert(content.includes("</details>"));
   }
 });
 
