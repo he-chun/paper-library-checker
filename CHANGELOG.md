@@ -5,7 +5,11 @@ Versioning while remaining pre-1.0.
 
 ## [Unreleased]
 
-- Prepares version 0.4.0 with a browser toolbar popup for Zotero connectivity,
+- No changes yet.
+
+## [0.4.0] - 2026-08-20
+
+- Adds a browser toolbar popup for Zotero connectivity,
   index readiness, current-page state, manual page checks, and direct access to
   Options.
 - Localizes the browser extension and Zotero Tools menu in English and

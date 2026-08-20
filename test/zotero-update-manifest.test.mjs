@@ -10,14 +10,15 @@ import { inspectZip } from "../scripts/zip.mjs";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 
-test("published manifest remains bound to the qualified v0.3.0 release", async () => {
+test("published manifest points to v0.4.0 while preserving v0.3.0 qualification evidence", async () => {
   const published = await readFile(path.join(root, "updates.json"));
   const qualification = JSON.parse(await readFile(path.join(root, "docs", "verification", "release-qualification-0.3.0.json"), "utf8"));
   const updates = JSON.parse(published);
   const item = updates.addons["paper-library-checker@he-chun.github.io"].updates[0];
-  assert.equal(item.version, "0.3.0");
-  assert.equal(item.update_hash, "sha256:91331ef1bcee06c34bbcadaaf956866b5c06125999da630f48f0f6837234ef59");
-  assert.equal(createHash("sha256").update(published).digest("hex"), "9f4bc8e052e7a8325b99a84375b9d81b2a2876b24fde1797a031f18c14573420");
+  assert.equal(item.version, "0.4.0");
+  assert.equal(item.update_link, "https://github.com/he-chun/paper-library-checker/releases/download/v0.4.0/paper-library-checker-zotero-0.4.0.xpi");
+  assert.equal(item.update_hash, "sha256:85cc29a5129092a759528e2ca63a6700877c3cedb1b5fe58872f52d3e1c765e7");
+  assert.equal(createHash("sha256").update(published).digest("hex"), "57700df0e04a08b6494e96ed1644859803076c97247bacce43d5e5fd7c63693f");
   assert.equal(qualification.artifactSha256.xpi, "91331ef1bcee06c34bbcadaaf956866b5c06125999da630f48f0f6837234ef59");
   assert.equal(qualification.artifactSha256.extensionZip, "ef69fec94e4ac8bb9de87b4b1c6ab42b226c50d895a6df893150da2f07dc9bd5");
 });

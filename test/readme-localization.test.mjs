@@ -12,16 +12,16 @@ import {
 const root = fileURLToPath(new URL("..", import.meta.url));
 const readmePath = path.join(root, "README.md");
 const chineseReadmePath = path.join(root, "README.zh-CN.md");
-const releaseUrl = "https://github.com/he-chun/paper-library-checker/releases/tag/v0.3.0";
+const releaseUrl = "https://github.com/he-chun/paper-library-checker/releases/tag/v0.4.0";
 const canonicalFacts = [
-  "0.3.0",
+  "0.4.0",
   "Zotero 9.0.x",
   "Zotero 9.0.6",
   "151.0.4129.78",
-  "91331ef1bcee06c34bbcadaaf956866b5c06125999da630f48f0f6837234ef59",
-  "ef69fec94e4ac8bb9de87b4b1c6ab42b226c50d895a6df893150da2f07dc9bd5",
+  "85cc29a5129092a759528e2ca63a6700877c3cedb1b5fe58872f52d3e1c765e7",
+  "dab1b40c9384b5c966a77d8d96a139bbf47dc3a059b44d75c5abecd61ca5100f",
   "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
-  "9f4bc8e052e7a8325b99a84375b9d81b2a2876b24fde1797a031f18c14573420",
+  "57700df0e04a08b6494e96ed1644859803076c97247bacce43d5e5fd7c63693f",
   releaseUrl
 ];
 

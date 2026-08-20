@@ -162,7 +162,7 @@ jobs:
       - run: npm ci
       - name: Validate candidate XPI/update closure
         run: PLC_DIST_DIR="$PWD/compare/ubuntu/dist" PLC_UPDATES_FILE="$PWD/compare/ubuntu/dist/candidate-updates.json" npm run validate:candidate-updates
-      - name: Verify published v0.3.0 tag, prerelease, assets, and hashes
+      - name: Verify v0.3.0 release history and current v0.4.0 published update manifest
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -181,4 +181,4 @@ jobs:
             --output "$RUNNER_TEMP/published.zip"
           echo "91331ef1bcee06c34bbcadaaf956866b5c06125999da630f48f0f6837234ef59  $RUNNER_TEMP/published.xpi" | sha256sum -c -
           echo "ef69fec94e4ac8bb9de87b4b1c6ab42b226c50d895a6df893150da2f07dc9bd5  $RUNNER_TEMP/published.zip" | sha256sum -c -
-          echo "9f4bc8e052e7a8325b99a84375b9d81b2a2876b24fde1797a031f18c14573420  updates.json" | sha256sum -c -
+          echo "57700df0e04a08b6494e96ed1644859803076c97247bacce43d5e5fd7c63693f  updates.json" | sha256sum -c -

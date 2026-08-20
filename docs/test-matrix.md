@@ -55,19 +55,21 @@ profile; it does not replace or expand the release support matrix.
 | Token reset and re-pair | Old token fails; pasting the new token restores `Connected` | PASS (2026-08-19) |
 | Edge restart persistence | Extension and popup remain installed after a normal restart | PASS (2026-08-19) — dedicated profile restarted normally; extension path, popup manifest, and local extension storage persisted |
 
-## 0.4.0 release candidate smoke
+## 0.4.0 minimal release smoke
 
-The candidate below is distinct from the published v0.3.0 artifacts and update
-channel. It uses only regenerable Zotero and Edge profiles with no private
-library data.
+The exact 0.4.0 release artifact was checked with regenerable Zotero and Edge
+profiles containing no private library data. Broader runtime evidence is reused
+from the feature smoke above and its automated tests; it was not repeated for
+the metadata-only release step.
 
 | Test item | Expected result | Actual result |
 | --- | --- | --- |
-| Candidate package identity | XPI manifest and `install.rdf` report 0.4.0 and match the reviewed candidate hash | PASS (2026-08-19) |
+| Published package identity | XPI manifest and `install.rdf` report 0.4.0 and match the published hash | PASS (2026-08-20) |
 | Zotero fresh-profile discovery | Zotero Add-on Manager discovers Paper Library Checker 0.4.0 | PASS (2026-08-19) — discovered disabled, as expected for a sideloaded add-on |
-| Zotero enable and startup | Enable 0.4.0 and show the localized Tools menu | BLOCKED — action-time confirmation is required before enabling newly installed software |
-| Zotero restart, disable/enable, uninstall/reinstall, and token actions | Complete the candidate lifecycle and Copy / Reset / Revoke token checks | BLOCKED — depends on enabling the exact candidate |
+| Zotero enable and startup | Enable 0.4.0 and show the localized Tools menu | PASS (2026-08-20) |
+| Authenticated health | Return `version=0.4.0` and `indexReady=true` | PASS (2026-08-20) |
 | Edge load-unpacked identity | The dedicated profile retains the unpacked 0.4.0 manifest, popup, service worker, and local storage | PASS (2026-08-19) |
 | Edge normal restart | The dedicated Edge profile exits normally and restores the extension and storage | PASS (2026-08-19) |
-| Popup, page-state, pairing, and browser-language smoke | Exercise Connected / Offline / Indexing, supported states, controls, locale switching, and re-pairing | BLOCKED — exact-candidate Zotero startup is pending |
-| Authenticated matching and site smoke | Exercise health, matched/not-found, CNKI Chinese, MDPI, malformed pages, and sender negatives | BLOCKED — exact-candidate Zotero startup is pending |
+| Popup connection and index | Show `Connected` and `Ready` | PASS (2026-08-20) |
+| Single controlled-page check | **Check this page** returns a normal page state | PASS (2026-08-20) |
+| Unhandled exceptions | No unhandled exception during the minimal smoke | PASS (2026-08-20) |
