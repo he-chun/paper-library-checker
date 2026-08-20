@@ -41,7 +41,7 @@ test("popup health response exposes only connection and index readiness", async 
   const originalFetch = global.fetch;
   global.chrome.storage.sync.get = async () => ({ endpoint: "http://127.0.0.1:23119/zotero-checker" });
   global.chrome.storage.local.get = async () => ({ token: "a".repeat(64) });
-  global.fetch = async () => ({ ok: true, json: async () => ({ indexReady: true, version: "0.3.0", token: "secret" }) });
+  global.fetch = async () => ({ ok: true, json: async () => ({ indexReady: true, version: "0.4.0", token: "secret" }) });
   try {
     assert.deepEqual(await background.getPopupHealth(), { connected: true, indexReady: true });
   } finally {

@@ -40,6 +40,10 @@ experimental and was not used to qualify the alpha. See the public
 ScienceDirect is not claimed as a passed live-site capability because a
 publisher access challenge replaced the normal article DOM.
 
+Development note: the toolbar popup and bilingual interface changes are staged
+as an unpublished 0.4.0 release candidate. The installation links, checksums,
+and update channel below intentionally remain on the published v0.3.0 release.
+
 Canonical release checksums:
 
 | Asset | SHA-256 |

@@ -4,7 +4,7 @@
   <Description about="urn:mozilla:install-manifest">
     <em:id>paper-library-checker@he-chun.github.io</em:id>
     <em:name>Paper Library Checker</em:name>
-    <em:version>0.3.0</em:version>
+    <em:version>0.4.0</em:version>
     <em:description>A third-party add-on for Zotero that checks a local library for scholarly articles.</em:description>
     <em:creator>he-chun</em:creator>
     <em:type>2</em:type>

@@ -142,5 +142,5 @@ test("Zotero i18n attaches to the loadSubScript target scope", async () => {
   const scope = { Object, String, Array, Services: { locale: { appLocaleAsBCP47: "zh-CN" } }, ZoteroCheck: {} };
   vm.runInNewContext(source, scope);
   assert.equal(typeof scope.ZoteroCheck.I18n.t, "function");
-  assert.equal(scope.ZoteroCheck.I18n.t("loadedVersion", "0.3.0"), "文献库检查器（0.3.0）");
+  assert.equal(scope.ZoteroCheck.I18n.t("loadedVersion", "0.4.0"), "文献库检查器（0.4.0）");
 });

@@ -27,12 +27,12 @@ test("requires non-empty third-party notices", () => {
 });
 
 test("requires consistent versions and a matching release tag", () => {
-  assert.equal(validateVersions(["0.3.0", "0.3.0", "0.3.0"]), "0.3.0");
-  assert.throws(() => validateVersions(["0.3.0", "0.3.1"]), /Version mismatch/);
-  assert.throws(() => validateVersions(["0.3.0", undefined]), /Version mismatch/);
-  assert.doesNotThrow(() => validateReleaseTag("v0.3.0", "0.3.0"));
-  assert.throws(() => validateReleaseTag("release-0.3.0", "0.3.0"), /vX.Y.Z/);
-  assert.throws(() => validateReleaseTag("v0.3.1", "0.3.0"), /does not match/);
+  assert.equal(validateVersions(["0.4.0", "0.4.0", "0.4.0"]), "0.4.0");
+  assert.throws(() => validateVersions(["0.4.0", "0.4.1"]), /Version mismatch/);
+  assert.throws(() => validateVersions(["0.4.0", undefined]), /Version mismatch/);
+  assert.doesNotThrow(() => validateReleaseTag("v0.4.0", "0.4.0"));
+  assert.throws(() => validateReleaseTag("release-0.4.0", "0.4.0"), /vX.Y.Z/);
+  assert.throws(() => validateReleaseTag("v0.4.1", "0.4.0"), /does not match/);
 });
 
 test("requires Apache-2.0 package and lockfile metadata", () => {

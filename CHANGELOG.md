@@ -5,12 +5,20 @@ Versioning while remaining pre-1.0.
 
 ## [Unreleased]
 
-- Adds a browser toolbar popup for Zotero connectivity, index readiness, current
-  page status, manual checks, and direct access to Options.
+- Prepares version 0.4.0 with a browser toolbar popup for Zotero connectivity,
+  index readiness, current-page state, manual page checks, and direct access to
+  Options.
 - Localizes the browser extension and Zotero Tools menu in English and
   Simplified Chinese, with English fallback for unsupported locales.
+- Keeps popup-only health messages on a separate extension-page sender boundary
+  from authenticated content-script messages, without adding browser or host
+  permissions.
 - Separates development candidate update manifests from the tracked published
-  `updates.json` while retaining deterministic cross-platform artifact checks.
+  `updates.json` while retaining deterministic Ubuntu/Windows artifact checks
+  and the published v0.3.0 verification boundary.
+- Fixes Zotero `loadSubScript` target-scope compatibility for the i18n module.
+- Ensures manual checks without usable metadata settle on `Unrecognized`
+  instead of remaining in the transient `Checking` state.
 
 ## [0.3.0] - 2026-08-14
 

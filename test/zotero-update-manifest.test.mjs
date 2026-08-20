@@ -34,17 +34,17 @@ test("development candidate manifest closes over the current built XPI without c
     const manifest = JSON.parse(await readFile(path.join(root, "zotero-plugin", "manifest.json"), "utf8"));
     const updates = JSON.parse(await readFile(updatesFile, "utf8"));
     const item = updates.addons[manifest.applications.zotero.id].updates[0];
-    assert.equal(manifest.version, "0.3.0");
+    assert.equal(manifest.version, "0.4.0");
     assert.equal(manifest.applications.zotero.strict_min_version, "9.0");
     assert.equal(manifest.applications.zotero.strict_max_version, "9.0.*");
     assert.equal(manifest.applications.zotero.update_url, "https://raw.githubusercontent.com/he-chun/paper-library-checker/main/updates.json");
     assert.match(item.update_hash, /^sha256:[0-9a-f]{64}$/);
     assert.equal(item.version, manifest.version);
-    assert.equal(item.update_link, "https://candidate.invalid/paper-library-checker-zotero-0.3.0.xpi");
+    assert.equal(item.update_link, "https://candidate.invalid/paper-library-checker-zotero-0.4.0.xpi");
     assert.deepEqual(await readFile(path.join(root, "updates.json")), publishedBefore);
     for (const name of [
-      "paper-library-checker-zotero-0.3.0.xpi",
-      "paper-library-checker-extension-0.3.0.zip"
+      "paper-library-checker-zotero-0.4.0.xpi",
+      "paper-library-checker-extension-0.4.0.zip"
     ]) {
       assert.equal(inspectZip(await readFile(path.join(directory, name))).entries.includes("updates.json"), false);
     }

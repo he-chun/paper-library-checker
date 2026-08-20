@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "Paper Library Checker",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "A third-party add-on for Zotero that checks a local library for scholarly articles.",
   "homepage_url": "https://github.com/he-chun/paper-library-checker",
   "applications": {
