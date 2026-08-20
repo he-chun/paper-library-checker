@@ -30,27 +30,25 @@ Zotero Connector，也不会保存条目。它检查页面元数据是否可能�
 | 通用 COinS/JSON-LD/citation/DC 元数据 | 有自动化回归测试覆盖 | 不支持 |
 | 其他已列出的学术站点 | 实验性/尽力支持 | 不支持 |
 
-0.3.0 是首个公开 alpha 版本。其规范构建、Zotero 运行时和 Edge 持久安装门槛
-均已通过。桌面端的精确实测目标是受支持的 Zotero 9.0.x 范围内的 Zotero
-9.0.6。Microsoft Edge 151.0.4129.78 是主要且唯一纳入发布门槛的浏览器；
-Chrome 仍处于实验性范围，未用于 0.3.0 alpha 的发布资格验证。参见公开的
-[发布资格报告](docs/verification/release-qualification-0.3.0.md)。由于发布者访问
-验证页面替代了正常文章 DOM，ScienceDirect 不被声明为已通过真实站点验证的功能。
-
-开发说明：工具栏 popup 和双语界面变更已进入尚未发布的 0.4.0 候选分支。
-下面的安装链接、校验和与更新通道仍有意保持在已发布的 v0.3.0 Release。
+0.4.0 是当前公开 alpha 版本。其规范构建、定向 Zotero 运行时 smoke、Edge
+持久安装、工具栏 popup、手动页面检查和双语界面门槛均已通过。桌面端的精确实测
+目标仍是受支持的 Zotero 9.0.x 范围内的 Zotero 9.0.6。Microsoft Edge
+151.0.4129.78 是主要发布测试浏览器；Chrome 仍处于实验性范围。公开的
+[0.3.0 发布资格报告](docs/verification/release-qualification-0.3.0.md)继续作为
+首个 alpha 的历史记录。由于发布者访问验证页面替代了正常文章 DOM，
+ScienceDirect 不被声明为已通过真实站点验证的功能。
 
 规范 Release 校验和：
 
 | 资产 | SHA-256 |
 | --- | --- |
-| Zotero XPI | `91331ef1bcee06c34bbcadaaf956866b5c06125999da630f48f0f6837234ef59` |
-| Edge 扩展 ZIP | `ef69fec94e4ac8bb9de87b4b1c6ab42b226c50d895a6df893150da2f07dc9bd5` |
+| Zotero XPI | `85cc29a5129092a759528e2ca63a6700877c3cedb1b5fe58872f52d3e1c765e7` |
+| Edge 扩展 ZIP | `dab1b40c9384b5c966a77d8d96a139bbf47dc3a059b44d75c5abecd61ca5100f` |
 | LICENSE | `c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4` |
-| `updates.json` | `9f4bc8e052e7a8325b99a84375b9d81b2a2876b24fde1797a031f18c14573420` |
+| `updates.json` | `57700df0e04a08b6494e96ed1644859803076c97247bacce43d5e5fd7c63693f` |
 
 Release 资产通过
-[v0.3.0 GitHub Release](https://github.com/he-chun/paper-library-checker/releases/tag/v0.3.0)
+[v0.4.0 GitHub Release](https://github.com/he-chun/paper-library-checker/releases/tag/v0.4.0)
 发布。Zotero 更新清单是仓库根目录中的 [`updates.json`](updates.json)。
 
 未知站点永远不会被自动扫描参考文献。宽泛文章检测仍为实验性功能，并默认禁用。
@@ -78,8 +76,8 @@ URL。匹配响应不会暴露 Zotero item ID、key、library metadata、已存�
 
 ## 安装 Zotero 附加组件
 
-1. 从 [v0.3.0 GitHub Release](https://github.com/he-chun/paper-library-checker/releases/tag/v0.3.0)
-   下载 `paper-library-checker-zotero-0.3.0.xpi`。
+1. 从 [v0.4.0 GitHub Release](https://github.com/he-chun/paper-library-checker/releases/tag/v0.4.0)
+   下载 `paper-library-checker-zotero-0.4.0.xpi`。
 2. 在 Zotero 9 中打开 **Tools > Plugins**，选择 **Install Plugin From File**，
    然后选择下载的 XPI。
 3. 重启 Zotero。
@@ -91,8 +89,8 @@ URL。匹配响应不会暴露 Zotero item ID、key、library metadata、已存�
 
 ## 安装并配对浏览器扩展
 
-1. 从 [v0.3.0 GitHub Release](https://github.com/he-chun/paper-library-checker/releases/tag/v0.3.0)
-   下载 `paper-library-checker-extension-0.3.0.zip`。
+1. 从 [v0.4.0 GitHub Release](https://github.com/he-chun/paper-library-checker/releases/tag/v0.4.0)
+   下载 `paper-library-checker-extension-0.4.0.zip`。
 2. 把它解压到不会移动或删除的稳定目录。
 3. 打开 `edge://extensions` 并开启 **Developer mode**。
 4. 点击 **Load unpacked**，选择直接包含 `manifest.json` 的解压目录。
@@ -102,8 +100,11 @@ URL。匹配响应不会暴露 Zotero item ID、key、library metadata、已存�
 7. 刷新已打开的文章页面。
 
 本扩展尚未发布到 Microsoft Edge Add-ons Store，当前使用 Developer mode 的
-unpacked 安装方式。移动或删除解压目录可能导致扩展失效。Chrome 可以用于实验，
-但不属于 0.3.0 alpha 的发布门槛。
+unpacked 安装方式。更新现有 unpacked 安装时，请下载新的 ZIP，在同一个稳定扩展
+目录中替换或更新文件，然后在 `edge://extensions` 点击 **Reload**。保持相同目录
+通常会保留扩展 storage；仅当扩展 identity 或已存储 token 改变时才需要重新配对。
+移动或删除解压目录可能导致扩展失效。Chrome 可以用于实验，但不属于 0.4.0
+alpha 的发布门槛。
 
 浏览器把 secret 保存在 `chrome.storage.local` 中；非敏感选项使用
 `chrome.storage.sync`。可以通过 Zotero Tools 菜单重置或撤销令牌。从 0.2
@@ -114,12 +115,12 @@ unpacked 安装方式。移动或删除解压目录可能导致扩展失效。Ch
 ### 首次使用
 
 使用 Paper Library Checker 期间必须保持 Zotero 运行。Zotero **Tools** 菜单中
-禁用的 `Paper Library Checker (0.3.0)` 菜单项表示附加组件已经加载。
+禁用的 `Paper Library Checker (0.4.0)` 菜单项表示附加组件已经加载。
 
 1. 选择 **Tools > Paper Library Checker: Copy pairing token**。
 2. 打开扩展的 **Options**，把令牌粘贴到 **Pairing token**，然后点击 **Save**。
 3. 点击 **Test connection**。连接成功时会显示
-   `Connected to Paper Library Checker 0.3.0`。
+   `Connected to Paper Library Checker 0.4.0`。
 
 普通用户通常应保留默认 endpoint：
 `http://127.0.0.1:23119/zotero-checker`。

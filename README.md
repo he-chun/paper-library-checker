@@ -31,30 +31,27 @@ item already in the local library, then displays a page badge or list marker.
 | Generic COinS/JSON-LD/citation/DC | Automated regression coverage | Not supported |
 | Other listed scholarly domains | Experimental / best effort | Not supported |
 
-Version 0.3.0 is the first public alpha. Its canonical build, Zotero runtime,
-and persistent Edge installation gates passed. The exact tested desktop target
-is Zotero 9.0.6 within the supported Zotero 9.0.x range. Microsoft Edge
-151.0.4129.78 is the primary and only release-gated browser; Chrome remains
-experimental and was not used to qualify the alpha. See the public
-[release qualification](docs/verification/release-qualification-0.3.0.md).
-ScienceDirect is not claimed as a passed live-site capability because a
-publisher access challenge replaced the normal article DOM.
-
-Development note: the toolbar popup and bilingual interface changes are staged
-as an unpublished 0.4.0 release candidate. The installation links, checksums,
-and update channel below intentionally remain on the published v0.3.0 release.
+Version 0.4.0 is the current public alpha. Its canonical build, targeted Zotero
+runtime smoke, persistent Edge installation, toolbar popup, manual page check,
+and bilingual UI gates passed. The exact tested desktop target remains Zotero
+9.0.6 within the supported Zotero 9.0.x range. Microsoft Edge 151.0.4129.78 is
+the primary release-tested browser; Chrome remains experimental. The public
+[0.3.0 release qualification](docs/verification/release-qualification-0.3.0.md)
+remains the historical record for the initial alpha. ScienceDirect is not
+claimed as a passed live-site capability because a publisher access challenge
+replaced the normal article DOM.
 
 Canonical release checksums:
 
 | Asset | SHA-256 |
 | --- | --- |
-| Zotero XPI | `91331ef1bcee06c34bbcadaaf956866b5c06125999da630f48f0f6837234ef59` |
-| Edge extension ZIP | `ef69fec94e4ac8bb9de87b4b1c6ab42b226c50d895a6df893150da2f07dc9bd5` |
+| Zotero XPI | `85cc29a5129092a759528e2ca63a6700877c3cedb1b5fe58872f52d3e1c765e7` |
+| Edge extension ZIP | `dab1b40c9384b5c966a77d8d96a139bbf47dc3a059b44d75c5abecd61ca5100f` |
 | LICENSE | `c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4` |
-| `updates.json` | `9f4bc8e052e7a8325b99a84375b9d81b2a2876b24fde1797a031f18c14573420` |
+| `updates.json` | `57700df0e04a08b6494e96ed1644859803076c97247bacce43d5e5fd7c63693f` |
 
 Release assets are distributed from the
-[v0.3.0 GitHub Release](https://github.com/he-chun/paper-library-checker/releases/tag/v0.3.0).
+[v0.4.0 GitHub Release](https://github.com/he-chun/paper-library-checker/releases/tag/v0.4.0).
 The Zotero update manifest is the repository-root [`updates.json`](updates.json).
 
 Unknown sites are never scanned automatically for references. Broad article
@@ -84,8 +81,8 @@ URL to a separately installed service at `127.0.0.1:1969`. See
 
 ## Install the Zotero add-on
 
-1. Download `paper-library-checker-zotero-0.3.0.xpi` from the
-   [v0.3.0 GitHub Release](https://github.com/he-chun/paper-library-checker/releases/tag/v0.3.0).
+1. Download `paper-library-checker-zotero-0.4.0.xpi` from the
+   [v0.4.0 GitHub Release](https://github.com/he-chun/paper-library-checker/releases/tag/v0.4.0).
 2. In Zotero 9, open **Tools > Plugins**, choose **Install Plugin From File**,
    and select the downloaded XPI.
 3. Restart Zotero.
@@ -97,8 +94,8 @@ The add-on uses Zotero's HTTP server on loopback port `23119`. It generates a
 
 ## Install and pair the browser extension
 
-1. Download `paper-library-checker-extension-0.3.0.zip` from the
-   [v0.3.0 GitHub Release](https://github.com/he-chun/paper-library-checker/releases/tag/v0.3.0).
+1. Download `paper-library-checker-extension-0.4.0.zip` from the
+   [v0.4.0 GitHub Release](https://github.com/he-chun/paper-library-checker/releases/tag/v0.4.0).
 2. Extract it to a stable directory that will not be moved or deleted.
 3. Open `edge://extensions` and enable **Developer mode**.
 4. Choose **Load unpacked** and select the extracted directory that directly
@@ -108,7 +105,12 @@ The add-on uses Zotero's HTTP server on loopback port `23119`. It generates a
 7. Reload an open article page.
 
 The extension is not distributed through the Microsoft Edge Add-ons Store.
-Chrome may be used experimentally, but is not a 0.3.0 alpha release gate.
+To update an existing unpacked installation, download the new ZIP, replace or
+update the files in the same stable extension directory, and click **Reload**
+in `edge://extensions`. Keeping the same directory normally preserves
+extension storage; re-pair only if the extension identity or stored token
+changes. Chrome may be used experimentally, but is not a 0.4.0 alpha release
+gate.
 
 The browser stores the secret in `chrome.storage.local`. Non-sensitive options
 use `chrome.storage.sync`. The Zotero Tools menu can reset or revoke the token.
@@ -120,14 +122,14 @@ Upgrading from a 0.2 development build requires
 ### First use
 
 Keep Zotero running whenever you use Paper Library Checker. In Zotero's
-**Tools** menu, the disabled `Paper Library Checker (0.3.0)` item confirms that
+**Tools** menu, the disabled `Paper Library Checker (0.4.0)` item confirms that
 the add-on has loaded.
 
 1. Choose **Tools > Paper Library Checker: Copy pairing token**.
 2. Open the extension **Options**, paste the token into **Pairing token**, and
    click **Save**.
 3. Click **Test connection**. A successful setup displays
-   `Connected to Paper Library Checker 0.3.0`.
+   `Connected to Paper Library Checker 0.4.0`.
 
 Most users should leave the endpoint at its default value:
 `http://127.0.0.1:23119/zotero-checker`.
