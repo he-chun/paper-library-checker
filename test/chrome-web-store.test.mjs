@@ -1,0 +1,132 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const root = fileURLToPath(new URL("..", import.meta.url));
+const browserRoot = path.join(root, "browser-extension");
+const storeRoot = path.join(root, "store-assets", "chrome-web-store");
+const iconMap = {
+  16: "icons/icon16.png",
+  32: "icons/icon32.png",
+  48: "icons/icon48.png",
+  128: "icons/icon128.png"
+};
+
+function inspectPng(buffer) {
+  assert.deepEqual(buffer.subarray(0, 8), Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
+  const chunks = [];
+  for (let offset = 8; offset + 12 <= buffer.length;) {
+    const length = buffer.readUInt32BE(offset);
+    const type = buffer.toString("ascii", offset + 4, offset + 8);
+    chunks.push(type);
+    offset += 12 + length;
+    if (type === "IEND") break;
+  }
+  return {
+    width: buffer.readUInt32BE(16),
+    height: buffer.readUInt32BE(20),
+    bitDepth: buffer[24],
+    colorType: buffer[25],
+    chunks
+  };
+}
+
+test("0.4.1 manifest declares complete production and action icons", async () => {
+  const manifest = JSON.parse(await readFile(path.join(browserRoot, "manifest.json"), "utf8"));
+  assert.equal(manifest.version, "0.4.1");
+  assert.deepEqual(manifest.icons, iconMap);
+  assert.deepEqual(manifest.action.default_icon, iconMap);
+  assert.equal(manifest.action.default_popup, "src/popup.html");
+  assert.equal(manifest.action.default_title, "__MSG_actionTitle__");
+});
+
+test("permission and host sets are identical to the 0.4.0 baseline", async () => {
+  const manifest = JSON.parse(await readFile(path.join(browserRoot, "manifest.json"), "utf8"));
+  assert.deepEqual(manifest.permissions, ["storage"]);
+  assert.deepEqual(manifest.host_permissions, [
+    "http://127.0.0.1:23119/*",
+    "http://localhost:23119/*",
+    "http://127.0.0.1:1969/*",
+    "http://localhost:1969/*"
+  ]);
+  for (const forbidden of ["key", "update_url"]) assert.equal(forbidden in manifest, false);
+  for (const forbidden of ["tabs", "activeTab", "<all_urls>"]) {
+    assert.equal(manifest.permissions.includes(forbidden), false);
+    assert.equal(manifest.host_permissions.includes(forbidden), false);
+  }
+});
+
+test("production and store PNGs have exact dimensions and no textual metadata", async () => {
+  const files = [
+    ...Object.entries(iconMap).map(([size, name]) => [path.join(browserRoot, name), Number(size)]),
+    [path.join(storeRoot, "store-icon-128.png"), 128],
+    [path.join(storeRoot, "source", "icon-master-1024.png"), 1024],
+    [path.join(storeRoot, "promo-small-440x280.png"), [440, 280]]
+  ];
+  for (const [file, size] of files) {
+    const png = inspectPng(await readFile(file));
+    const [width, height] = Array.isArray(size) ? size : [size, size];
+    assert.equal(png.width, width, file);
+    assert.equal(png.height, height, file);
+    assert.equal(png.bitDepth, 8, file);
+    assert.equal(png.colorType, 6, file);
+    for (const chunk of ["eXIf", "iTXt", "tEXt", "zTXt"]) assert.equal(png.chunks.includes(chunk), false, `${file}: ${chunk}`);
+  }
+});
+
+test("English and Simplified Chinese locale keys remain identical", async () => {
+  const en = JSON.parse(await readFile(path.join(browserRoot, "_locales", "en", "messages.json"), "utf8"));
+  const zh = JSON.parse(await readFile(path.join(browserRoot, "_locales", "zh_CN", "messages.json"), "utf8"));
+  assert.deepEqual(Object.keys(zh).sort(), Object.keys(en).sort());
+});
+
+test("listing and reviewer materials preserve core product facts", async () => {
+  const en = await readFile(path.join(storeRoot, "listing.en.md"), "utf8");
+  const zh = await readFile(path.join(storeRoot, "listing.zh-CN.md"), "utf8");
+  const reviewer = await readFile(path.join(storeRoot, "reviewer-instructions.md"), "utf8");
+  const normalizedEn = en.replace(/\s+/g, " ");
+  const normalizedZh = zh.replace(/\s+/g, " ");
+  const pairs = [
+    ["Zotero 9.0.x", "Zotero 9.0.x"],
+    ["Offline", "Offline"],
+    ["does not save", "不会保存"],
+    ["does not upload", "不会上传"],
+    ["no telemetry", "没有遥测"],
+    ["ScienceDirect", "ScienceDirect"],
+    ["MDPI References are not supported", "MDPI References 不支持"],
+    ["alpha", "alpha"]
+  ];
+  for (const [englishFact, chineseFact] of pairs) {
+    assert(normalizedEn.includes(englishFact), englishFact);
+    assert(normalizedZh.includes(chineseFact), chineseFact);
+  }
+  assert(reviewer.includes("companion Paper Library Checker Zotero add-on"));
+  assert(reviewer.includes("releases/tag/v0.4.1"));
+  const summary = en.match(/## Summary\s+([^\n]+)/)?.[1] ?? "";
+  assert(summary.length > 0 && summary.length <= 132);
+});
+
+test("privacy and permission documents state the Chrome Web Store boundaries", async () => {
+  const privacy = await readFile(path.join(storeRoot, "privacy-practices.md"), "utf8");
+  const permissions = await readFile(path.join(storeRoot, "permission-justifications.md"), "utf8");
+  assert.match(privacy, /No, this extension does not use remote code\./);
+  assert.match(privacy.replace(/\s+/g, " "), /not sent to the maintainer/);
+  assert.match(permissions, /`storage`/);
+  assert.match(permissions, /does not request `<all_urls>`/);
+  assert.match(permissions, /permission set is unchanged from 0\.4\.0/);
+});
+
+test("production JavaScript contains no remote-code execution path", async () => {
+  const productionFiles = [
+    "src/background.js",
+    "src/content.js",
+    "src/popup.js",
+    "src/options.js"
+  ];
+  for (const name of productionFiles) {
+    const source = await readFile(path.join(browserRoot, name), "utf8");
+    assert.doesNotMatch(source, /\beval\s*\(|\bnew\s+Function\s*\(|<script[^>]+https?:\/\//i, name);
+  }
+});

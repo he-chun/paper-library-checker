@@ -14,6 +14,8 @@ Paper Library Checker 将受支持学术页面的元数据与本地 Zotero 9 文
 
 > Alpha 软件：在首个稳定版本发布前，站点覆盖范围和安装细节可能发生变化。
 
+正在准备 Chrome Web Store 上架，目前尚未在该商店发布。
+
 Zotero 是 Corporation for Digital Scholarship 的注册商标。本独立项目与 Zotero 项目没有关联，也未获得 Zotero 项目的认可或背书。
 
 ## 为什么使用？

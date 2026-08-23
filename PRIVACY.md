@@ -28,6 +28,21 @@ The extension does not upload Zotero library data. A separately installed
 translation-server may fetch the public page URL supplied to it; users should
 review that project's behavior independently.
 
+All project data handling occurs on the user's computer. Data is not sent to
+the maintainer, sold, used for advertising or profiling, or used for credit,
+insurance, employment, or other unrelated purposes. This includes the public
+web-page metadata, current page URL, local pairing token, and local connection,
+index, and match state described in this policy.
+
+## Chrome Web Store and remote code
+
+Chrome is the target browser for the planned Chrome Web Store listing. The
+production extension does not use remote code: it does not load remote scripts,
+evaluate remotely obtained content, download code for execution, or allow a
+remote configuration to control code execution. The companion Zotero add-on at
+localhost and the optional translation-server at localhost are local services,
+not remote code.
+
 The first public-alpha support policy formally gates only CNKI Chinese and MDPI
 article-detail live pages. CNKI English and CNKI batch behavior are
 experimental, and ScienceDirect is best effort when publisher access controls

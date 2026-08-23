@@ -24,9 +24,10 @@ const [english, chinese, packageText, updateManifestText] = await Promise.all([
 const packageMetadata = JSON.parse(packageText);
 const updateManifest = JSON.parse(updateManifestText);
 const currentVersion = packageMetadata.version;
-const releaseUrl = `https://github.com/he-chun/paper-library-checker/releases/tag/v${currentVersion}`;
+const publishedVersion = updateManifest.addons["paper-library-checker@he-chun.github.io"].updates.at(-1).version;
+const releaseUrl = `https://github.com/he-chun/paper-library-checker/releases/tag/v${publishedVersion}`;
 const canonicalFacts = [
-  currentVersion,
+  publishedVersion,
   "Zotero 9.0.x",
   "Zotero 9.0.6",
   "151.0.4129.78",
@@ -38,11 +39,20 @@ test("README language switchers are reciprocal and mark the current language", (
   assert.match(chinese, /^# Paper Library Checker\r?\n\r?\n\[English\]\(README\.md\) \| \*\*简体中文\*\*/);
 });
 
-test("localized READMEs derive the current version and preserve qualified runtime facts", () => {
+test("localized READMEs preserve the published version while the package is a candidate", () => {
   const addon = updateManifest.addons["paper-library-checker@he-chun.github.io"];
-  assert.equal(addon.updates.at(-1).version, currentVersion);
+  assert.equal(currentVersion, "0.4.1");
+  assert.equal(addon.updates.at(-1).version, "0.4.0");
   for (const content of [english, chinese]) {
     for (const fact of canonicalFacts) assert(content.includes(fact), fact);
+  }
+});
+
+test("both READMEs describe Chrome Web Store work as preparation only", () => {
+  assert(english.includes("Chrome Web Store submission is being prepared."));
+  assert(chinese.includes("正在准备 Chrome Web Store 上架。") || chinese.includes("正在准备 Chrome Web Store 上架，"));
+  for (const content of [english, chinese]) {
+    assert.doesNotMatch(content, /chromewebstore\.google\.com/);
   }
 });
 

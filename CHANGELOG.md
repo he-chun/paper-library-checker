@@ -5,7 +5,12 @@ Versioning while remaining pre-1.0.
 
 ## [Unreleased]
 
-- No changes yet.
+- Adds an original, provenance-documented extension icon and production icon
+  declarations without changing browser permissions.
+- Prepares bilingual Chrome Web Store listing, privacy, permission, reviewer,
+  submission, screenshot, and promotional materials.
+- Prepares deterministic 0.4.1 candidate artifacts while leaving the tracked
+  published Zotero update manifest on v0.4.0.
 
 ## [0.4.0] - 2026-08-20
 

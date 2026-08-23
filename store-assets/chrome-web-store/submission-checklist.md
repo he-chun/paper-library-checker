@@ -1,0 +1,31 @@
+# Chrome Web Store submission checklist
+
+These are maintainer/dashboard actions. This repository task does not log in to
+the Chrome Web Store dashboard or mark them complete.
+
+- [ ] Chrome Web Store developer account is registered.
+- [ ] Contact email is verified.
+- [ ] Account security settings are complete.
+- [ ] GitHub Release v0.4.1 exists.
+- [ ] Reviewer XPI link is accessible and its SHA-256 matches the release checksum.
+- [ ] The 0.4.1 Chrome ZIP SHA-256 has been checked.
+- [ ] Manifest name, version, description, and icons are correct.
+- [ ] `manifest.json` is at the ZIP root.
+- [ ] Production icons 16, 32, 48, and 128 are in the ZIP.
+- [ ] Store icon is a 128 × 128 PNG.
+- [ ] At least one real 1280 × 800 screenshot is uploaded.
+- [ ] English and Simplified Chinese listing text is filled in consistently.
+- [ ] Category is selected.
+- [ ] Privacy practices are filled in.
+- [ ] Permission justifications are filled in.
+- [ ] Remote code is set to **No**.
+- [ ] Privacy Policy URL is accessible.
+- [ ] Distribution is selected.
+- [ ] Reviewer instructions are filled in.
+- [ ] Maintainer has decided whether to use deferred publishing.
+- [ ] The Chrome Web Store item ID assigned after first upload is recorded.
+- [ ] README gains a Chrome Web Store install link only after the listing is actually live.
+
+Hard submission gate: do not submit for Chrome Web Store review until the
+GitHub v0.4.1 Release and reviewer XPI actually exist and their hashes have
+been verified.
