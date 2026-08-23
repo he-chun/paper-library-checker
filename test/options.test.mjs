@@ -20,3 +20,10 @@ test("connection errors distinguish authentication, rate, service, and protocol 
   assert.match(options.connectionMessage(503, { error: "pairing_not_configured" }), /not paired/);
   assert.match(options.connectionMessage(503, {}), /temporarily unavailable/);
 });
+
+test("add-on compatibility requires the exact browser extension version", () => {
+  assert.equal(options.isCompatibleAddonVersion("0.4.1", "0.4.1"), true);
+  assert.equal(options.isCompatibleAddonVersion("0.4.0", "0.4.1"), false);
+  assert.equal(options.isCompatibleAddonVersion("0.3.9", "0.4.1"), false);
+  assert.equal(options.isCompatibleAddonVersion(undefined, "0.4.1"), false);
+});
