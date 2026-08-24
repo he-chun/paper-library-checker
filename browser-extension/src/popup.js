@@ -26,10 +26,12 @@
 
   function renderPageState(documentObject, pageState) {
     const state = uiState.normalizePageState(pageState);
-    const good = [uiState.PAGE_STATES.SAVED, uiState.PAGE_STATES.NOT_SAVED].includes(state);
+    const good = state === uiState.PAGE_STATES.SAVED;
+    const missing = state === uiState.PAGE_STATES.NOT_SAVED;
     const warning = [uiState.PAGE_STATES.POSSIBLE_MATCH, uiState.PAGE_STATES.NOT_CHECKED,
       uiState.PAGE_STATES.CHECKING, uiState.PAGE_STATES.CHOOSE_ITEM].includes(state);
-    setText(documentObject, "pageState", i18n.t(uiState.messageKeyForPageState(state)), good ? "good" : warning ? "warning" : "error");
+    setText(documentObject, "pageState", i18n.t(uiState.messageKeyForPageState(state)),
+      good ? "good" : missing ? "missing" : warning ? "warning" : "error");
     const checkButton = documentObject.querySelector("#checkPage");
     if (checkButton) checkButton.disabled = state === uiState.PAGE_STATES.UNSUPPORTED;
   }

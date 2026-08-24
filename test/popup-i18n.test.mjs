@@ -39,6 +39,25 @@ test("popup renders supported, unchecked, and unsupported page states", async ()
   assert.equal(document.querySelector("#checkPage").disabled, true);
 });
 
+test("popup page-state colors preserve saved, possible-match, not-saved, and error semantics", async () => {
+  const document = await popupDocument();
+  const pageState = document.querySelector("#pageState");
+  for (const [state, expectedTone] of [
+    [uiState.PAGE_STATES.SAVED, "good"],
+    [uiState.PAGE_STATES.POSSIBLE_MATCH, "warning"],
+    [uiState.PAGE_STATES.NOT_SAVED, "missing"],
+    [uiState.PAGE_STATES.UNRECOGNIZED, "error"],
+    [uiState.PAGE_STATES.ERROR, "error"]
+  ]) {
+    popup.renderPageState(document, state);
+    assert.equal(pageState.dataset.state, expectedTone, state);
+  }
+  const popupCss = await readFile(new URL("../browser-extension/src/popup.css", import.meta.url), "utf8");
+  const contentCss = await readFile(new URL("../browser-extension/src/content.css", import.meta.url), "utf8");
+  assert.match(popupCss, /dd\[data-state="missing"\]\s*\{\s*color:\s*#164b86;\s*\}/i);
+  assert.match(contentCss, /\.zotero-check-badge\[data-state="missing"\][^{]*\{\s*color:\s*#164b86;/i);
+});
+
 test("Check this page targets the active tab and Open options uses the standard API", async () => {
   const document = await popupDocument();
   const messages = [];
