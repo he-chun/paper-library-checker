@@ -43,13 +43,29 @@ does not authorize a tag, release, merge, or visibility change.
 - Compare downloaded artifact checksums with CI output before creating a GitHub
   Release. Publication is a separate maintainer action.
 
-### Chrome Web Store order
+### Chrome Web Store updates
 
-1. Publish GitHub v0.4.1 and its companion Zotero XPI first.
-2. Verify the downloaded XPI and Chrome extension ZIP hashes.
-3. Upload the browser ZIP to the Chrome Web Store only after those artifacts exist.
-4. Submit the listing, privacy practices, permission reasons, and reviewer instructions.
-5. Add a store installation link to the READMEs only after the listing is actually live.
+The published item ID is `pmfobjnkoiiplambnbbkfdlfjcbdogon`; use this same
+item for every public update.
+
+1. Set the product and manifest version higher than the current store version,
+   which is 0.4.1 at the time of this record.
+2. Publish the matching GitHub tag/Release and companion Zotero XPI first, then
+   verify the downloaded XPI and browser ZIP hashes.
+3. Upload that same formal browser ZIP to the existing Chrome Web Store item.
+4. Do not create a new store item or extension ID for each product version.
+5. Update listing or privacy fields only when their content actually changes.
+6. Choose **Submit for review**.
+7. After the update passes review, publish it using the selected publication
+   timing.
+8. Confirm that the public listing displays the new version.
+
+Chrome's [official update process](https://developer.chrome.com/docs/webstore/update)
+requires a new ZIP containing all changed and unchanged extension files and a
+manifest version greater than the currently published version. The existing
+published version continues serving new and existing users until the reviewed
+update is actually published. This project does not configure Chrome Web Store
+API automation, OAuth, or upload keys as part of the release workflow.
 
 ## Rollback
 

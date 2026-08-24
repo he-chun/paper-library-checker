@@ -10,11 +10,11 @@
 
 Paper Library Checker 将受支持学术页面的元数据与本地 Zotero 9 文献库比较，直接在页面上显示“已保存”“可能匹配”或“未保存”。它适用于知网（CNKI）等文献检索流程；项目无遥测，也不会上传 Zotero 文献库。
 
-[下载发布版本](https://github.com/he-chun/paper-library-checker/releases) · [快速开始](#快速开始) · [支持的网站](#支持的网站与状态) · [隐私说明](#本地数据流和隐私) · [English](README.md)
+[从 Chrome Web Store 安装](https://chromewebstore.google.com/detail/paper-library-checker/pmfobjnkoiiplambnbbkfdlfjcbdogon) · [下载发布版本](https://github.com/he-chun/paper-library-checker/releases) · [快速开始](#快速开始) · [支持的网站](#支持的网站与状态) · [隐私说明](#本地数据流和隐私) · [English](README.md)
 
 > Alpha 软件：在首个稳定版本发布前，站点覆盖范围和安装细节可能发生变化。
 
-正在准备 Chrome Web Store 上架，目前尚未在该商店发布。
+**[从 Chrome Web Store 安装](https://chromewebstore.google.com/detail/paper-library-checker/pmfobjnkoiiplambnbbkfdlfjcbdogon)** — 当前商店版本为 0.4.1。
 
 Zotero 是 Corporation for Digital Scholarship 的注册商标。本独立项目与 Zotero 项目没有关联，也未获得 Zotero 项目的认可或背书。
 
@@ -30,21 +30,38 @@ Zotero 是 Corporation for Digital Scholarship 的注册商标。本独立项目
 | 组件 | 当前支持状态 |
 | --- | --- |
 | Zotero 桌面端 | 仅支持 Zotero 9.0.x；发布时精确实测版本为 9.0.6。 |
-| Microsoft Edge | 主要发布测试浏览器。 |
-| Google Chrome | 实验性支持，不属于当前发布门槛。 |
-| 分发方式 | 手动安装 XPI 和解压加载浏览器扩展；尚未发布到浏览器扩展商店。 |
+| Google Chrome | Chrome Web Store 是浏览器扩展的主要公开分发渠道；商店版 0.4.1 已通过安装、连接、popup 和代表性页面检查。 |
+| Microsoft Edge | 可以从 Chrome Web Store 安装扩展；站点支持边界仍以本文的支持表为准。 |
+| 分发方式 | 浏览器扩展默认从 Chrome Web Store 安装，Zotero XPI 从 GitHub Releases 安装；GitHub 浏览器 ZIP 保留用于开发、审计或手动安装。 |
 
 Paper Library Checker 包含两个必需组件：Zotero 桌面附加组件和浏览器扩展。使用期间请保持 Zotero 运行。
 
 ## 快速开始
 
-1. 打开 [GitHub Releases](https://github.com/he-chun/paper-library-checker/releases)，选择当前 alpha 版本，下载 Paper Library Checker 的 `.xpi` 和浏览器扩展 `.zip` 文件。
-2. 在 Zotero 中打开**工具（Tools）> 插件（Plugins）**，选择**从文件安装插件（Install Plugin From File）**，安装 XPI，然后重启 Zotero。
-3. 把浏览器 ZIP 解压到不会移动或删除的稳定目录。在 Edge 中打开 `edge://extensions`，启用**开发人员模式（Developer mode）**，选择**加载解压缩的扩展（Load unpacked）**，并选中直接包含 `manifest.json` 的目录。
-4. 在 Zotero 中选择**工具 > 文献库检查器：复制配对令牌**（**Tools > Paper Library Checker: Copy pairing token**）。打开浏览器扩展的**设置（Options）**，把令牌粘贴到**配对令牌（Pairing token）**，点击**保存（Save）**，再点击**测试连接（Test connection）**。
-5. 刷新文章页面。连接成功时会显示 `已连接到文献库检查器 <版本号>`；英文界面显示 `Connected to Paper Library Checker <version>`。
+1. [从 Chrome Web Store 安装浏览器扩展](https://chromewebstore.google.com/detail/paper-library-checker/pmfobjnkoiiplambnbbkfdlfjcbdogon)。
+2. 从 [GitHub v0.4.1 Release](https://github.com/he-chun/paper-library-checker/releases/tag/v0.4.1) 下载 Zotero XPI。在 Zotero 中打开**工具（Tools）> 插件（Plugins）**，选择**从文件安装插件（Install Plugin From File）**并安装 XPI。
+3. 重启 Zotero。
+4. 在 Zotero 中选择**工具 > 文献库检查器：复制配对令牌**（**Tools > Paper Library Checker: Copy pairing token**）。
+5. 打开浏览器扩展的**设置（Options）**，把令牌粘贴到**配对令牌（Pairing token）**，点击**保存（Save）**，再点击**测试连接（Test connection）**。
+6. 打开受支持的文章页，点击工具栏图标，再选择**检查当前页面（Check this page）**。
 
-加载扩展后不要移动、改名或删除解压目录，否则浏览器扩展可能失效。普通用户无需从源代码构建任何组件。
+### 手动/开发者安装
+
+如需开发、审计或手动安装备用流程，请从 GitHub v0.4.1 Release 下载浏览器
+ZIP，并解压到不会移动或删除的稳定目录。打开 `chrome://extensions` 或
+`edge://extensions`，启用**开发人员模式（Developer mode）**，选择
+**加载解压缩的扩展（Load unpacked）**，并选中直接包含 `manifest.json` 的
+目录。使用较新的手动 ZIP 替换文件后，请在该页面点击**重新加载（Reload）**。
+加载后不要移动、改名或删除解压目录。
+
+### 从 unpacked 安装迁移
+
+安装 Chrome Web Store 版本前，先停用或移除旧的 unpacked 扩展。商店版使用
+固定扩展 ID `pmfobjnkoiiplambnbbkfdlfjcbdogon`，其存储和 pairing token 可能
+不会从 unpacked 版本自动迁移。请在**设置（Options）**中重新粘贴令牌，点击
+**保存（Save）**，再点击**测试连接（Test connection）**。不要同时启用
+unpacked 版和商店版，否则重复 content script 可能产生重复状态徽标或互相冲突
+的页面状态。
 
 ## 支持的网站与状态
 
@@ -59,7 +76,7 @@ Paper Library Checker 包含两个必需组件：Zotero 桌面附加组件和浏
 
 某个域名出现在浏览器 manifest 中，只表示内容脚本可以在该域名运行，并不等于项目已经验证或承诺支持该网站。未知站点永远不会被自动扫描参考文献；宽泛文章检测仍是默认关闭的实验性功能。
 
-本扩展不处理缺少可用页面元数据的 PDF，不保存记录，不修改 Zotero 文献库，也不承诺达到 Zotero Connector 翻译器的覆盖范围。Chrome 仍为实验性支持。
+本扩展不处理缺少可用页面元数据的 PDF，不保存记录，不修改 Zotero 文献库，也不承诺达到 Zotero Connector 翻译器的覆盖范围。发布到 Chrome Web Store 不会扩大本表中的站点支持声明。
 
 ## 使用方法
 
@@ -118,18 +135,22 @@ Paper Library Checker 包含两个必需组件：Zotero 桌面附加组件和浏
 | `文献库：可能匹配` / `Library: possible match` | 这是模糊题名匹配，不是确定已收藏；请在 Zotero 中核对题名、年份和作者。 |
 | `文献库：无法识别` / `Library: unrecognized` | 页面没有提供可用的受支持元数据；PDF 页面尤其可能缺少足够元数据。 |
 | 参考文献列表没有变色 | 开启**自动检查参考文献列表**或点击 `↻`，并确认页面有受支持的列表适配器。 |
-| Edge 扩展重启后消失 | 解压扩展目录必须保持在原位置。如已移动，请在 `edge://extensions` 中重新执行**加载解压缩的扩展**并重新配对。 |
+| 手动加载的扩展重启后消失 | 解压扩展目录必须保持在原位置。如已移动，请重新执行**加载解压缩的扩展**并重新配对。 |
 
 ## 更新或卸载
 
-更新已加载的解压扩展时，下载新 ZIP，在同一个稳定目录中替换或更新文件，然后在 `edge://extensions` 中点击**重新加载（Reload）**。保持目录不变通常可以保留扩展存储；只有扩展标识或已保存令牌发生变化时才需要重新配对。需要手动更新 Zotero 附加组件时，可通过**工具 > 插件**安装新版 XPI。
+从 Chrome Web Store 安装的扩展由商店渠道更新，用户不需要下载 ZIP 来替换
+商店版。下载 GitHub 浏览器 ZIP 并在 `chrome://extensions` 或
+`edge://extensions` 中点击**重新加载（Reload）**，只适用于手动/unpacked
+安装。Zotero XPI 仍使用当前 GitHub/Zotero 更新流程。删除浏览器扩展会移除其
+本地扩展身份和存储，重新安装后可能需要再次粘贴 pairing token 并测试连接。
 
 完整卸载步骤：
 
 1. 在 Zotero 中选择**工具 > 文献库检查器：撤销配对令牌**（**Tools > Paper Library Checker: Revoke pairing token**）。
-2. 在 `edge://extensions` 中移除浏览器扩展。
+2. 在 `chrome://extensions` 或 `edge://extensions` 中移除浏览器扩展。
 3. 在 Zotero 的**工具 > 插件**中移除附加组件。
-4. 确认 Edge 不再列出扩展后，删除解压的浏览器扩展目录。
+4. 如果使用手动安装，请在浏览器不再列出扩展后删除解压的浏览器扩展目录。
 
 从 0.2 开发构建升级的用户还应阅读 [0.3 迁移说明](docs/migration-0.3.md)。
 
@@ -190,7 +211,7 @@ Zotero Connector 用于把条目保存到 Zotero。Paper Library Checker 不会�
 <details>
 <summary>Release 验证与 SHA-256 校验和</summary>
 
-0.4.1 是当前公开 alpha 版本。规范构建和定向 Chrome/Zotero 冒烟测试均已通过，包括连接、索引就绪、已保存与未保存页面检查，以及 Options 连接测试。0.4.0 完整资格验证的精确运行时目标仍是受支持的 Zotero 9.0.x 范围内的 Zotero 9.0.6 和 Microsoft Edge 151.0.4129.78；Chrome 是计划提交 Chrome Web Store 的目标浏览器。
+0.4.1 是当前公开 alpha 版本。规范构建和定向 Chrome/Zotero 冒烟测试均已通过，包括连接、索引就绪、已保存与未保存页面检查，以及 Options 连接测试。Chrome Web Store 0.4.1 还完成了商店安装、重新配对、popup 就绪和一个代表性页面检查。0.4.0 完整资格验证的精确运行时目标仍是受支持的 Zotero 9.0.x 范围内的 Zotero 9.0.6 和 Microsoft Edge 151.0.4129.78；商店发布不会扩大站点支持表。
 
 请从 [v0.4.1 GitHub Release](https://github.com/he-chun/paper-library-checker/releases/tag/v0.4.1) 下载规范构建产物及 [`SHA256SUMS.txt`](https://github.com/he-chun/paper-library-checker/releases/download/v0.4.1/SHA256SUMS.txt)。仓库根目录的 [`updates.json`](updates.json) 是 Zotero 更新清单。公开的 [0.3.0 发布资格报告](docs/verification/release-qualification-0.3.0.md)继续作为首个 alpha 的历史记录。由于发布者访问验证页面替代了正常文章 DOM，ScienceDirect 不被声明为已通过真实站点验证的功能。
 

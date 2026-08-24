@@ -1,9 +1,14 @@
-# Chrome Web Store submission assets
+# Chrome Web Store publication assets
 
-This directory contains the maintainer-owned listing material for the planned
-Chrome Web Store submission of Paper Library Checker 0.4.1. It is part of the
+This directory contains the maintainer-owned listing material for the published
+Chrome Web Store listing of Paper Library Checker 0.4.1. It is part of the
 public source export but is deliberately excluded from the production browser
 extension ZIP.
+
+- Listing status: **Published**
+- Version: **0.4.1**
+- Item ID: `pmfobjnkoiiplambnbbkfdlfjcbdogon`
+- Store URL: https://chromewebstore.google.com/detail/paper-library-checker/pmfobjnkoiiplambnbbkfdlfjcbdogon
 
 - `source/icon-master-1024.png` is the cleaned archival master.
 - `store-icon-128.png` is the store listing icon.
@@ -11,20 +16,34 @@ extension ZIP.
 - `screenshots/en` contains three reviewed 1280 x 800 captures from the real
   extension UI using dedicated browser and Zotero profiles. The optional
   `screenshots/zh_CN` directory is reserved for a future localization enhancement;
-  Simplified Chinese screenshots are not a blocker for the initial submission.
+  Simplified Chinese screenshots are not a publication blocker.
 - The listing, privacy, permission, reviewer, provenance, and submission files
-  are copy-ready working material. The Chrome Web Store dashboard remains a
-  maintainer-only step.
+  record the published listing. The Chrome Web Store dashboard remains
+  maintainer-only.
 
 The recommended Chrome Web Store category is **Workflow & Planning** because
 the extension helps researchers perform literature-management workflows more
 efficiently by checking whether scholarly articles are already present in
 their local Zotero library.
 
-The minimal Chrome/Zotero smoke used while capturing the English screenshots
-passed. Chrome Web Store upload and review submission have not started. The
-reviewer XPI is available from GitHub Release v0.4.1 and its checksum has been
+The reviewer XPI is available from GitHub Release v0.4.1 and its checksum was
 verified against the published `SHA256SUMS.txt`.
+
+## Store installation smoke
+
+The maintainer completed the following minimal verification with the published
+store package; this does not expand the supported-site matrix:
+
+```text
+CWS_PUBLIC_LISTING=PASS
+CWS_INSTALL=PASS
+CWS_VERSION_0_4_1=PASS
+CWS_EXTENSION_ID_MATCH=PASS
+CWS_REPAIR_TOKEN=PASS
+CWS_CONNECTED_READY=PASS
+CWS_ONE_PAGE_CHECK=PASS
+CWS_DUPLICATE_CONTENT_SCRIPT=NONE
+```
 
 Paper Library Checker is an independent project and is not affiliated with or
 endorsed by Zotero, Google Chrome, Microsoft Edge, or their publishers.

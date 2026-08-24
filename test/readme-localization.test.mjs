@@ -26,6 +26,7 @@ const updateManifest = JSON.parse(updateManifestText);
 const currentVersion = packageMetadata.version;
 const publishedVersion = updateManifest.addons["paper-library-checker@he-chun.github.io"].updates.at(-1).version;
 const releaseUrl = `https://github.com/he-chun/paper-library-checker/releases/tag/v${publishedVersion}`;
+const chromeWebStoreUrl = "https://chromewebstore.google.com/detail/paper-library-checker/pmfobjnkoiiplambnbbkfdlfjcbdogon";
 const canonicalFacts = [
   publishedVersion,
   "Zotero 9.0.x",
@@ -48,12 +49,14 @@ test("localized READMEs point to the current published version", () => {
   }
 });
 
-test("both READMEs describe Chrome Web Store work as preparation only", () => {
-  assert(english.includes("Chrome Web Store submission is being prepared."));
-  assert(chinese.includes("正在准备 Chrome Web Store 上架。") || chinese.includes("正在准备 Chrome Web Store 上架，"));
+test("both READMEs link to the published Chrome Web Store listing", () => {
   for (const content of [english, chinese]) {
-    assert.doesNotMatch(content, /chromewebstore\.google\.com/);
+    assert(content.includes(chromeWebStoreUrl));
+    assert(content.includes("pmfobjnkoiiplambnbbkfdlfjcbdogon"));
+    assert.doesNotMatch(content, /submission is being prepared|正在准备 Chrome Web Store 上架/);
   }
+  assert(english.includes("the published store version is 0.4.1"));
+  assert(chinese.includes("当前商店版本为 0.4.1"));
 });
 
 test("Simplified Chinese support matrix preserves qualified support levels", () => {
@@ -89,6 +92,33 @@ test("both READMEs retain installation and pairing instructions", () => {
   ]) assert(chinese.includes(marker), marker);
   assert(english.includes("pairing token"));
   assert(chinese.includes("配对令牌"));
+});
+
+test("both READMEs prefer store installation and document unpacked migration", () => {
+  const normalizedEnglish = english.replace(/\s+/g, " ");
+  const normalizedChinese = chinese.replace(/\s+/g, " ");
+  for (const content of [english, chinese]) {
+    for (const marker of [
+      chromeWebStoreUrl,
+      "pmfobjnkoiiplambnbbkfdlfjcbdogon",
+      "Check this page",
+      "Save",
+      "Test connection",
+      "content script"
+    ]) assert(content.includes(marker), marker);
+  }
+  for (const marker of [
+    "Manual/developer installation",
+    "Migrating from an unpacked installation",
+    "Do not enable the unpacked and store versions at the same time",
+    "may not migrate automatically"
+  ]) assert(normalizedEnglish.includes(marker), marker);
+  for (const marker of [
+    "手动/开发者安装",
+    "从 unpacked 安装迁移",
+    "不要同时启用",
+    "不会从 unpacked 版本自动迁移"
+  ]) assert(normalizedChinese.includes(marker), marker);
 });
 
 test("localized READMEs follow the user-first section order", () => {
@@ -167,6 +197,7 @@ test("both README first screens state the local-first value proposition", () => 
 
 test("both README first screens provide localized quick links", () => {
   for (const marker of [
+    "[Install from Chrome Web Store]",
     "[Download releases]",
     "[Quick start](#quick-start)",
     "[Supported sites](#supported-sites-and-status)",
@@ -175,6 +206,7 @@ test("both README first screens provide localized quick links", () => {
   ]) assert(english.slice(0, 1500).includes(marker), marker);
 
   for (const marker of [
+    "[从 Chrome Web Store 安装]",
     "[下载发布版本]",
     "[快速开始](#快速开始)",
     "[支持的网站](#支持的网站与状态)",
@@ -276,13 +308,17 @@ test("localized usage guidance keeps matching and support qualifications", () =>
 
 test("both READMEs retain update and clean-uninstall guidance", () => {
   for (const content of [english, chinese]) {
-    for (const marker of ["edge://extensions", "Reload", "Revoke pairing token"]) {
+    for (const marker of ["chrome://extensions", "edge://extensions", "Reload", "Revoke pairing token"]) {
       assert(content.includes(marker), marker);
     }
   }
   assert(english.includes("Update or uninstall"));
+  assert(english.includes("update through the Chrome Web Store channel"));
+  assert(english.includes("reinstallation may require pasting the pairing token again"));
   assert(english.includes("the 0.3 migration"));
   assert(chinese.includes("更新或卸载"));
+  assert(chinese.includes("由商店渠道更新"));
+  assert(chinese.includes("重新安装后可能需要再次粘贴 pairing token"));
   assert(chinese.includes("重新加载"));
   assert(chinese.includes("0.3 迁移说明"));
 });
