@@ -190,9 +190,9 @@ ScienceDirect and MDPI pages with `citation_doi` normally use the generic extrac
 <details>
 <summary>Release verification and SHA-256 checksums</summary>
 
-Version 0.4.0 is the current public alpha. Its canonical build, targeted Zotero runtime smoke, persistent Edge installation, toolbar popup, manual page check, and bilingual UI gates passed. The exact tested desktop target is Zotero 9.0.6 within the supported Zotero 9.0.x range. Microsoft Edge 151.0.4129.78 is the primary release-tested browser; Chrome remains experimental.
+Version 0.4.1 is the current public alpha. Its canonical build and targeted Chrome/Zotero smoke passed, including connection, index readiness, saved and not-saved page checks, and the Options connection test. The exact broader runtime target from the 0.4.0 qualification remains Zotero 9.0.6 within the supported Zotero 9.0.x range and Microsoft Edge 151.0.4129.78; Chrome is the target browser for the planned Chrome Web Store submission.
 
-Download the canonical artifacts and [`SHA256SUMS.txt`](https://github.com/he-chun/paper-library-checker/releases/download/v0.4.0/SHA256SUMS.txt) from the [v0.4.0 GitHub Release](https://github.com/he-chun/paper-library-checker/releases/tag/v0.4.0). The repository-root [`updates.json`](updates.json) is the Zotero update manifest. The public [0.3.0 release qualification](docs/verification/release-qualification-0.3.0.md) remains the historical record for the initial alpha. ScienceDirect is not claimed as a passed live-site capability because a publisher access challenge replaced the normal article DOM.
+Download the canonical artifacts and [`SHA256SUMS.txt`](https://github.com/he-chun/paper-library-checker/releases/download/v0.4.1/SHA256SUMS.txt) from the [v0.4.1 GitHub Release](https://github.com/he-chun/paper-library-checker/releases/tag/v0.4.1). The repository-root [`updates.json`](updates.json) is the Zotero update manifest. The public [0.3.0 release qualification](docs/verification/release-qualification-0.3.0.md) remains the historical record for the initial alpha. ScienceDirect is not claimed as a passed live-site capability because a publisher access challenge replaced the normal article DOM.
 
 </details>
 

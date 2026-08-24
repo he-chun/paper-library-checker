@@ -190,9 +190,9 @@ Zotero Connector 用于把条目保存到 Zotero。Paper Library Checker 不会�
 <details>
 <summary>Release 验证与 SHA-256 校验和</summary>
 
-0.4.0 是当前公开 alpha 版本。规范构建、定向 Zotero 运行时冒烟测试、Edge 持久安装、工具栏弹窗、手动页面检查和双语界面门槛均已通过。精确实测桌面目标是受支持的 Zotero 9.0.x 范围内的 Zotero 9.0.6；Microsoft Edge 151.0.4129.78 是主要发布测试浏览器，Chrome 仍为实验性。
+0.4.1 是当前公开 alpha 版本。规范构建和定向 Chrome/Zotero 冒烟测试均已通过，包括连接、索引就绪、已保存与未保存页面检查，以及 Options 连接测试。0.4.0 完整资格验证的精确运行时目标仍是受支持的 Zotero 9.0.x 范围内的 Zotero 9.0.6 和 Microsoft Edge 151.0.4129.78；Chrome 是计划提交 Chrome Web Store 的目标浏览器。
 
-请从 [v0.4.0 GitHub Release](https://github.com/he-chun/paper-library-checker/releases/tag/v0.4.0) 下载规范构建产物及 [`SHA256SUMS.txt`](https://github.com/he-chun/paper-library-checker/releases/download/v0.4.0/SHA256SUMS.txt)。仓库根目录的 [`updates.json`](updates.json) 是 Zotero 更新清单。公开的 [0.3.0 发布资格报告](docs/verification/release-qualification-0.3.0.md)继续作为首个 alpha 的历史记录。由于发布者访问验证页面替代了正常文章 DOM，ScienceDirect 不被声明为已通过真实站点验证的功能。
+请从 [v0.4.1 GitHub Release](https://github.com/he-chun/paper-library-checker/releases/tag/v0.4.1) 下载规范构建产物及 [`SHA256SUMS.txt`](https://github.com/he-chun/paper-library-checker/releases/download/v0.4.1/SHA256SUMS.txt)。仓库根目录的 [`updates.json`](updates.json) 是 Zotero 更新清单。公开的 [0.3.0 发布资格报告](docs/verification/release-qualification-0.3.0.md)继续作为首个 alpha 的历史记录。由于发布者访问验证页面替代了正常文章 DOM，ScienceDirect 不被声明为已通过真实站点验证的功能。
 
 </details>
 

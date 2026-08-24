@@ -18,8 +18,8 @@ extension ZIP.
 
 The minimal Chrome/Zotero smoke used while capturing the English screenshots
 passed. Chrome Web Store upload and review submission have not started. The
-reviewer XPI link remains pending until GitHub Release v0.4.1 is published and
-its checksum is verified.
+reviewer XPI is available from GitHub Release v0.4.1 and its checksum has been
+verified against the published `SHA256SUMS.txt`.
 
 Paper Library Checker is an independent project and is not affiliated with or
 endorsed by Zotero, Google Chrome, Microsoft Edge, or their publishers.

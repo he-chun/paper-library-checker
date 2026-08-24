@@ -39,10 +39,10 @@ test("README language switchers are reciprocal and mark the current language", (
   assert.match(chinese, /^# Paper Library Checker\r?\n\r?\n\[English\]\(README\.md\) \| \*\*简体中文\*\*/);
 });
 
-test("localized READMEs preserve the published version while the package is a candidate", () => {
+test("localized READMEs point to the current published version", () => {
   const addon = updateManifest.addons["paper-library-checker@he-chun.github.io"];
   assert.equal(currentVersion, "0.4.1");
-  assert.equal(addon.updates.at(-1).version, "0.4.0");
+  assert.equal(addon.updates.at(-1).version, "0.4.1");
   for (const content of [english, chinese]) {
     for (const fact of canonicalFacts) assert(content.includes(fact), fact);
   }
