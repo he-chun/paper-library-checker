@@ -140,6 +140,48 @@ test("Chrome Web Store materials recommend the current workflow category", async
   }
 });
 
+test("Chrome Web Store materials record the published 0.4.1 item", async () => {
+  const readme = await readFile(path.join(storeRoot, "README.md"), "utf8");
+  const checklist = await readFile(path.join(storeRoot, "submission-checklist.md"), "utf8");
+  const storeUrl = "https://chromewebstore.google.com/detail/paper-library-checker/pmfobjnkoiiplambnbbkfdlfjcbdogon";
+  for (const content of [readme, checklist]) {
+    assert(content.includes("Listing status: **Published**"));
+    assert(content.includes("Version: **0.4.1**"));
+    assert(content.includes("pmfobjnkoiiplambnbbkfdlfjcbdogon"));
+    assert(content.includes(storeUrl));
+  }
+  for (const marker of [
+    "CWS_PUBLIC_LISTING=PASS",
+    "CWS_INSTALL=PASS",
+    "CWS_VERSION_0_4_1=PASS",
+    "CWS_EXTENSION_ID_MATCH=PASS",
+    "CWS_REPAIR_TOKEN=PASS",
+    "CWS_CONNECTED_READY=PASS",
+    "CWS_ONE_PAGE_CHECK=PASS",
+    "CWS_DUPLICATE_CONTENT_SCRIPT=NONE"
+  ]) assert(readme.includes(marker), marker);
+  for (const marker of [
+    "[x] The verified 0.4.1 browser package was uploaded",
+    "[x] Chrome Web Store review passed",
+    "[x] Manual publication was completed",
+    "[x] Distribution is **Public**"
+  ]) assert(checklist.includes(marker), marker);
+  assert(checklist.includes("they are not a publication blocker"));
+});
+
+test("release documentation updates the existing Chrome Web Store item", async () => {
+  const releasing = await readFile(path.join(root, "docs", "releasing.md"), "utf8");
+  for (const marker of [
+    "pmfobjnkoiiplambnbbkfdlfjcbdogon",
+    "higher than the current store version",
+    "same formal browser ZIP",
+    "Do not create a new store item or extension ID",
+    "Submit for review",
+    "Confirm that the public listing displays the new version",
+    "https://developer.chrome.com/docs/webstore/update"
+  ]) assert(releasing.includes(marker), marker);
+});
+
 test("privacy and permission documents state the Chrome Web Store boundaries", async () => {
   const publicPrivacy = await readFile(path.join(root, "PRIVACY.md"), "utf8");
   const privacy = await readFile(path.join(storeRoot, "privacy-practices.md"), "utf8");

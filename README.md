@@ -10,11 +10,11 @@
 
 Paper Library Checker compares metadata from supported scholarly pages with your local Zotero 9 library and displays `Saved`, `Possible match`, or `Not saved` on the page. It is designed for CNKI and other literature-search workflows, with no telemetry and no Zotero library upload.
 
-[Download releases](https://github.com/he-chun/paper-library-checker/releases) · [Quick start](#quick-start) · [Supported sites](#supported-sites-and-status) · [Privacy](#local-data-flow-and-privacy) · [简体中文](README.zh-CN.md)
+[Install from Chrome Web Store](https://chromewebstore.google.com/detail/paper-library-checker/pmfobjnkoiiplambnbbkfdlfjcbdogon) · [Download releases](https://github.com/he-chun/paper-library-checker/releases) · [Quick start](#quick-start) · [Supported sites](#supported-sites-and-status) · [Privacy](#local-data-flow-and-privacy) · [简体中文](README.zh-CN.md)
 
 > Alpha software: site coverage and installation details may change before the first stable release.
 
-Chrome Web Store submission is being prepared. The extension is not yet listed there.
+**[Install from Chrome Web Store](https://chromewebstore.google.com/detail/paper-library-checker/pmfobjnkoiiplambnbbkfdlfjcbdogon)** — the published store version is 0.4.1.
 
 Zotero is a registered trademark of the Corporation for Digital Scholarship. This independent project is not affiliated with or endorsed by the Zotero project.
 
@@ -30,21 +30,40 @@ Zotero is a registered trademark of the Corporation for Digital Scholarship. Thi
 | Component | Current support |
 | --- | --- |
 | Zotero desktop | Zotero 9.0.x only; 9.0.6 is the exact release-tested version. |
-| Microsoft Edge | Primary release-tested browser. |
-| Google Chrome | Experimental; not part of the current release gate. |
-| Distribution | Manual XPI installation and an unpacked browser extension; no browser-store package. |
+| Google Chrome | The Chrome Web Store is the primary public browser-extension channel. Store version 0.4.1 passed installation, connection, popup, and a representative page check. |
+| Microsoft Edge | Can install the extension from the Chrome Web Store; site support remains limited to the matrix below. |
+| Distribution | Install the browser extension from the Chrome Web Store and the Zotero XPI from GitHub Releases. The GitHub browser ZIP remains available for development, auditing, or manual installation. |
 
 Paper Library Checker has two required components: a Zotero desktop add-on and a browser extension. Keep Zotero running while using it.
 
 ## Quick start
 
-1. Open [GitHub Releases](https://github.com/he-chun/paper-library-checker/releases), select the current alpha, and download the Paper Library Checker `.xpi` and browser-extension `.zip` assets.
-2. In Zotero, open **Tools > Plugins**, choose **Install Plugin From File**, select the XPI, and restart Zotero.
-3. Extract the browser ZIP to a stable directory. In Edge, open `edge://extensions`, enable **Developer mode**, choose **Load unpacked**, and select the directory that directly contains `manifest.json`.
-4. In Zotero, choose **Tools > Paper Library Checker: Copy pairing token**. Open the browser extension **Options**, paste the token into **Pairing token**, click **Save**, and then **Test connection**.
-5. Reload an article page. A successful test displays `Connected to Paper Library Checker <version>`.
+1. [Install the browser extension from the Chrome Web Store](https://chromewebstore.google.com/detail/paper-library-checker/pmfobjnkoiiplambnbbkfdlfjcbdogon).
+2. Download the Zotero XPI from the [GitHub v0.4.1 Release](https://github.com/he-chun/paper-library-checker/releases/tag/v0.4.1). In Zotero, open **Tools > Plugins**, choose **Install Plugin From File**, and install the XPI.
+3. Restart Zotero.
+4. In Zotero, choose **Tools > Paper Library Checker: Copy pairing token**.
+5. Open the browser extension **Options**, paste the token into **Pairing token**, click **Save**, and then **Test connection**.
+6. Open a supported article page, select the toolbar icon, and choose **Check this page**.
 
-Do not move, rename, or delete the unpacked extension directory after loading it; doing so can disable the browser extension. Users do not need to build either component from source.
+### Manual/developer installation
+
+For development, auditing, or a manual-installation fallback, download the
+browser ZIP from the GitHub v0.4.1 Release and extract it to a stable directory.
+Open `chrome://extensions` or `edge://extensions`, enable **Developer mode**,
+choose **Load unpacked**, and select the directory that directly contains
+`manifest.json`. Click **Reload** there after replacing files with a newer
+manual ZIP. Do not move, rename, or delete the unpacked extension directory
+after loading it.
+
+### Migrating from an unpacked installation
+
+Disable or remove the old unpacked extension before installing the Chrome Web
+Store version. The store version uses the fixed extension ID
+`pmfobjnkoiiplambnbbkfdlfjcbdogon`, so its storage and pairing token may not
+migrate automatically from an unpacked installation. Paste the token again in
+**Options**, click **Save**, and then **Test connection**. Do not enable the
+unpacked and store versions at the same time; duplicate content scripts can
+produce duplicate status badges or conflicting page state.
 
 ## Supported sites and status
 
@@ -59,7 +78,7 @@ Do not move, rename, or delete the unpacked extension directory after loading it
 
 A domain appearing in the browser manifest means that the content script is allowed to run there; it is not by itself a claim of live-site support. Unknown sites are never scanned automatically for references. Broad article detection remains experimental and disabled by default.
 
-The extension does not handle PDFs without usable page metadata, save records, modify the Zotero library, or promise coverage equivalent to Zotero Connector translators. Chrome remains experimental.
+The extension does not handle PDFs without usable page metadata, save records, modify the Zotero library, or promise coverage equivalent to Zotero Connector translators. Publishing through the Chrome Web Store does not expand the site-support claims in this table.
 
 ## How to use
 
@@ -118,18 +137,25 @@ After **Reset pairing token**, paste the new token in extension Options, click *
 | `Library: possible match` | This is a fuzzy title match, not a confirmed saved item. Compare the title, year, and authors in Zotero. |
 | `Library: unrecognized` | The page did not provide usable supported metadata. PDF pages are especially likely to lack enough metadata. |
 | Reference links are not colored | Enable **Auto-check reference lists** or click `↻`, and confirm that the page has a supported list adapter. |
-| Edge extension disappears after restart | The unpacked extension directory must remain in its original location. Use **Load unpacked** again and pair again if it moved. |
+| A manually loaded extension disappears after restart | The unpacked extension directory must remain in its original location. Use **Load unpacked** again and pair again if it moved. |
 
 ## Update or uninstall
 
-To update an existing unpacked browser installation, download the new ZIP, replace or update the files in the same stable extension directory, and click **Reload** in `edge://extensions`. Keeping the same directory normally preserves extension storage; pair again only if the extension identity or stored token changes. Install a newer Zotero XPI through **Tools > Plugins** when a manual add-on update is needed.
+Chrome Web Store installations update through the Chrome Web Store channel;
+users do not need to download a ZIP to replace the store version. Downloading a
+GitHub browser ZIP and clicking **Reload** in `chrome://extensions` or
+`edge://extensions` applies only to manual/unpacked installations. Zotero XPI
+updates continue through the current GitHub/Zotero update flow. Removing the
+browser extension clears its local extension identity and storage, so a later
+reinstallation may require pasting the pairing token again and testing the
+connection.
 
 To uninstall cleanly:
 
 1. In Zotero, choose **Tools > Paper Library Checker: Revoke pairing token**.
-2. Remove the browser extension from `edge://extensions`.
+2. Remove the browser extension from `chrome://extensions` or `edge://extensions`.
 3. Remove the Zotero add-on from **Tools > Plugins**.
-4. Delete the unpacked browser-extension directory after Edge no longer lists it.
+4. If it was installed manually, delete the unpacked browser-extension directory after the browser no longer lists it.
 
 Users upgrading from a 0.2 development build should also follow [the 0.3 migration](docs/migration-0.3.md).
 
@@ -190,7 +216,7 @@ ScienceDirect and MDPI pages with `citation_doi` normally use the generic extrac
 <details>
 <summary>Release verification and SHA-256 checksums</summary>
 
-Version 0.4.1 is the current public alpha. Its canonical build and targeted Chrome/Zotero smoke passed, including connection, index readiness, saved and not-saved page checks, and the Options connection test. The exact broader runtime target from the 0.4.0 qualification remains Zotero 9.0.6 within the supported Zotero 9.0.x range and Microsoft Edge 151.0.4129.78; Chrome is the target browser for the planned Chrome Web Store submission.
+Version 0.4.1 is the current public alpha. Its canonical build and targeted Chrome/Zotero smoke passed, including connection, index readiness, saved and not-saved page checks, and the Options connection test. Chrome Web Store version 0.4.1 also passed store installation, re-pairing, popup readiness, and one representative page check. The exact broader runtime target from the 0.4.0 qualification remains Zotero 9.0.6 within the supported Zotero 9.0.x range and Microsoft Edge 151.0.4129.78; store publication does not extend the site-support matrix.
 
 Download the canonical artifacts and [`SHA256SUMS.txt`](https://github.com/he-chun/paper-library-checker/releases/download/v0.4.1/SHA256SUMS.txt) from the [v0.4.1 GitHub Release](https://github.com/he-chun/paper-library-checker/releases/tag/v0.4.1). The repository-root [`updates.json`](updates.json) is the Zotero update manifest. The public [0.3.0 release qualification](docs/verification/release-qualification-0.3.0.md) remains the historical record for the initial alpha. ScienceDirect is not claimed as a passed live-site capability because a publisher access challenge replaced the normal article DOM.
 

@@ -1,39 +1,32 @@
-# Chrome Web Store submission checklist
+# Chrome Web Store publication checklist
 
-These are maintainer/dashboard actions. This repository task does not log in to
-the Chrome Web Store dashboard or mark them complete.
+- Listing status: **Published**
+- Version: **0.4.1**
+- Item ID: `pmfobjnkoiiplambnbbkfdlfjcbdogon`
+- Store URL: https://chromewebstore.google.com/detail/paper-library-checker/pmfobjnkoiiplambnbbkfdlfjcbdogon
 
-Repository-prepared evidence:
+This records the completed public launch without including dashboard screenshots,
+Google account information, or internal review data.
 
-- [x] Three reviewed English screenshots from the real UI are present at 1280 x 800.
-- [x] The minimal Chrome/Zotero smoke completed without an unhandled error.
-- [ ] Optional Simplified Chinese screenshots may be added as a later localization enhancement.
+- [x] Chrome Web Store developer account is registered.
+- [x] Contact email and account security requirements were completed.
 - [x] GitHub Release v0.4.1 and its reviewer XPI are public and hash-verified.
-- [ ] No browser ZIP has been uploaded to the Chrome Web Store dashboard.
-
-- [ ] Chrome Web Store developer account is registered.
-- [ ] Contact email is verified.
-- [ ] Account security settings are complete.
-- [x] GitHub Release v0.4.1 exists.
-- [x] Reviewer XPI link is accessible and its SHA-256 matches the release checksum.
-- [x] The 0.4.1 Chrome ZIP SHA-256 has been checked.
-- [ ] Manifest name, version, description, and icons are correct.
-- [ ] `manifest.json` is at the ZIP root.
-- [ ] Production icons 16, 32, 48, and 128 are in the ZIP.
-- [ ] Store icon is a 128 × 128 PNG.
-- [ ] At least one real 1280 x 800 screenshot is uploaded to the dashboard.
-- [ ] English and Simplified Chinese listing text is filled in consistently.
-- [ ] Category is set to **Workflow & Planning**.
-- [ ] Privacy practices are filled in.
-- [ ] Permission justifications are filled in.
-- [ ] Remote code is set to **No**.
-- [ ] Privacy Policy URL is accessible.
-- [ ] Distribution is selected.
-- [ ] Reviewer instructions are filled in.
-- [ ] Maintainer has decided whether to use deferred publishing.
-- [ ] The Chrome Web Store item ID assigned after first upload is recorded.
-- [ ] README gains a Chrome Web Store install link only after the listing is actually live.
-
-Hard submission gate: do not submit for Chrome Web Store review until the
-GitHub v0.4.1 Release and reviewer XPI actually exist and their hashes have
-been verified.
+- [x] The verified 0.4.1 browser package was uploaded to the existing item.
+- [x] Manifest name, version, description, and icons were accepted.
+- [x] `manifest.json` is at the ZIP root.
+- [x] Production icons 16, 32, 48, and 128 are in the ZIP.
+- [x] Store icon is a 128 × 128 PNG.
+- [x] Three real 1280 x 800 English screenshots were uploaded.
+- [x] Listing text was completed.
+- [x] Category is **Workflow & Planning**.
+- [x] Privacy practices were completed.
+- [x] Permission justifications were completed.
+- [x] Remote code is set to **No**.
+- [x] Privacy Policy URL is public.
+- [x] Distribution is **Public**.
+- [x] Reviewer instructions were completed.
+- [x] Chrome Web Store review passed.
+- [x] Manual publication was completed.
+- [x] Item ID `pmfobjnkoiiplambnbbkfdlfjcbdogon` is recorded.
+- [x] The public README includes the Chrome Web Store installation link.
+- [ ] Optional Simplified Chinese screenshots may be added later; they are not a publication blocker.
