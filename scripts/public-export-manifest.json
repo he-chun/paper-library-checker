@@ -49,6 +49,7 @@
     "browser-extension",
     "zotero-plugin",
     "test",
-    "tools/manual-verification"
+    "tools/manual-verification",
+    "store-assets/chrome-web-store"
   ]
 }

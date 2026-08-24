@@ -82,6 +82,11 @@ function connectionMessage(status, payload) {
   return optionsI18n.t("connectionFailed", status);
 }
 
+function isCompatibleAddonVersion(addonVersion, extensionVersion) {
+  return typeof addonVersion === "string" && typeof extensionVersion === "string" &&
+    addonVersion === extensionVersion;
+}
+
 async function testConnection() {
   try {
     var endpoint = validateEndpoint(document.querySelector("#endpoint").value.trim());
@@ -92,7 +97,8 @@ async function testConnection() {
     var payload = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(connectionMessage(response.status, payload));
     if (payload.indexReady !== true) throw new Error(optionsI18n.t("indexNotReady"));
-    if (typeof payload.version !== "string" || !payload.version.startsWith("0.3.")) throw new Error(optionsI18n.t("unexpectedAddonVersion"));
+    var extensionVersion = chrome.runtime.getManifest().version;
+    if (!isCompatibleAddonVersion(payload.version, extensionVersion)) throw new Error(optionsI18n.t("unexpectedAddonVersion"));
     setStatus(optionsI18n.t("connectedVersion", payload.version), false);
   } catch (error) {
     setStatus(error.message, true);
@@ -116,4 +122,8 @@ if (typeof document !== "undefined") {
   load().catch((error) => setStatus(error.message, true));
 }
 
-if (typeof module !== "undefined" && module.exports) module.exports = { connectionMessage, validateEndpoint };
+if (typeof module !== "undefined" && module.exports) module.exports = {
+  connectionMessage,
+  isCompatibleAddonVersion,
+  validateEndpoint
+};

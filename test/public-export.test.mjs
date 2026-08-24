@@ -62,6 +62,11 @@ test("public export includes new production popup, locale, and Zotero i18n files
   }
 });
 
+test("public export allowlist includes Chrome Web Store materials", async () => {
+  const manifest = await loadPublicExportManifest(root);
+  assert(manifest.directories.includes("store-assets/chrome-web-store"));
+});
+
 test("public privacy scanner rejects synthetic private content", () => {
   assert.doesNotThrow(() => scanPublicDocument("safe.md", "Synthetic public-safe report"));
   assert.doesNotThrow(() => scanPublicDocument("updates.json", '{"addons":{"paper-library-checker@he-chun.github.io":{}}}'));

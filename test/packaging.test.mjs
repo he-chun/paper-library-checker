@@ -53,6 +53,10 @@ test("builds and inspects release artifacts", () => {
   assert(inventory.plugin.entries.includes("THIRD_PARTY_NOTICES.md"));
   assert(inventory.extension.entries.includes("THIRD_PARTY_NOTICES.md"));
   for (const name of [
+    "icons/icon16.png",
+    "icons/icon32.png",
+    "icons/icon48.png",
+    "icons/icon128.png",
     "src/popup.html",
     "src/popup.js",
     "src/popup.css",
@@ -69,6 +73,7 @@ test("builds and inspects release artifacts", () => {
   for (const artifact of Object.values(inventory)) {
     assert.equal(artifact.entries.some((entry) => entry.startsWith("tools/") || entry.includes(".local.")), false);
   }
+  assert.equal(inventory.extension.entries.some((entry) => entry.startsWith("store-assets/") || entry.startsWith("screenshots/") || entry.includes("icon-master")), false);
 });
 
 test("artifact policy explicitly rejects manual verification tools and local output", () => {

@@ -43,6 +43,14 @@ does not authorize a tag, release, merge, or visibility change.
 - Compare downloaded artifact checksums with CI output before creating a GitHub
   Release. Publication is a separate maintainer action.
 
+### Chrome Web Store order
+
+1. Publish GitHub v0.4.1 and its companion Zotero XPI first.
+2. Verify the downloaded XPI and Chrome extension ZIP hashes.
+3. Upload the browser ZIP to the Chrome Web Store only after those artifacts exist.
+4. Submit the listing, privacy practices, permission reasons, and reviewer instructions.
+5. Add a store installation link to the READMEs only after the listing is actually live.
+
 ## Rollback
 
 Keep the previous reviewed XPI and extension ZIP plus checksums. If a regression

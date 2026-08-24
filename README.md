@@ -14,6 +14,8 @@ Paper Library Checker compares metadata from supported scholarly pages with your
 
 > Alpha software: site coverage and installation details may change before the first stable release.
 
+Chrome Web Store submission is being prepared. The extension is not yet listed there.
+
 Zotero is a registered trademark of the Corporation for Digital Scholarship. This independent project is not affiliated with or endorsed by the Zotero project.
 
 ## Why use it?

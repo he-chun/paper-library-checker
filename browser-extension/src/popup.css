@@ -36,6 +36,7 @@ dd {
 }
 
 dd[data-state="good"] { color: #176b32; }
+dd[data-state="missing"] { color: #164b86; }
 dd[data-state="warning"] { color: #8a5200; }
 dd[data-state="error"] { color: #a40000; }
 

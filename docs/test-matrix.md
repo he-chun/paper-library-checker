@@ -73,3 +73,19 @@ the metadata-only release step.
 | Popup connection and index | Show `Connected` and `Ready` | PASS (2026-08-20) |
 | Single controlled-page check | **Check this page** returns a normal page state | PASS (2026-08-20) |
 | Unhandled exceptions | No unhandled exception during the minimal smoke | PASS (2026-08-20) |
+
+## 0.4.1 minimal Chrome/Zotero smoke
+
+The maintainer exercised the 0.4.1 candidate with dedicated Chrome and Zotero
+profiles while capturing the reviewed Chrome Web Store screenshots. This was a
+targeted smoke, not a repeat of the full release matrix.
+
+| Test item | Actual result |
+| --- | --- |
+| Zotero add-on version 0.4.1 | PASS (2026-08-24) |
+| Zotero connected | PASS (2026-08-24) |
+| Index ready | PASS (2026-08-24) |
+| Saved page check | PASS (2026-08-24) |
+| Not-saved page check | PASS (2026-08-24) |
+| Options test connection | PASS (2026-08-24) |
+| Unhandled error | NONE (2026-08-24) |
