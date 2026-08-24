@@ -48,6 +48,10 @@ article-detail live pages. CNKI English and CNKI batch behavior are
 experimental, and ScienceDirect is best effort when publisher access controls
 replace the article DOM. These support labels do not change the local data flow.
 
+## Chrome Web Store Limited Use
+
+Paper Library Checker's use of user data complies with the Chrome Web Store User Data Policy, including the Limited Use requirements. User data is used only to provide or improve the extension's single purpose and is not sold, used for advertising, transferred for unrelated purposes, or used to determine creditworthiness or for lending purposes.
+
 ## Authentication data
 
 The Zotero add-on generates a 256-bit random pairing token on first run and
