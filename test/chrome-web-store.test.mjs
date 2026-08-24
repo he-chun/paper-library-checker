@@ -76,6 +76,25 @@ test("production and store PNGs have exact dimensions and no textual metadata", 
   }
 });
 
+test("reviewed English store screenshots have exact dimensions and no textual metadata", async () => {
+  const files = [
+    "01-popup-connected-saved.png",
+    "02-popup-not-saved.png",
+    "03-options.png"
+  ];
+  for (const name of files) {
+    const file = path.join(storeRoot, "screenshots", "en", name);
+    const png = inspectPng(await readFile(file));
+    assert.equal(png.width, 1280, file);
+    assert.equal(png.height, 800, file);
+    assert.equal(png.bitDepth, 8, file);
+    assert.equal(png.colorType, 6, file);
+    for (const chunk of ["eXIf", "iTXt", "tEXt", "zTXt"]) {
+      assert.equal(png.chunks.includes(chunk), false, `${file}: ${chunk}`);
+    }
+  }
+});
+
 test("English and Simplified Chinese locale keys remain identical", async () => {
   const en = JSON.parse(await readFile(path.join(browserRoot, "_locales", "en", "messages.json"), "utf8"));
   const zh = JSON.parse(await readFile(path.join(browserRoot, "_locales", "zh_CN", "messages.json"), "utf8"));
