@@ -5,7 +5,7 @@ maintainer-operated server requirement. It requires Zotero 9.0.x and the
 companion Paper Library Checker Zotero add-on.
 
 1. Install Zotero 9.0.x.
-2. From the future [GitHub v0.4.1 Release](https://github.com/he-chun/paper-library-checker/releases/tag/v0.4.1), download the companion XPI.
+2. From the [GitHub v0.4.1 Release](https://github.com/he-chun/paper-library-checker/releases/tag/v0.4.1), download the companion XPI.
 3. In Zotero, open **Tools → Plugins**, choose **Install Plugin From File**, and install and enable the XPI.
 4. Restart Zotero.
 5. In Zotero's **Tools** menu, choose **Paper Library Checker: Copy pairing token**.

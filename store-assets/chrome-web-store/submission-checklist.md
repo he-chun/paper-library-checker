@@ -8,15 +8,15 @@ Repository-prepared evidence:
 - [x] Three reviewed English screenshots from the real UI are present at 1280 x 800.
 - [x] The minimal Chrome/Zotero smoke completed without an unhandled error.
 - [ ] Optional Simplified Chinese screenshots may be added as a later localization enhancement.
-- [ ] GitHub Release v0.4.1 and its reviewer XPI do not exist until the GitHub release step completes.
+- [x] GitHub Release v0.4.1 and its reviewer XPI are public and hash-verified.
 - [ ] No browser ZIP has been uploaded to the Chrome Web Store dashboard.
 
 - [ ] Chrome Web Store developer account is registered.
 - [ ] Contact email is verified.
 - [ ] Account security settings are complete.
-- [ ] GitHub Release v0.4.1 exists.
-- [ ] Reviewer XPI link is accessible and its SHA-256 matches the release checksum.
-- [ ] The 0.4.1 Chrome ZIP SHA-256 has been checked.
+- [x] GitHub Release v0.4.1 exists.
+- [x] Reviewer XPI link is accessible and its SHA-256 matches the release checksum.
+- [x] The 0.4.1 Chrome ZIP SHA-256 has been checked.
 - [ ] Manifest name, version, description, and icons are correct.
 - [ ] `manifest.json` is at the ZIP root.
 - [ ] Production icons 16, 32, 48, and 128 are in the ZIP.
