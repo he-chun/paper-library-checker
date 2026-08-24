@@ -23,6 +23,12 @@ add-on on the loopback interface. If enabled by the user, the extension may
 send the current public page URL to a separately installed translation-server
 on the loopback interface.
 
+## Limited Use
+
+User data is used only to provide or improve the extension's single purpose.
+It is not sold, used for advertising, transferred for unrelated purposes, or
+used to determine creditworthiness or for lending purposes.
+
 ## Remote code
 
 No, this extension does not use remote code.

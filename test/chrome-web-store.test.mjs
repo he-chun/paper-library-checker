@@ -141,8 +141,14 @@ test("Chrome Web Store materials recommend the current workflow category", async
 });
 
 test("privacy and permission documents state the Chrome Web Store boundaries", async () => {
+  const publicPrivacy = await readFile(path.join(root, "PRIVACY.md"), "utf8");
   const privacy = await readFile(path.join(storeRoot, "privacy-practices.md"), "utf8");
   const permissions = await readFile(path.join(storeRoot, "permission-justifications.md"), "utf8");
+  for (const content of [publicPrivacy, privacy]) {
+    assert.match(content, /only to provide or improve the extension's single purpose/);
+    assert.match(content, /not sold, used for advertising, transferred for unrelated purposes/);
+    assert.match(content, /creditworthiness or for lending purposes/);
+  }
   assert.match(privacy, /No, this extension does not use remote code\./);
   assert.match(privacy.replace(/\s+/g, " "), /not sent to the maintainer/);
   assert.match(permissions, /`storage`/);
