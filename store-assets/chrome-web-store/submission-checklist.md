@@ -23,7 +23,7 @@ Repository-prepared evidence:
 - [ ] Store icon is a 128 × 128 PNG.
 - [ ] At least one real 1280 x 800 screenshot is uploaded to the dashboard.
 - [ ] English and Simplified Chinese listing text is filled in consistently.
-- [ ] Category is selected.
+- [ ] Category is set to **Workflow & Planning**.
 - [ ] Privacy practices are filled in.
 - [ ] Permission justifications are filled in.
 - [ ] Remote code is set to **No**.

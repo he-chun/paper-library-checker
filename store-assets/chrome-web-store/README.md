@@ -16,6 +16,11 @@ extension ZIP.
   are copy-ready working material. The Chrome Web Store dashboard remains a
   maintainer-only step.
 
+The recommended Chrome Web Store category is **Workflow & Planning** because
+the extension helps researchers perform literature-management workflows more
+efficiently by checking whether scholarly articles are already present in
+their local Zotero library.
+
 The minimal Chrome/Zotero smoke used while capturing the English screenshots
 passed. Chrome Web Store upload and review submission have not started. The
 reviewer XPI is available from GitHub Release v0.4.1 and its checksum has been
@@ -26,5 +31,6 @@ endorsed by Zotero, Google Chrome, Microsoft Edge, or their publishers.
 
 The listing constraints were checked against Chrome's official documentation:
 [listing guidance](https://developer.chrome.com/docs/webstore/best-listing),
+[category guidance](https://developer.chrome.com/docs/webstore/best-practices#choose-your-extensions-category-well),
 [dashboard listing fields](https://developer.chrome.com/docs/webstore/cws-dashboard-listing),
 and [image requirements](https://developer.chrome.com/docs/webstore/images).
