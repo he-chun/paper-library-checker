@@ -8,6 +8,13 @@ Paper Library Checker
 
 检查受支持学术网站上的论文是否已存在于本地 Zotero 文献库中。
 
+## 推荐分类
+
+Workflow & Planning
+
+Paper Library Checker 通过检查学术文章是否已存在于本地 Zotero 文献库中，
+帮助研究人员更高效地完成文献管理工作流。
+
 ## 详细说明
 
 Paper Library Checker 是一个仍处于 alpha 阶段的本地优先 Zotero 配套工具。

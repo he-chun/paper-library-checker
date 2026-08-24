@@ -8,6 +8,14 @@ Paper Library Checker
 
 Check whether papers on supported scholarly sites are already in your local Zotero library.
 
+## Recommended category
+
+Workflow & Planning
+
+Paper Library Checker helps researchers perform literature-management
+workflows more efficiently by checking whether scholarly articles are already
+present in their local Zotero library.
+
 ## Description
 
 Paper Library Checker is an alpha, local-first companion for Zotero. On

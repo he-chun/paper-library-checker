@@ -127,6 +127,19 @@ test("listing and reviewer materials preserve core product facts", async () => {
   assert(summary.length > 0 && summary.length <= 132);
 });
 
+test("Chrome Web Store materials recommend the current workflow category", async () => {
+  const files = [
+    "listing.en.md",
+    "listing.zh-CN.md",
+    "submission-checklist.md",
+    "README.md"
+  ];
+  for (const name of files) {
+    const content = await readFile(path.join(storeRoot, name), "utf8");
+    assert(content.includes("Workflow & Planning"), name);
+  }
+});
+
 test("privacy and permission documents state the Chrome Web Store boundaries", async () => {
   const privacy = await readFile(path.join(storeRoot, "privacy-practices.md"), "utf8");
   const permissions = await readFile(path.join(storeRoot, "permission-justifications.md"), "utf8");
