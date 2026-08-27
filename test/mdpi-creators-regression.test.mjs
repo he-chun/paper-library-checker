@@ -36,7 +36,10 @@ test("MDPI-like metadata is bounded before the production local API request", as
   global.chrome = {
     runtime: { id: "extension-id", onMessage: { addListener() {} } },
     storage: {
-      sync: { get: async () => ({ endpoint: "http://127.0.0.1:23119/zotero-checker" }) },
+      sync: { get: async () => ({
+        endpoint: "http://127.0.0.1:23119/zotero-checker",
+        connectionMode: "enhanced"
+      }) },
       local: { get: async () => ({ token }) }
     }
   };

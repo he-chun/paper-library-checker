@@ -4,6 +4,8 @@ if (typeof importScripts === "function") {
     "common/candidate-normalization.js",
     "common/sender-security.js",
     "backends/enhanced-backend.js",
+    "backends/local-api-matcher.js",
+    "backends/local-api-backend.js",
     "backends/backend-resolver.js"
   );
 }
@@ -11,6 +13,8 @@ const PLCSenderSecurity = globalThis.PLCSenderSecurity ||
   (typeof require === "function" ? require("./common/sender-security.js") : null);
 const PLCEnhancedBackend = globalThis.PLCEnhancedBackend ||
   (typeof require === "function" ? require("./backends/enhanced-backend.js") : null);
+const PLCLocalApiBackend = globalThis.PLCLocalApiBackend ||
+  (typeof require === "function" ? require("./backends/local-api-backend.js") : null);
 const PLCBackendResolver = globalThis.PLCBackendResolver ||
   (typeof require === "function" ? require("./backends/backend-resolver.js") : null);
 
@@ -23,7 +27,8 @@ const TRANSLATION_SERVER_PROBE_TIMEOUT_MS = 500;
 const TRANSLATION_SERVER_REACHABLE_TTL = 30000;
 let _tsReachable = null;
 const enhancedBackend = PLCEnhancedBackend.createEnhancedBackend();
-const backendResolver = PLCBackendResolver.createBackendResolver({ enhancedBackend });
+const standardBackend = PLCLocalApiBackend.createLocalApiBackend();
+const backendResolver = PLCBackendResolver.createBackendResolver({ enhancedBackend, standardBackend });
 
 async function isTranslationServerReachable() {
   if (_tsReachable !== null && Date.now() - _tsReachable.at < TRANSLATION_SERVER_REACHABLE_TTL) {
@@ -68,11 +73,20 @@ async function resolveBackend() {
 }
 
 async function callZotero(path, body, method = "POST") {
-  const { backend } = await resolveBackend();
-  if (path === "/health" && method === "GET") return backend.probe();
-  if (path === "/check" && method === "POST") return backend.check(body);
-  if (path === "/batch-check" && method === "POST") return backend.batchCheck(body.items || []);
-  throw new Error("unsupported_backend_operation");
+  const resolution = await resolveBackend();
+  let result;
+  if (path === "/health" && method === "GET") {
+    result = resolution.probeResult || await resolution.backend.probe();
+  } else if (path === "/check" && method === "POST") {
+    result = await resolution.backend.check(body);
+  } else if (path === "/batch-check" && method === "POST") {
+    result = await resolution.backend.batchCheck(body.items || []);
+  } else {
+    throw new Error("unsupported_backend_operation");
+  }
+  return resolution.degradedReason && result && typeof result === "object"
+    ? { ...result, degradedReason: resolution.degradedReason }
+    : result;
 }
 
 function handleRuntimeMessage(message, sender, sendResponse) {
@@ -143,7 +157,9 @@ function isTrustedExtensionMessage(message, sender) {
 async function getPopupHealth() {
   try {
     const result = await callZotero("/health", null, "GET");
-    return { connected: true, indexReady: result.indexReady === true };
+    const health = { connected: true, indexReady: result.indexReady === true };
+    if (result.degradedReason) health.degradedReason = result.degradedReason;
+    return health;
   } catch (_error) {
     return { connected: false, indexReady: false };
   }

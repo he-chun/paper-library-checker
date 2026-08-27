@@ -5,67 +5,112 @@ import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
 const resolverApi = require("../browser-extension/src/backends/backend-resolver.js");
 
-function backend(name) {
-  return { name, probe() {}, check() {}, batchCheck() {}, getCapabilities() {} };
+function backend(name, { probeResult, probeError } = {}) {
+  const calls = [];
+  return {
+    name,
+    calls,
+    async probe() {
+      calls.push("probe");
+      if (probeError) throw probeError;
+      return probeResult;
+    },
+    check() {},
+    batchCheck() {},
+    getCapabilities() {}
+  };
 }
 
-test("backend resolver maps auto and enhanced to the enhanced backend", () => {
-  const enhancedBackend = backend("enhanced");
-  const resolver = resolverApi.createBackendResolver({
-    storage: { sync: { get: async () => ({ connectionMode: "auto" }) } },
-    enhancedBackend
+function createResolver(connectionMode, enhancedBackend, standardBackend) {
+  return resolverApi.createBackendResolver({
+    storage: { sync: { get: async (defaults) => connectionMode == null ? defaults : { connectionMode } } },
+    enhancedBackend,
+    standardBackend,
+    getExtensionVersion: () => "0.4.1"
   });
+}
 
-  assert.deepEqual(resolver.resolveMode("auto"), { mode: "auto", backend: enhancedBackend });
-  assert.deepEqual(resolver.resolveMode("enhanced"), { mode: "enhanced", backend: enhancedBackend });
+test("auto prefers a healthy compatible enhanced backend", async () => {
+  const enhancedBackend = backend("enhanced", {
+    probeResult: { ok: true, version: "0.4.1", indexReady: true }
+  });
+  const standardBackend = backend("standard", {
+    probeResult: { ok: true, version: "3", indexReady: true }
+  });
+  const resolved = await createResolver("auto", enhancedBackend, standardBackend).resolve();
+
+  assert.equal(resolved.mode, "auto");
+  assert.equal(resolved.selectedMode, "enhanced");
+  assert.equal(resolved.backend, enhancedBackend);
+  assert.deepEqual(enhancedBackend.calls, ["probe"]);
+  assert.deepEqual(standardBackend.calls, []);
+  assert.equal(resolved.degradedReason, undefined);
 });
 
-test("missing persisted mode uses the auto default", async () => {
-  const enhancedBackend = backend("enhanced");
-  const resolver = resolverApi.createBackendResolver({
-    storage: { sync: { get: async (defaults) => defaults } },
-    enhancedBackend
+test("auto falls back to standard and reports why enhanced degraded", async () => {
+  const enhancedError = Object.assign(new Error("invalid_signature"), { code: "invalid_signature" });
+  const enhancedBackend = backend("enhanced", { probeError: enhancedError });
+  const standardBackend = backend("standard", {
+    probeResult: { ok: true, version: "3", indexReady: true }
   });
+  const resolved = await createResolver("auto", enhancedBackend, standardBackend).resolve();
 
-  assert.deepEqual(await resolver.resolve(), { mode: "auto", backend: enhancedBackend });
+  assert.equal(resolved.selectedMode, "standard");
+  assert.equal(resolved.backend, standardBackend);
+  assert.equal(resolved.degradedReason, "invalid_signature");
+  assert.deepEqual(enhancedBackend.calls, ["probe"]);
+  assert.deepEqual(standardBackend.calls, ["probe"]);
 });
 
-test("invalid persisted modes fall back to auto and resolve to enhanced", async () => {
-  const enhancedBackend = backend("enhanced");
-  const resolver = resolverApi.createBackendResolver({
-    storage: { sync: { get: async () => ({ connectionMode: "future-mode" }) } },
-    enhancedBackend
-  });
-
-  assert.equal(resolverApi.normalizeConnectionMode("future-mode"), "auto");
-  assert.deepEqual(await resolver.resolve(), { mode: "auto", backend: enhancedBackend });
-});
-
-test("standard mode returns a stable unavailable backend until it is implemented", async () => {
-  const resolver = resolverApi.createBackendResolver({
-    storage: { sync: { get: async () => ({ connectionMode: "standard" }) } },
-    enhancedBackend: backend("enhanced")
-  });
-  const resolved = await resolver.resolve();
-
-  assert.equal(resolved.mode, "standard");
-  assert.deepEqual(resolved.backend.getCapabilities(), {
-    mode: "standard",
-    available: false,
-    probe: false,
-    check: false,
-    batchCheck: false
-  });
-  for (const operation of [
-    () => resolved.backend.probe(),
-    () => resolved.backend.check({}),
-    () => resolved.backend.batchCheck([])
+test("auto rejects incompatible or unready enhanced health before fallback", async () => {
+  for (const [probeResult, reason] of [
+    [{ ok: true, version: "0.4.0", indexReady: true }, "enhanced_backend_incompatible"],
+    [{ ok: true, version: "0.4.1", indexReady: false }, "enhanced_index_unavailable"]
   ]) {
-    await assert.rejects(operation, (error) => {
-      assert.equal(error.message, "standard_backend_unavailable");
-      assert.equal(error.code, "standard_backend_unavailable");
-      assert.equal(error.status, 503);
-      return true;
+    const enhancedBackend = backend("enhanced", { probeResult });
+    const standardBackend = backend("standard", {
+      probeResult: { ok: true, version: "3", indexReady: true }
     });
+    const resolved = await createResolver("auto", enhancedBackend, standardBackend).resolve();
+    assert.equal(resolved.selectedMode, "standard");
+    assert.equal(resolved.degradedReason, reason);
   }
+});
+
+test("explicit enhanced mode never probes or falls back to standard", async () => {
+  const enhancedBackend = backend("enhanced", { probeError: new Error("offline") });
+  const standardBackend = backend("standard", {
+    probeResult: { ok: true, version: "3", indexReady: true }
+  });
+  const resolved = await createResolver("enhanced", enhancedBackend, standardBackend).resolve();
+
+  assert.equal(resolved.backend, enhancedBackend);
+  assert.equal(resolved.selectedMode, "enhanced");
+  assert.deepEqual(enhancedBackend.calls, []);
+  assert.deepEqual(standardBackend.calls, []);
+});
+
+test("explicit standard mode never probes enhanced", async () => {
+  const enhancedBackend = backend("enhanced", {
+    probeResult: { ok: true, version: "0.4.1", indexReady: true }
+  });
+  const standardBackend = backend("standard");
+  const resolved = await createResolver("standard", enhancedBackend, standardBackend).resolve();
+
+  assert.equal(resolved.backend, standardBackend);
+  assert.equal(resolved.selectedMode, "standard");
+  assert.deepEqual(enhancedBackend.calls, []);
+  assert.deepEqual(standardBackend.calls, []);
+});
+
+test("missing and invalid persisted modes normalize to auto", async () => {
+  for (const mode of [undefined, "future-mode"]) {
+    const enhancedBackend = backend("enhanced", {
+      probeResult: { ok: true, version: "0.4.1", indexReady: true }
+    });
+    const resolved = await createResolver(mode, enhancedBackend, backend("standard")).resolve();
+    assert.equal(resolved.mode, "auto");
+    assert.equal(resolved.selectedMode, "enhanced");
+  }
+  assert.equal(resolverApi.normalizeConnectionMode("future-mode"), "auto");
 });

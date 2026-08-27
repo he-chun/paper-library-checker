@@ -5,11 +5,15 @@ import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
 let connectionMode = "auto";
 let fetchPayload = { status: "matched", matchType: "doi", confidence: 1 };
+let localStatus = 200;
+let localItems = [];
+let token = "a".repeat(64);
 
 global.chrome = {
   runtime: {
     id: "extension-id",
     getURL: (value) => `chrome-extension://extension-id/${value}`,
+    getManifest: () => ({ version: "0.4.1" }),
     onMessage: { addListener() {} }
   },
   storage: {
@@ -20,10 +24,23 @@ global.chrome = {
         connectionMode
       })
     },
-    local: { get: async () => ({ token: "a".repeat(64) }) }
+    local: { get: async () => ({ token }) }
   }
 };
-global.fetch = async () => ({ ok: true, status: 200, json: async () => fetchPayload });
+global.fetch = async (url) => {
+  if (url === "http://127.0.0.1:23119/api/") {
+    return {
+      ok: localStatus === 200,
+      status: localStatus,
+      headers: { get: () => "3" },
+      json: async () => ({})
+    };
+  }
+  if (url.startsWith("http://127.0.0.1:23119/api/users/0/items?")) {
+    return { ok: localStatus === 200, status: localStatus, json: async () => localItems };
+  }
+  return { ok: true, status: 200, json: async () => fetchPayload };
+};
 
 const background = require("../browser-extension/src/background.js");
 const contentSender = { id: "extension-id", tab: { url: "https://journal.example/article" } };
@@ -37,7 +54,8 @@ function send(message, sender) {
 }
 
 test("content-script single and batch match responses keep their existing shapes", async () => {
-  connectionMode = "auto";
+  connectionMode = "enhanced";
+  token = "a".repeat(64);
   fetchPayload = { status: "matched", matchType: "doi", confidence: 1 };
   assert.deepEqual(await send({
     type: "zotero-check:match",
@@ -77,14 +95,42 @@ test("popup health keeps connected and indexReady compatibility fields", async (
   });
 });
 
-test("standard mode returns stable errors without changing message envelopes", async () => {
+test("auto fallback returns a degraded reason without exposing raw Zotero items", async () => {
+  connectionMode = "auto";
+  token = "";
+  localStatus = 200;
+  localItems = [{
+    key: "PRIVATEKEY",
+    data: { itemType: "journalArticle", title: "Synthetic", DOI: "10.1000/example" }
+  }];
+  assert.deepEqual(await send({
+    type: "zotero-check:match",
+    candidate: { DOI: "10.1000/example" }
+  }, contentSender), {
+    ok: true,
+    result: {
+      status: "matched",
+      matchType: "doi",
+      confidence: 1,
+      degradedReason: "enhanced_backend_unavailable"
+    }
+  });
+  assert.deepEqual(await send({ type: "zotero-check:popup-health" }, popupSender), {
+    connected: true,
+    indexReady: true,
+    degradedReason: "enhanced_backend_unavailable"
+  });
+});
+
+test("standard mode returns the stable disabled error without changing message envelopes", async () => {
   connectionMode = "standard";
+  localStatus = 403;
   assert.deepEqual(await send({
     type: "zotero-check:match",
     candidate: { title: "Synthetic" }
   }, contentSender), {
     ok: false,
-    error: "standard_backend_unavailable"
+    error: "local_api_disabled"
   });
   assert.deepEqual(await send({ type: "zotero-check:popup-health" }, popupSender), {
     connected: false,

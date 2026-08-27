@@ -12,11 +12,13 @@
 
   const DEFAULT_ENDPOINT = "http://127.0.0.1:23119/zotero-checker";
   const CAPABILITIES = Object.freeze({
-    mode: "enhanced",
-    probe: true,
-    check: true,
-    batchCheck: true,
-    authenticated: true
+    exactIdentifiers: true,
+    exactTitle: true,
+    fuzzyTitle: true,
+    possibleMatch: true,
+    batch: true,
+    realtimeIndex: true,
+    authenticatedProtocol: true
   });
 
   function makeLocalApiError(status, code) {

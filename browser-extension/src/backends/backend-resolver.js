@@ -10,48 +10,62 @@
     STANDARD: "standard",
     ENHANCED: "enhanced"
   });
-  const STANDARD_BACKEND_UNAVAILABLE = "standard_backend_unavailable";
 
   function normalizeConnectionMode(value) {
     return Object.values(CONNECTION_MODES).includes(value) ? value : CONNECTION_MODES.AUTO;
   }
 
-  function makeUnavailableError() {
-    const error = new Error(STANDARD_BACKEND_UNAVAILABLE);
-    error.code = STANDARD_BACKEND_UNAVAILABLE;
-    error.status = 503;
-    return error;
+  function enhancedProbeFailure(result, extensionVersion) {
+    if (!result || result.ok !== true) return "enhanced_backend_unavailable";
+    if (result.version !== extensionVersion) return "enhanced_backend_incompatible";
+    if (result.indexReady !== true) return "enhanced_index_unavailable";
+    return "";
   }
 
-  function createUnavailableStandardBackend() {
-    const reject = () => Promise.reject(makeUnavailableError());
-    return Object.freeze({
-      probe: reject,
-      check: reject,
-      batchCheck: reject,
-      getCapabilities() {
-        return Object.freeze({
-          mode: CONNECTION_MODES.STANDARD,
-          available: false,
-          probe: false,
-          check: false,
-          batchCheck: false
-        });
-      }
-    });
+  function errorReason(error) {
+    return error?.code || "enhanced_backend_unavailable";
   }
 
   function createBackendResolver(dependencies = {}) {
     const storage = dependencies.storage || runtimeRoot.chrome?.storage;
     const enhancedBackend = dependencies.enhancedBackend;
-    const standardBackend = dependencies.standardBackend || createUnavailableStandardBackend();
+    const standardBackend = dependencies.standardBackend;
+    const getExtensionVersion = dependencies.getExtensionVersion ||
+      (() => runtimeRoot.chrome?.runtime?.getManifest?.().version || "");
 
-    function resolveMode(value) {
+    async function resolveMode(value) {
       const mode = normalizeConnectionMode(value);
-      return {
-        mode,
-        backend: mode === CONNECTION_MODES.STANDARD ? standardBackend : enhancedBackend
-      };
+      if (mode === CONNECTION_MODES.ENHANCED) {
+        return { mode, selectedMode: CONNECTION_MODES.ENHANCED, backend: enhancedBackend };
+      }
+      if (mode === CONNECTION_MODES.STANDARD) {
+        return { mode, selectedMode: CONNECTION_MODES.STANDARD, backend: standardBackend };
+      }
+
+      let degradedReason = "";
+      try {
+        const probeResult = await enhancedBackend.probe();
+        degradedReason = enhancedProbeFailure(probeResult, getExtensionVersion());
+        if (!degradedReason) {
+          return { mode, selectedMode: CONNECTION_MODES.ENHANCED, backend: enhancedBackend, probeResult };
+        }
+      } catch (error) {
+        degradedReason = errorReason(error);
+      }
+
+      try {
+        const probeResult = await standardBackend.probe();
+        return {
+          mode,
+          selectedMode: CONNECTION_MODES.STANDARD,
+          backend: standardBackend,
+          probeResult,
+          degradedReason
+        };
+      } catch (error) {
+        error.degradedReason = degradedReason;
+        throw error;
+      }
     }
 
     async function resolve() {
@@ -64,10 +78,9 @@
 
   return {
     CONNECTION_MODES,
-    STANDARD_BACKEND_UNAVAILABLE,
     createBackendResolver,
-    createUnavailableStandardBackend,
-    makeUnavailableError,
+    enhancedProbeFailure,
+    errorReason,
     normalizeConnectionMode
   };
 });

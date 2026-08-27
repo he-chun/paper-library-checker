@@ -116,10 +116,12 @@ test("enhanced backend advertises the shared backend interface", () => {
   assert.equal(typeof backend.check, "function");
   assert.equal(typeof backend.batchCheck, "function");
   assert.deepEqual(backend.getCapabilities(), {
-    mode: "enhanced",
-    probe: true,
-    check: true,
-    batchCheck: true,
-    authenticated: true
+    exactIdentifiers: true,
+    exactTitle: true,
+    fuzzyTitle: true,
+    possibleMatch: true,
+    batch: true,
+    realtimeIndex: true,
+    authenticatedProtocol: true
   });
 });

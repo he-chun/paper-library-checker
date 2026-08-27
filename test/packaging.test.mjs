@@ -67,7 +67,9 @@ test("builds and inspects release artifacts", () => {
     "src/common/page-controller.js",
     "src/common/sender-security.js",
     "src/backends/backend-resolver.js",
-    "src/backends/enhanced-backend.js"
+    "src/backends/enhanced-backend.js",
+    "src/backends/local-api-backend.js",
+    "src/backends/local-api-matcher.js"
   ]) assert(inventory.extension.entries.includes(name), name);
   assert(inventory.plugin.entries.includes("src/i18n.js"));
   assert.equal(inventory.plugin.dataDescriptorEntries, 0);
