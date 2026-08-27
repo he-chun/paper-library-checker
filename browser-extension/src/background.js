@@ -136,11 +136,12 @@ async function callZotero(path, body, method = "POST", context = {}) {
     if (path === "/health" && method === "GET") {
       result = await probeBackend(resolution);
     } else if (path === "/check" && method === "POST") {
-      result = await resolution.backend.check(body);
+      result = await resolution.backend.check(body, { workload: context.workload });
     } else if (path === "/batch-check" && method === "POST") {
       result = await resolution.backend.batchCheck(body.items || [], {
         scope: context.batchScope,
-        batchId: operationId
+        batchId: operationId,
+        workload: context.workload
       });
     } else {
       throw new Error("unsupported_backend_operation");

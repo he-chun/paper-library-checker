@@ -65,6 +65,36 @@ test("probe detects an enabled compatible Local API with browser-safe v3 headers
   });
 });
 
+test("probe is not blocked behind an active item query", async () => {
+  let releaseItem;
+  let probeCompleted = false;
+  const backend = localApi.createLocalApiBackend({
+    concurrency: 1,
+    fetch: async (url, options) => {
+      const parsed = new URL(url);
+      if (parsed.pathname.endsWith("/groups")) return response({ payload: [] });
+      if (parsed.pathname === "/api/") return response();
+      return new Promise((resolve, reject) => {
+        releaseItem = () => resolve(response({ payload: [] }));
+        options.signal.addEventListener("abort", () => reject(Object.assign(new Error("aborted"), { name: "AbortError" })));
+      });
+    }
+  });
+
+  const itemQuery = backend.check({ title: "Queued article" });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  const probe = backend.probe().then((result) => {
+    probeCompleted = true;
+    return result;
+  });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  const completedBeforeRelease = probeCompleted;
+  releaseItem();
+
+  await Promise.all([itemQuery, probe]);
+  assert.equal(completedBeforeRelease, true);
+});
+
 test("probe distinguishes disabled, unavailable, and incompatible Local API states", async () => {
   for (const [fetchImpl, code] of [
     [async () => response({ status: 403 }), "local_api_disabled"],

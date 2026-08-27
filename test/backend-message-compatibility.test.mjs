@@ -202,6 +202,11 @@ test("developer mode exposes bounded service-worker timings only to extension pa
   localItems = [];
   const privateTitle = "Private diagnostic title";
   await send({ type: "zotero-check:match", candidate: { title: privateTitle } }, contentSender);
+  await send({
+    type: "zotero-check:match",
+    workload: "references",
+    candidates: [{ title: privateTitle }]
+  }, contentSender);
 
   const log = await send({ type: "zotero-check:developer-log" }, {
     id: "extension-id",
@@ -210,6 +215,7 @@ test("developer mode exposes bounded service-worker timings only to extension pa
   assert.equal(log.enabled, true);
   assert.equal(log.entries.some((entry) => entry.event === "operation_completed"), true);
   assert.equal(log.entries.some((entry) => entry.phase === "item_query" && Number.isFinite(entry.durationMs)), true);
+  assert.equal(log.entries.some((entry) => entry.event === "batch_started" && entry.workload === "references"), true);
   assert.equal(JSON.stringify(log).includes(privateTitle), false);
 
   const cleared = await send({ type: "zotero-check:clear-developer-log" }, {

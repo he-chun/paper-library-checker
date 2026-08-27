@@ -12,6 +12,8 @@
   const REQUEST_TIMEOUT_MS = 30000;
   const DEFAULT_CONCURRENCY = 1;
   const MAX_CONCURRENCY = 6;
+  const FOREGROUND_PRIORITY = 1;
+  const REFERENCE_PRIORITY = 0;
   const TIMEOUT_COOLDOWN_MS = 60000;
   const QUERY_CACHE_TTL_MS = 5000;
   const QUERY_CACHE_MAX_ENTRIES = 256;
@@ -47,6 +49,7 @@
     const limit = Math.max(1, Math.min(MAX_CONCURRENCY, Math.floor(maximum || DEFAULT_CONCURRENCY)));
     const queue = [];
     let active = 0;
+    let sequence = 0;
 
     function drain() {
       while (active < limit && queue.length) {
@@ -63,12 +66,17 @@
       }
     }
 
-    return function schedule(task, signal) {
+    return function schedule(task, signal, priority = REFERENCE_PRIORITY) {
       return new Promise((resolve, reject) => {
-        queue.push({ task, signal, resolve, reject });
+        queue.push({ task, signal, resolve, reject, priority, sequence: sequence++ });
+        queue.sort((left, right) => right.priority - left.priority || left.sequence - right.sequence);
         drain();
       });
     };
+  }
+
+  function requestPriorityForWorkload(workload) {
+    return workload === "references" ? REFERENCE_PRIORITY : FOREGROUND_PRIORITY;
   }
 
   function createLocalApiBackend(dependencies = {}) {
@@ -181,12 +189,12 @@
       return response;
     }
 
-    function request(url, signal, phase, details) {
-      return schedule(() => requestDirect(url, signal, phase, details), signal);
+    function request(url, signal, phase, details, priority) {
+      return schedule(() => requestDirect(url, signal, phase, details), signal, priority);
     }
 
-    async function readJsonArray(url, signal, phase, details) {
-      const response = await request(url, signal, phase, details);
+    async function readJsonArray(url, signal, phase, details, priority) {
+      const response = await request(url, signal, phase, details, priority);
       let payload;
       try {
         payload = await response.json();
@@ -202,7 +210,7 @@
     }
 
     async function probe() {
-      const response = await request(endpoint, null, "probe");
+      const response = await requestDirect(endpoint, null, "probe");
       const apiVersion = response.headers?.get?.("Zotero-API-Version") || "";
       if (apiVersion !== "3") throw makeLocalApiError("local_api_incompatible");
       return { ok: true, version: apiVersion, indexReady: true };
@@ -221,7 +229,7 @@
       return result;
     }
 
-    async function getGroupIDs(signal, batchId) {
+    async function getGroupIDs(signal, batchId, priority) {
       if (groupCache.value && groupCache.expiresAt > now()) {
         report("cache_used", { phase: "group_list", cache: "hit", resultCount: groupCache.value.length, batchId });
         return groupCache.value;
@@ -232,7 +240,7 @@
       }
       const url = new URL("users/0/groups", endpoint);
       url.searchParams.set("format", "json");
-      const promise = readJsonArray(url.href, null, "group_list", { batchId }).then((payload) => {
+      const promise = readJsonArray(url.href, null, "group_list", { batchId }, priority).then((payload) => {
         const value = parseGroupIDs(payload);
         report("group_list_loaded", { libraryCount: value.length + 1, batchId });
         if (groupCache.promise === promise) {
@@ -267,7 +275,7 @@
       }
     }
 
-    async function readItems(libraryPath, query, signal, batchId) {
+    async function readItems(libraryPath, query, signal, batchId, priority) {
       const url = new URL(`${libraryPath}/items`, endpoint);
       url.searchParams.set("format", "json");
       url.searchParams.set("include", "data");
@@ -286,7 +294,7 @@
         report("cache_used", { phase: "item_query", cache: "inflight", library, queryType: query.type, batchId });
         return existing.promise;
       }
-      const promise = readJsonArray(key, signal, "item_query", { library, queryType: query.type, batchId }).then((payload) => {
+      const promise = readJsonArray(key, signal, "item_query", { library, queryType: query.type, batchId }, priority).then((payload) => {
         cacheQuery(key, payload);
         report("query_results_received", { library, queryType: query.type, resultCount: payload.length, batchId });
         return payload;
@@ -315,11 +323,11 @@
       });
     }
 
-    async function libraryPaths(signal, batchId) {
+    async function libraryPaths(signal, batchId, priority) {
       let groupError = null;
       let groupIDs = [];
       try {
-        groupIDs = await getGroupIDs(signal, batchId);
+        groupIDs = await getGroupIDs(signal, batchId, priority);
       } catch (error) {
         if (error.code === "batch_superseded") throw error;
         groupError = error;
@@ -333,11 +341,12 @@
     async function check(candidate, options = {}) {
       const signal = options.signal;
       const batchId = options.batchId;
+      const priority = requestPriorityForWorkload(options.workload);
       const queries = searchQueries(candidate);
       if (!queries.length) return { status: "not_found", matchType: null, confidence: 0 };
       const prepared = matcher.prepareCandidate(candidate);
       const hasIdentifiers = Object.keys(prepared.identifiers).length > 0;
-      const { paths, groupError } = await libraryPaths(signal, batchId);
+      const { paths, groupError } = await libraryPaths(signal, batchId, priority);
       const errors = groupError ? [groupError] : [];
       const seenItems = new Set();
       const successfulLibraries = new Set();
@@ -346,7 +355,7 @@
       for (const query of queries) {
         for (const path of paths) {
           try {
-            const items = await readItems(path, query, signal, batchId);
+            const items = await readItems(path, query, signal, batchId, priority);
             successfulLibraries.add(path);
             const uniqueItems = items.filter((item) => {
               const key = matcher.itemFingerprint(item);
@@ -380,6 +389,7 @@
       if (existing?.key === batchKey) {
         report("batch_reused", {
           operation: "batch",
+          workload: options.workload,
           batchId: existing.batchId,
           inputCount: candidates.length
         });
@@ -397,6 +407,7 @@
       }
       report("batch_started", {
         operation: "batch",
+        workload: options.workload,
         batchId,
         inputCount: candidates.length,
         uniqueCount: unique.size,
@@ -405,7 +416,11 @@
       const active = { batchId, controller, key: batchKey, promise: null };
       active.promise = (async () => {
         for (const entry of unique.values()) {
-          entry.promise = check(entry.candidate, { signal: controller.signal, batchId }).catch((error) => ({
+          entry.promise = check(entry.candidate, {
+            signal: controller.signal,
+            batchId,
+            workload: options.workload
+          }).catch((error) => ({
             status: "error",
             matchType: null,
             confidence: 0,
@@ -417,6 +432,7 @@
         const errorCount = results.filter((result) => result.status === "error").length;
         report("batch_completed", {
           operation: "batch",
+          workload: options.workload,
           batchId,
           inputCount: candidates.length,
           uniqueCount: unique.size,

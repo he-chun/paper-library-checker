@@ -76,7 +76,7 @@ test("different candidates with identical query settings share one in-flight que
   assert.equal(harness.requests.filter((url) => url.includes("/items?")).length, 1);
 });
 
-test("standard backend defaults to one active Local API request", async () => {
+test("standard backend retains one active Local API request by default", async () => {
   let activeItems = 0;
   let maximumActiveItems = 0;
   const harness = createHarness(async (url, options) => {
@@ -95,6 +95,37 @@ test("standard backend defaults to one active Local API request", async () => {
   });
   await harness.backend.batchCheck([{ title: "First" }, { title: "Second" }]);
   assert.equal(maximumActiveItems, 1);
+});
+
+test("foreground detail work runs before queued reference queries", async () => {
+  let releaseFirstReference;
+  const itemOrder = [];
+  const harness = createHarness(async (url, options) => {
+    if (url.pathname.endsWith("/groups")) return response(200, []);
+    const term = url.searchParams.get("q");
+    itemOrder.push(term);
+    if (term === "Reference 1") {
+      return new Promise((resolve, reject) => {
+        releaseFirstReference = () => resolve(response(200, [{ data: { itemType: "journalArticle", title: term } }]));
+        options.signal.addEventListener("abort", () => reject(Object.assign(new Error("aborted"), { name: "AbortError" })));
+      });
+    }
+    return response(200, [{ data: { itemType: "journalArticle", title: term } }]);
+  }, { concurrency: 1 });
+
+  const references = harness.backend.batchCheck([
+    { title: "Reference 1" },
+    { title: "Reference 2" },
+    { title: "Reference 3" }
+  ], { scope: "tab:1:references", workload: "references" });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  const detail = harness.backend.batchCheck([
+    { title: "Detail" }
+  ], { scope: "tab:1:detail", workload: "detail" });
+  releaseFirstReference();
+
+  await Promise.all([detail, references]);
+  assert.deepEqual(itemOrder, ["Reference 1", "Detail", "Reference 2", "Reference 3"]);
 });
 
 test("personal and group libraries are searched, failed groups are isolated, and matches return early", async () => {
