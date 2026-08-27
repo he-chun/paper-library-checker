@@ -1,9 +1,9 @@
 # Privacy
 
 Paper Library Checker is local-first. The browser extension extracts scholarly
-metadata from supported pages and sends it to a Zotero add-on on the loopback
-interface. The add-on compares that metadata with an in-memory index of the
-local Zotero library.
+metadata from supported pages. Enhanced mode sends it to the Paper Library
+Checker Zotero add-on on loopback. Standard mode queries Zotero's built-in
+read-only Local API and compares candidate records in service-worker memory.
 
 ## Data processed
 
@@ -18,6 +18,9 @@ attachments, notes, collections, tags, or local paths.
 ## Where data goes
 
 - Zotero matching requests go only to the configured HTTP loopback endpoint.
+- Standard-mode reads go only to Zotero's fixed Local API root on port 23119.
+  Raw Local API item JSON remains in service-worker memory and is not returned
+  to pages, written to browser storage or logs, or forwarded elsewhere.
 - When enabled, Zotero translation-server receives the current public HTTP(S)
   page URL at its fixed loopback endpoint. Private, local, and mismatched URLs
   are rejected by the extension.
@@ -53,6 +56,10 @@ replace the article DOM. These support labels do not change the local data flow.
 Paper Library Checker's use of user data complies with the Chrome Web Store User Data Policy, including the Limited Use requirements. User data is used only to provide or improve the extension's single purpose and is not sold, used for advertising, transferred for unrelated purposes, or used to determine creditworthiness or for lending purposes.
 
 ## Authentication data
+
+Standard-mode Local API reads do not use the pairing token. Zotero requires the
+user to enable its local API preference; Paper Library Checker performs no
+Local API writes and requests no write authorization.
 
 The Zotero add-on generates a 256-bit random pairing token on first run and
 stores it in a local Zotero preference. The browser extension stores the copied

@@ -5,7 +5,11 @@ Versioning while remaining pre-1.0.
 
 ## [Unreleased]
 
-No changes yet.
+- Adds a standard single-item backend using Zotero's built-in read-only Local
+  API, with exact identifier/title verification in the extension service worker
+  and no Paper Library Checker XPI requirement.
+- Makes automatic mode prefer a healthy compatible enhanced backend and fall
+  back to standard mode with a minimized degradation reason.
 
 ## [0.4.1] - 2026-08-24
 

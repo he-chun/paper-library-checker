@@ -2,11 +2,11 @@
 
 ## Status and scope
 
-This decision introduces a browser-extension backend boundary for two connection
-modes without changing the current user-visible behavior. This change only
-encapsulates the existing authenticated Zotero add-on integration as the
-enhanced backend. It does not implement Zotero's Local API, change the matching
-protocol, or modify the Zotero add-on.
+This decision defines a browser-extension backend boundary for two connection
+modes. The enhanced backend uses the authenticated Paper Library Checker Zotero
+add-on. The standard backend uses Zotero's built-in read-only Local API for
+single-item exact matching without requiring the project XPI. This does not
+change the enhanced protocol or modify the Zotero add-on.
 
 ## Backend responsibilities
 
@@ -19,9 +19,13 @@ batchCheck(candidates)
 getCapabilities()
 ```
 
-The standard backend will eventually use Zotero's supported Local API surface
-and perform any required comparison inside the extension. It is not available
-in this change.
+The standard backend probes the fixed `/api/` loopback endpoint and queries the
+personal-library items resource with local user ID `0`. It sends only GET requests with
+Local API version 3 and `Zotero-Allowed-Request`. Search responses are candidate
+sets, not matches: identifier, title, year, and creator values are normalized
+and verified again in service-worker memory. Attachment, note, and annotation
+items are excluded. The first standard backend supports single-item exact
+matching only; it has no batch or fuzzy-match capability.
 
 The enhanced backend owns the existing `/zotero-checker` integration: endpoint
 validation, local pairing-token access, candidate serialization, HMAC request
@@ -41,14 +45,24 @@ defaults to `auto`. Its allowed values and current resolution are:
 
 | Stored value | Resolution in this change |
 | --- | --- |
-| `auto` | Enhanced backend |
+| `auto` | Probe enhanced first; fall back to standard when enhanced is unhealthy, incompatible, or not index-ready |
 | `enhanced` | Enhanced backend |
-| `standard` | Unavailable backend with `standard_backend_unavailable` |
-| Any other value | Normalize to `auto`, then use the enhanced backend |
+| `standard` | Standard backend only; do not probe enhanced |
+| Any other value | Normalize to `auto` |
 
 There is no settings-page control yet. Existing installations need no
-migration: absence of the field behaves as `auto`, while the endpoint remains
-unchanged and the pairing token remains in `chrome.storage.local`.
+migration: absence of the field behaves as `auto`, while the enhanced endpoint
+remains unchanged and the pairing token remains in `chrome.storage.local`.
+Explicit `enhanced` never falls back, and explicit `standard` never probes the
+enhanced endpoint. Successful automatic fallback includes `degradedReason` as
+optional response metadata.
+
+The standard endpoint is fixed to `http://127.0.0.1:23119/api/`; the validator
+also permits the equivalent `http://localhost:23119/api/` root for injected or
+future configuration. No other scheme, host, port, path, credentials, query, or
+fragment is accepted. HTTP 403 becomes `local_api_disabled`; network failure,
+timeout, incompatible API versions, and malformed JSON have separate stable
+errors. These rules follow Zotero's official [Local API documentation](https://www.zotero.org/support/dev/web_api/v3/local_api).
 
 ## Unified result boundary
 
@@ -73,13 +87,12 @@ worker responds to a content script.
 
 ## LocalApiBackend extension point
 
-A later change can add `browser-extension/src/backends/local-api-backend.js`
-using the same IIFE/`globalThis`/CommonJS module form. It must implement the four
-backend methods, expose only normalized results and capabilities, and accept
-injected fetch and storage dependencies for Node tests. The resolver can then
-receive that implementation as `standardBackend`; `auto` selection can be
-changed only after explicit probing and fallback rules are specified and
-tested.
+`browser-extension/src/backends/local-api-backend.js` is injected into the
+resolver as `standardBackend`. Matching normalization and candidate
+reverification live in `local-api-matcher.js`. A later standard-mode batch or
+fuzzy implementation can extend these modules without changing content-script
+messages, but must first update capabilities and add bounded-query, privacy,
+and compatibility tests.
 
 No caller outside the resolver should branch on backend type. HMAC and pairing
 remain enhanced-backend concerns, while Local API credentials and permissions

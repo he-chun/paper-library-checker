@@ -15,6 +15,8 @@
 3. The service worker sends authenticated requests to Zotero's loopback server.
 4. Optionally, the service worker sends the current public URL to a separately
    installed translation-server on loopback.
+5. In standard mode, the service worker reads candidate records from Zotero's
+   built-in Local API and performs exact-match verification in memory.
 
 ## Threats and controls
 
@@ -26,7 +28,9 @@
 | Endpoint exfiltrates token | User or sync changes endpoint | Endpoint must be HTTP loopback, contain no credentials/query/fragment, and use the exact endpoint path; token stays in local storage | A compromised extension process can bypass its own checks. |
 | translation-server SSRF | Page or message supplies URL | URL must equal sender tab URL, use HTTP(S), and avoid loopback/private/link-local host literals | DNS resolution can change after validation; translation-server must enforce its own network policy. |
 | Resource exhaustion | Authenticated caller sends bursts or large data | Custom raw-body media type, add-on pre-read 64 KiB content-length check, 200-item hard batch cap, field/count limits, 120 requests/10 seconds, bounded replay/result caches and cache keys | Zotero core owns the socket and starts request processing before add-on code; a native platform pre-read limit would provide a stronger guarantee. |
-| Library metadata disclosure | Match result or logs are overbroad | Default response is status/matchType/confidence only; health is minimal and authenticated; logs redact and rotate | Status badge itself is a match oracle visible to the page DOM. |
+| Library metadata disclosure | Match result or logs are overbroad | Default response is status/matchType/confidence only; health is minimal; enhanced requests are authenticated; logs redact and rotate | Status badge itself is a match oracle visible to the page DOM. |
+| Raw Local API item disclosure | Standard-mode queries return editable Zotero item JSON | Only the service worker imports the Local API modules; candidate JSON is held in memory, filtered to bibliographic items, reverified locally, and reduced to a minimal match result without logging or storage | Any local process can read an enabled unauthenticated Local API; users must not expose port 23119 beyond loopback. |
+| Local API search false positive | Zotero quicksearch returns approximate or field-adjacent candidates | Search responses are never treated as matches; DOI, PMID, ISBN, CNKI ID, normalized title, year, and creators are independently rechecked | Standard mode intentionally omits full-library fuzzy matching and possible-match results. |
 | Secret or metadata leakage through sync/log/error | Normal use or failure | Secret in `storage.local`, migration removes sync copy, long-term key never transported, strict `{item}`/`{items}` envelopes, bounded deep rejection of credential keys or the secret value, custom media type avoids Zotero 9.0.6's known plain-JSON body logging branch, minimized stable errors | Zotero core logs short-lived signature headers; Zotero 9.0.6 debug-log integration remains a required real-runtime gate. Browser profile malware and clipboard managers remain out of scope. |
 
 ## Loopback assumptions

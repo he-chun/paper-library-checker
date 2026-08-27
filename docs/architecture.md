@@ -14,9 +14,10 @@
   article metadata when configured.
 
 The service worker selects a connection backend behind a shared
-`probe`/`check`/`batchCheck`/`getCapabilities` interface. The current enhanced
-backend encapsulates the existing authenticated add-on protocol; the standard
-backend is reserved for a later Zotero Local API integration. See
+`probe`/`check`/`batchCheck`/`getCapabilities` interface. The enhanced backend
+encapsulates the existing authenticated add-on protocol. The standard backend
+uses Zotero's built-in read-only Local API for single-item exact matching and
+revalidates returned candidates entirely within the service worker. See
 `docs/dual-backend-architecture.md`.
 
 ## Detection classes
@@ -46,6 +47,10 @@ The content script treats DOM metadata as untrusted. The service worker validate
 sender and tab URL, keeps the token in local storage, and restricts network
 destinations. The add-on validates authentication, size, schema, rate, and cache
 bounds before matching. See `docs/threat-model.md`.
+
+Standard-mode Local API responses remain in service-worker memory and are
+reduced to status, match type, and confidence. Raw Zotero item JSON is never
+sent to content scripts, extension pages, storage, logs, or remote services.
 
 Content-script requests to the service worker require a same-extension sender,
 a trusted `sender.tab`, and an HTTP(S) tab URL. Popup health uses a separate
