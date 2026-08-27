@@ -76,7 +76,33 @@ test("different candidates with identical query settings share one in-flight que
   assert.equal(harness.requests.filter((url) => url.includes("/items?")).length, 1);
 });
 
-test("standard backend retains one active Local API request by default", async () => {
+test("standard backend overlaps four lightweight title requests by default", async () => {
+  let activeItems = 0;
+  let maximumActiveItems = 0;
+  let releaseRequests;
+  const requestsStarted = new Promise((resolve) => {
+    releaseRequests = resolve;
+  });
+  const harness = createHarness(async (url) => {
+    if (url.pathname.endsWith("/groups")) return response(200, []);
+    activeItems += 1;
+    maximumActiveItems = Math.max(maximumActiveItems, activeItems);
+    await requestsStarted;
+    activeItems -= 1;
+    return response(200, []);
+  });
+  const batch = harness.backend.batchCheck(Array.from({ length: 4 }, (_, index) => ({
+    title: `Reference ${index + 1}`
+  })));
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  const activeBeforeRelease = maximumActiveItems;
+  releaseRequests();
+  await batch;
+
+  assert.equal(activeBeforeRelease, 4);
+});
+
+test("identifier-only everything searches remain serial by default", async () => {
   let activeItems = 0;
   let maximumActiveItems = 0;
   const harness = createHarness(async (url, options) => {
@@ -93,7 +119,10 @@ test("standard backend retains one active Local API request by default", async (
     activeItems -= 1;
     return response(200, []);
   });
-  await harness.backend.batchCheck([{ title: "First" }, { title: "Second" }]);
+  await harness.backend.batchCheck([
+    { DOI: "10.1000/first" },
+    { DOI: "10.1000/second" }
+  ]);
   assert.equal(maximumActiveItems, 1);
 });
 

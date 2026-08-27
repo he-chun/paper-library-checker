@@ -108,10 +108,12 @@ candidates until the same exact matcher rechecks them. During a standard
 reference batch, each completed minimized result can update its page row
 immediately; the final response still contains the complete input-ordered array.
 
-The shared scheduler has a hard ceiling of six for injected performance tests,
-but production standard mode uses one active Local API request. Its item-query
-queue is stable within each priority, with detail-page work ahead of queued
-reference-list work; lightweight health probes do not join that queue. Its
+The shared scheduler has a hard ceiling of six active Local API requests.
+Production uses up to four concurrent lightweight title queries, while the
+identifier-only `everything` lane remains limited to one because real Zotero
+measurements showed that its full-text searches serialize internally. Each lane
+is stable within its priority, with detail-page work ahead of queued
+reference-list work; lightweight health probes do not join either lane. The
 item-query cache is bounded to 256 entries for five seconds; group membership is
 cached for thirty seconds. The 30-second per-request timeout accommodates large
 real libraries. An item timeout opens a sixty-second fail-fast cooldown, and page

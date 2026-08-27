@@ -32,10 +32,12 @@ another. This also prevents dynamic-page observers or another open tab from
 repeatedly aborting useful Local API work. Title-bearing candidates use only
 Zotero's lightweight title/creator/year search; exact identifiers are reverified
 in the returned records, while identifier-only candidates retain the full-text
-compatibility fallback. Production Local API work is serial, and a timed out
-item query opens a one-minute fail-fast cooldown so aborted searches cannot
-build an invisible Zotero work queue. Queued detail-page work takes precedence
-over queued reference-list queries, while the lightweight connection probe runs
+compatibility fallback. Production permits four concurrent lightweight title
+queries but keeps identifier-only full-text work serial, within the existing
+six-request hard ceiling. A timed out item query opens a one-minute fail-fast
+cooldown so aborted searches cannot build an invisible Zotero work queue. Queued
+detail-page work takes precedence over queued reference-list queries in each
+lane, while the lightweight connection probe runs
 outside the item-query queue so popup and Options health cannot wait behind an
 entire page batch. Automatic page retries use bounded
 exponential backoff while manual rechecks remain available. Foreground,

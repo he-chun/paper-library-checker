@@ -117,12 +117,22 @@ reference title queries took 549–609 ms each. The full-text fallback therefore
 accounted for about 92% of the detail-check latency and blocked the serial title
 queue even though it produced no match.
 
-The comparison shows that this Zotero instance processes the query workload
-approximately serially. It also proved that the former three-second timeout was
-too short for a real large library, so the production default remains 30
-seconds. Production concurrency is now one. Title-bearing candidates use only
-`titleCreatorYear`; exact identifiers are reverified in returned records, and
-only identifier-only candidates use `everything`. If an item query times out,
+After removing that fallback, a second real developer-mode trace contained no
+`everything` requests. The one-item detail check completed in 654 ms. A batch of
+38 unique references reused one cached result and sent 37 title requests
+strictly one at a time; those requests totaled 31.244 seconds, with a 583 ms
+median and a 3.537-second maximum. The complete batch took 31.253 seconds and
+returned 10 matches, 28 not-found results, and no errors. This isolated the next
+bottleneck to browser-side serialization of lightweight title queries.
+
+The identifier-only comparison shows that this Zotero instance processes
+full-text query work approximately serially. It also proved that the former
+three-second timeout was too short for a real large library, so the production
+default remains 30
+seconds. Production now permits four concurrent title queries but retains a
+one-request lane for identifier-only `everything` work. Title-bearing candidates
+use only `titleCreatorYear`, and exact identifiers are reverified in returned
+records. If an item query times out,
 the backend rejects further item work with `local_api_timeout` for
 sixty seconds, and page automatic retries back off from sixty seconds to five
 minutes. These controls prevent browser-side aborts from continuously adding

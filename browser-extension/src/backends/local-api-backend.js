@@ -10,7 +10,8 @@
 
   const DEFAULT_ENDPOINT = "http://127.0.0.1:23119/api/";
   const REQUEST_TIMEOUT_MS = 30000;
-  const DEFAULT_CONCURRENCY = 1;
+  const DEFAULT_CONCURRENCY = 4;
+  const IDENTIFIER_CONCURRENCY = 1;
   const MAX_CONCURRENCY = 6;
   const FOREGROUND_PRIORITY = 1;
   const REFERENCE_PRIORITY = 0;
@@ -45,30 +46,42 @@
     return url.href;
   }
 
-  function createLimiter(maximum) {
+  function createLimiter(maximum, laneLimits = {}) {
     const limit = Math.max(1, Math.min(MAX_CONCURRENCY, Math.floor(maximum || DEFAULT_CONCURRENCY)));
     const queue = [];
+    const activeByLane = new Map();
     let active = 0;
     let sequence = 0;
 
+    function canRun(entry) {
+      const laneLimit = Math.max(1, Math.min(limit, Math.floor(laneLimits[entry.lane] || limit)));
+      return (activeByLane.get(entry.lane) || 0) < laneLimit;
+    }
+
     function drain() {
       while (active < limit && queue.length) {
-        const entry = queue.shift();
+        const index = queue.findIndex(canRun);
+        if (index < 0) return;
+        const [entry] = queue.splice(index, 1);
         if (entry.signal?.aborted) {
           entry.reject(makeLocalApiError("batch_superseded"));
           continue;
         }
         active += 1;
+        activeByLane.set(entry.lane, (activeByLane.get(entry.lane) || 0) + 1);
         Promise.resolve().then(entry.task).then(entry.resolve, entry.reject).finally(() => {
           active -= 1;
+          const laneActive = (activeByLane.get(entry.lane) || 1) - 1;
+          if (laneActive > 0) activeByLane.set(entry.lane, laneActive);
+          else activeByLane.delete(entry.lane);
           drain();
         });
       }
     }
 
-    return function schedule(task, signal, priority = REFERENCE_PRIORITY) {
+    return function schedule(task, signal, priority = REFERENCE_PRIORITY, lane = "default") {
       return new Promise((resolve, reject) => {
-        queue.push({ task, signal, resolve, reject, priority, sequence: sequence++ });
+        queue.push({ task, signal, resolve, reject, priority, lane, sequence: sequence++ });
         queue.sort((left, right) => right.priority - left.priority || left.sequence - right.sequence);
         drain();
       });
@@ -109,7 +122,8 @@
     const now = dependencies.now || Date.now;
     const clock = dependencies.clock || Date.now;
     const onDiagnostic = typeof dependencies.onDiagnostic === "function" ? dependencies.onDiagnostic : () => {};
-    const schedule = createLimiter(dependencies.concurrency || DEFAULT_CONCURRENCY);
+    const concurrency = dependencies.concurrency || DEFAULT_CONCURRENCY;
+    const schedule = createLimiter(concurrency, { identifier: IDENTIFIER_CONCURRENCY });
     const queryCache = new Map();
     const queryInFlight = new Map();
     let groupCache = { expiresAt: 0, value: null, promise: null };
@@ -206,7 +220,8 @@
     }
 
     function request(url, signal, phase, details, priority) {
-      return schedule(() => requestDirect(url, signal, phase, details), signal, priority);
+      const lane = phase === "item_query" && details?.queryType !== "title" ? "identifier" : "default";
+      return schedule(() => requestDirect(url, signal, phase, details), signal, priority, lane);
     }
 
     async function readJsonArray(url, signal, phase, details, priority) {
@@ -429,7 +444,7 @@
         batchId,
         inputCount: candidates.length,
         uniqueCount: unique.size,
-        concurrency: dependencies.concurrency || DEFAULT_CONCURRENCY
+        concurrency
       });
       const active = { batchId, controller, key: batchKey, promise: null };
       active.promise = (async () => {
@@ -487,6 +502,7 @@
     DEFAULT_CONCURRENCY,
     DEFAULT_ENDPOINT,
     GROUP_CACHE_TTL_MS,
+    IDENTIFIER_CONCURRENCY,
     QUERY_CACHE_MAX_ENTRIES,
     QUERY_CACHE_TTL_MS,
     REQUEST_TIMEOUT_MS,

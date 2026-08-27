@@ -36,18 +36,20 @@ Only identifier-only candidates use the slower `everything` compatibility
 search. This avoids an unbounded full-text fallback after every useful title
 lookup while every response remains independently reverified.
 
-A shared scheduler permits at most six active Local API requests, but production
-standard mode deliberately defaults to one because real Zotero measurements
-showed that concurrent full-text searches are effectively serialized inside
-Zotero and can accumulate after browser-side aborts. Group-list results and
-successful item-query results use bounded, expiring memory caches; item queries
-expire after five seconds and the group list after thirty seconds. After an
-item-query timeout, further item queries fail fast with the same stable
-`local_api_timeout` code for sixty seconds instead of adding work to Zotero's
-queue. Within the serial item scheduler, queued `detail` work has priority over
-queued `references` work without aborting the active request. The small root API
-probe is independent of that scheduler, preventing popup and Options health from
-waiting behind all queued item searches. Page-side automatic retries start at
+A shared scheduler permits at most six active Local API requests. Production
+standard mode permits four lightweight `titleCreatorYear` requests while a
+separate lane keeps identifier-only `everything` work at one active request.
+Real Zotero measurements showed that concurrent full-text searches are
+effectively serialized inside Zotero and can accumulate after browser-side
+aborts, while a later 38-reference trace showed that serial title searches alone
+took 31.253 seconds. Group-list results and successful item-query results use
+bounded, expiring memory caches; item queries expire after five seconds and the
+group list after thirty seconds. After an item-query timeout, further item
+queries fail fast with the same stable `local_api_timeout` code for sixty seconds
+instead of adding work to Zotero's queue. Within both scheduler lanes, queued
+`detail` work has priority over queued `references` work without aborting active
+requests. The small root API probe is independent of that scheduler, preventing
+popup and Options health from waiting behind all queued item searches. Page-side automatic retries start at
 sixty seconds and back off to five minutes; a user-initiated recheck remains
 available. No persistent or full-library index is created.
 
