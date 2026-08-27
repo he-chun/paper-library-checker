@@ -11,7 +11,7 @@
   ]);
   const NUMBER_FIELDS = new Set([
     "durationMs", "httpStatus", "inputCount", "uniqueCount", "resultCount", "libraryCount", "matchedCount",
-    "notFoundCount", "errorCount", "concurrency", "operationId", "batchId"
+    "notFoundCount", "errorCount", "concurrency", "operationId", "batchId", "cooldownMs"
   ]);
 
   function safeText(value) {

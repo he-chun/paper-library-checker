@@ -25,6 +25,7 @@ test("developer diagnostics use an allowlist and discard paper and connection da
     backend: "standard",
     phase: "item_query",
     durationMs: 1250.4,
+    cooldownMs: 60000,
     httpStatus: 200,
     title: "Private paper title",
     doi: "10.1000/private",
@@ -37,6 +38,7 @@ test("developer diagnostics use an allowlist and discard paper and connection da
   assert.match(serialized, /backend_request_completed/);
   assert.match(serialized, /item_query/);
   assert.match(serialized, /1250/);
+  assert.match(serialized, /60000/);
   for (const privateValue of ["Private paper title", "10.1000/private", "127.0.0.1", secret, "creators"]) {
     assert.equal(serialized.includes(privateValue), false);
   }

@@ -76,6 +76,27 @@ test("different candidates with identical query settings share one in-flight que
   assert.equal(harness.requests.filter((url) => url.includes("/items?")).length, 1);
 });
 
+test("standard backend defaults to one active Local API request", async () => {
+  let activeItems = 0;
+  let maximumActiveItems = 0;
+  const harness = createHarness(async (url, options) => {
+    if (url.pathname.endsWith("/groups")) return response(200, []);
+    activeItems += 1;
+    maximumActiveItems = Math.max(maximumActiveItems, activeItems);
+    await new Promise((resolve, reject) => {
+      const timer = setTimeout(resolve, 5);
+      options.signal.addEventListener("abort", () => {
+        clearTimeout(timer);
+        reject(Object.assign(new Error("aborted"), { name: "AbortError" }));
+      });
+    });
+    activeItems -= 1;
+    return response(200, []);
+  });
+  await harness.backend.batchCheck([{ title: "First" }, { title: "Second" }]);
+  assert.equal(maximumActiveItems, 1);
+});
+
 test("personal and group libraries are searched, failed groups are isolated, and matches return early", async () => {
   const harness = createHarness(async (url) => {
     if (url.pathname.endsWith("/groups")) {
@@ -222,7 +243,7 @@ test("batches from different tabs do not cancel each other", async () => {
       });
     }
     return response(200, [{ data: { itemType: "journalArticle", title: term } }]);
-  });
+  }, { concurrency: 2 });
 
   const oldBatch = harness.backend.batchCheck([{ title: "Old" }], { scope: "tab-1" });
   await new Promise((resolve) => setTimeout(resolve, 0));

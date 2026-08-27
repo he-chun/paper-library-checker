@@ -38,11 +38,16 @@
   const MAX_DYNAMIC_CHECKS = 10;
   const BATCH_LIMIT = 80;
   const RETRY_DELAY_MS = 5000;
+  const BATCH_RETRY_INITIAL_MS = 60000;
+  const BATCH_RETRY_MAX_MS = 300000;
   const FOREGROUND_CHECK_DEBOUNCE_MS = 1000;
   let checkCount = 0;
   let lastSuccessfulCandidateKey = "";
   let lastSuccessfulBatchKey = "";
   let inFlightBatchKey = "";
+  let lastFailedBatchKey = "";
+  let batchRetryNotBefore = 0;
+  let batchRetryDelayMs = BATCH_RETRY_INITIAL_MS;
   let detailTimer = null;
   let batchTimer = null;
   let detailRetryTimer = null;
@@ -750,6 +755,9 @@
     if (!force && batchKey === lastSuccessfulBatchKey) {
       return;
     }
+    if (!userInitiated && batchKey === lastFailedBatchKey && Date.now() < batchRetryNotBefore) {
+      return;
+    }
     if (batchKey === inFlightBatchKey) {
       return;
     }
@@ -780,12 +788,23 @@
       } else {
         targets.forEach(function (target) { applyTargetState(target, "error", response?.error || i18n.t("checkerOffline")); });
       }
-      scheduleBatchRetry();
+      scheduleBatchRetry(batchKey);
       return;
     }
 
-    clearTimeout(batchRetryTimer);
-    lastSuccessfulBatchKey = batchKey;
+    const batchResults = response.result.results;
+    const allErrored = batchResults.length > 0 && batchResults.every(function (result) {
+      return result?.status === "error";
+    });
+    if (allErrored) {
+      scheduleBatchRetry(batchKey);
+    } else {
+      clearTimeout(batchRetryTimer);
+      batchRetryDelayMs = BATCH_RETRY_INITIAL_MS;
+      batchRetryNotBefore = 0;
+      lastFailedBatchKey = "";
+      lastSuccessfulBatchKey = batchKey;
+    }
 
     if (adapter) {
       var results = response.result.results.map(function (r, i) {
@@ -803,12 +822,16 @@
     }
   }
 
-  function scheduleBatchRetry() {
+  function scheduleBatchRetry(batchKey) {
     clearTimeout(batchRetryTimer);
+    const delay = batchRetryDelayMs;
+    lastFailedBatchKey = batchKey || lastFailedBatchKey;
+    batchRetryNotBefore = Date.now() + delay;
+    batchRetryDelayMs = Math.min(BATCH_RETRY_MAX_MS, delay * 2);
     batchRetryTimer = setTimeout(() => {
       lastSuccessfulBatchKey = "";
       scheduleBatchCheck();
-    }, RETRY_DELAY_MS);
+    }, delay);
   }
 
   function collectCNKITargets() {

@@ -86,6 +86,39 @@ test("empty personal library search returns a minimal not-found result", async (
   const url = new URL(requests.find((request) => request.url.includes("/items?" )).url);
   assert.equal(`${url.origin}${url.pathname}`, "http://127.0.0.1:23119/api/users/0/items");
   assert.equal(url.searchParams.get("q"), "Synthetic Article");
+  assert.equal(url.searchParams.get("qmode"), "titleCreatorYear");
+});
+
+test("a candidate with title and DOI uses the lightweight title query first and still returns an exact DOI match", async () => {
+  const requests = [];
+  const backend = localApi.createLocalApiBackend({
+    fetch: async (url) => {
+      const parsed = new URL(url);
+      requests.push(parsed);
+      if (parsed.pathname.endsWith("/groups")) return response({ payload: [] });
+      return response({ payload: parsed.searchParams.get("qmode") === "titleCreatorYear"
+        ? [{ data: { itemType: "journalArticle", title: "Exact title", DOI: "10.1000/exact" } }]
+        : [] });
+    }
+  });
+
+  assert.deepEqual(await backend.check({ title: "Exact title", DOI: "10.1000/exact" }), {
+    status: "matched",
+    matchType: "doi",
+    confidence: 1
+  });
+  const itemRequests = requests.filter((url) => url.pathname.endsWith("/items"));
+  assert.equal(itemRequests.length, 1);
+  assert.equal(itemRequests[0].searchParams.get("q"), "Exact title");
+  assert.equal(itemRequests[0].searchParams.get("qmode"), "titleCreatorYear");
+});
+
+test("identifier-only candidates retain the exact everything-search fallback", async () => {
+  const { backend, requests } = backendWithItems([{
+    data: { itemType: "journalArticle", DOI: "10.1000/identifier-only" }
+  }]);
+  assert.equal((await backend.check({ DOI: "10.1000/identifier-only" })).matchType, "doi");
+  const url = new URL(requests.find((request) => request.url.includes("/items?")).url);
   assert.equal(url.searchParams.get("qmode"), "everything");
 });
 
@@ -194,6 +227,37 @@ test("malformed JSON and request timeout return stable errors", async () => {
     })
   });
   await assert.rejects(() => timeout.probe(), (error) => error.code === "local_api_timeout");
+});
+
+test("an item-query timeout opens a cooldown without changing the stable error code", async () => {
+  let clock = 1000;
+  let itemRequests = 0;
+  let hang = true;
+  const events = [];
+  const backend = localApi.createLocalApiBackend({
+    now: () => clock,
+    timeoutMs: 5,
+    timeoutCooldownMs: 100,
+    onDiagnostic: (event, details) => events.push({ event, ...details }),
+    fetch: async (url, options) => {
+      if (new URL(url).pathname.endsWith("/groups")) return response({ payload: [] });
+      itemRequests += 1;
+      if (!hang) return response({ payload: [] });
+      return new Promise((_resolve, reject) => {
+        options.signal.addEventListener("abort", () => reject(Object.assign(new Error("aborted"), { name: "AbortError" })));
+      });
+    }
+  });
+
+  await assert.rejects(() => backend.check({ title: "First" }), (error) => error.code === "local_api_timeout");
+  await assert.rejects(() => backend.check({ title: "Second" }), (error) => error.code === "local_api_timeout");
+  assert.equal(itemRequests, 1);
+  assert.equal(events.some((entry) => entry.event === "backend_request_skipped" && entry.error === "local_api_timeout"), true);
+
+  clock += 101;
+  hang = false;
+  assert.equal((await backend.check({ title: "Third" })).status, "not_found");
+  assert.equal(itemRequests, 2);
 });
 
 test("standard capabilities enable batch but disable fuzzy, possible, realtime, and authenticated protocol", async () => {

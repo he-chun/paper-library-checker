@@ -10,7 +10,9 @@
 
   const DEFAULT_ENDPOINT = "http://127.0.0.1:23119/api/";
   const REQUEST_TIMEOUT_MS = 30000;
-  const DEFAULT_CONCURRENCY = 6;
+  const DEFAULT_CONCURRENCY = 1;
+  const MAX_CONCURRENCY = 6;
+  const TIMEOUT_COOLDOWN_MS = 60000;
   const QUERY_CACHE_TTL_MS = 5000;
   const QUERY_CACHE_MAX_ENTRIES = 256;
   const GROUP_CACHE_TTL_MS = 30000;
@@ -42,7 +44,7 @@
   }
 
   function createLimiter(maximum) {
-    const limit = Math.max(1, Math.min(DEFAULT_CONCURRENCY, Math.floor(maximum || DEFAULT_CONCURRENCY)));
+    const limit = Math.max(1, Math.min(MAX_CONCURRENCY, Math.floor(maximum || DEFAULT_CONCURRENCY)));
     const queue = [];
     let active = 0;
 
@@ -79,6 +81,7 @@
       ? QUERY_CACHE_MAX_ENTRIES
       : Math.max(1, Math.floor(dependencies.queryCacheMaxEntries));
     const groupCacheTtlMs = dependencies.groupCacheTtlMs == null ? GROUP_CACHE_TTL_MS : dependencies.groupCacheTtlMs;
+    const timeoutCooldownMs = dependencies.timeoutCooldownMs == null ? TIMEOUT_COOLDOWN_MS : dependencies.timeoutCooldownMs;
     const now = dependencies.now || Date.now;
     const clock = dependencies.clock || Date.now;
     const onDiagnostic = typeof dependencies.onDiagnostic === "function" ? dependencies.onDiagnostic : () => {};
@@ -88,6 +91,7 @@
     let groupCache = { expiresAt: 0, value: null, promise: null };
     const activeBatches = new Map();
     let batchSequence = 0;
+    let itemQueryCooldownUntil = 0;
 
     function report(event, details) {
       try {
@@ -101,7 +105,22 @@
       return Math.max(0, clock() - startedAt);
     }
 
+    function cooldownRemaining() {
+      return Math.max(0, itemQueryCooldownUntil - now());
+    }
+
     async function requestDirect(url, externalSignal, phase, details = {}) {
+      const remaining = phase === "item_query" ? cooldownRemaining() : 0;
+      if (remaining > 0) {
+        report("backend_request_skipped", {
+          phase,
+          ...details,
+          durationMs: 0,
+          error: "local_api_timeout",
+          cooldownMs: remaining
+        });
+        throw makeLocalApiError("local_api_timeout");
+      }
       const controller = new AbortController();
       const abortFromExternal = () => controller.abort();
       if (externalSignal?.aborted) throw makeLocalApiError("batch_superseded");
@@ -125,6 +144,9 @@
           : error?.name === "AbortError"
             ? makeLocalApiError("local_api_timeout")
             : makeLocalApiError("local_api_unavailable");
+        if (phase === "item_query" && mapped.code === "local_api_timeout") {
+          itemQueryCooldownUntil = Math.max(itemQueryCooldownUntil, now() + timeoutCooldownMs);
+        }
         report("backend_request_failed", {
           phase,
           ...details,
@@ -245,34 +267,52 @@
       }
     }
 
-    async function readItems(libraryPath, term, signal, queryType, batchId) {
+    async function readItems(libraryPath, query, signal, batchId) {
       const url = new URL(`${libraryPath}/items`, endpoint);
       url.searchParams.set("format", "json");
       url.searchParams.set("include", "data");
       url.searchParams.set("itemType", "-attachment");
-      url.searchParams.set("qmode", "everything");
-      url.searchParams.set("q", term);
+      url.searchParams.set("qmode", query.qmode);
+      url.searchParams.set("q", query.term);
       const key = url.href;
       const cached = cachedQuery(key);
       const library = libraryPath === "users/0" ? "personal" : "group";
       if (cached) {
-        report("cache_used", { phase: "item_query", cache: "hit", library, queryType, resultCount: cached.length, batchId });
+        report("cache_used", { phase: "item_query", cache: "hit", library, queryType: query.type, resultCount: cached.length, batchId });
         return cached;
       }
       const existing = queryInFlight.get(key);
       if (existing && existing.signal === signal) {
-        report("cache_used", { phase: "item_query", cache: "inflight", library, queryType, batchId });
+        report("cache_used", { phase: "item_query", cache: "inflight", library, queryType: query.type, batchId });
         return existing.promise;
       }
-      const promise = readJsonArray(key, signal, "item_query", { library, queryType, batchId }).then((payload) => {
+      const promise = readJsonArray(key, signal, "item_query", { library, queryType: query.type, batchId }).then((payload) => {
         cacheQuery(key, payload);
-        report("query_results_received", { library, queryType, resultCount: payload.length, batchId });
+        report("query_results_received", { library, queryType: query.type, resultCount: payload.length, batchId });
         return payload;
       }).finally(() => {
         if (queryInFlight.get(key)?.promise === promise) queryInFlight.delete(key);
       });
       queryInFlight.set(key, { promise, signal });
       return promise;
+    }
+
+    function searchQueries(candidate) {
+      const prepared = matcher.prepareCandidate(candidate);
+      const queries = [];
+      const title = String(candidate?.title || "").trim();
+      if (title) queries.push({ term: title, type: "title", qmode: "titleCreatorYear" });
+      for (const type of matcher.IDENTIFIER_PRIORITY) {
+        const term = prepared.identifiers[type];
+        if (term) queries.push({ term, type, qmode: "everything" });
+      }
+      const seen = new Set();
+      return queries.filter((query) => {
+        const key = `${query.qmode}\n${query.term}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
     }
 
     async function libraryPaths(signal, batchId) {
@@ -293,22 +333,21 @@
     async function check(candidate, options = {}) {
       const signal = options.signal;
       const batchId = options.batchId;
-      const terms = matcher.searchTerms(candidate);
-      if (!terms.length) return { status: "not_found", matchType: null, confidence: 0 };
+      const queries = searchQueries(candidate);
+      if (!queries.length) return { status: "not_found", matchType: null, confidence: 0 };
       const prepared = matcher.prepareCandidate(candidate);
-      const identifierTypes = new Map(Object.entries(prepared.identifiers).map(([type, value]) => [value, type]));
+      const hasIdentifiers = Object.keys(prepared.identifiers).length > 0;
       const { paths, groupError } = await libraryPaths(signal, batchId);
       const errors = groupError ? [groupError] : [];
       const seenItems = new Set();
-      let successfulLibraries = 0;
+      const successfulLibraries = new Set();
+      let titleFallback = null;
 
-      for (const path of paths) {
-        let librarySucceeded = false;
-        try {
-          for (const term of terms) {
-            const queryType = identifierTypes.get(term) || "title";
-            const items = await readItems(path, term, signal, queryType, batchId);
-            librarySucceeded = true;
+      for (const query of queries) {
+        for (const path of paths) {
+          try {
+            const items = await readItems(path, query, signal, batchId);
+            successfulLibraries.add(path);
             const uniqueItems = items.filter((item) => {
               const key = matcher.itemFingerprint(item);
               if (!key || seenItems.has(key)) return false;
@@ -316,17 +355,20 @@
               return true;
             });
             const result = matcher.matchCandidate(candidate, uniqueItems);
-            if (result.status === "matched") return result;
+            if (result.status === "matched") {
+              if (result.matchType !== "title" || !hasIdentifiers) return result;
+              titleFallback = titleFallback || result;
+            }
+          } catch (error) {
+            if (error.code === "batch_superseded") throw error;
+            errors.push(error);
           }
-        } catch (error) {
-          if (error.code === "batch_superseded") throw error;
-          errors.push(error);
         }
-        if (librarySucceeded) successfulLibraries += 1;
       }
 
       if (errors.length) throw errors[0];
-      if (!successfulLibraries) throw makeLocalApiError("local_api_unavailable");
+      if (titleFallback) return titleFallback;
+      if (!successfulLibraries.size) throw makeLocalApiError("local_api_unavailable");
       return { status: "not_found", matchType: null, confidence: 0 };
     }
 
@@ -408,6 +450,8 @@
     QUERY_CACHE_MAX_ENTRIES,
     QUERY_CACHE_TTL_MS,
     REQUEST_TIMEOUT_MS,
+    MAX_CONCURRENCY,
+    TIMEOUT_COOLDOWN_MS,
     createLimiter,
     createLocalApiBackend,
     makeLocalApiError,
