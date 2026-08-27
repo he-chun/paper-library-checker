@@ -53,11 +53,13 @@ expanded back into input order. A failed item becomes a minimized per-item
 error without rejecting the batch. Failed group queries do not prevent later
 libraries from producing an exact match; without a match, an incomplete library
 search returns an error instead of a false `not_found`. Active batches are keyed
-by tab scope and normalized input: repeated identical work in one tab reuses the
-same promise, changed work supersedes only that tab's prior batch, and batches
-from different tabs do not cancel each other. The content script also suppresses
-an identical in-flight page batch and keeps its run serial to ignore genuinely
-stale responses. Automatic foreground and DOM triggers reuse the normalized
+by tab and a fixed workload scope: repeated identical work reuses the same
+promise, changed work supersedes only the prior `detail` or `references` batch
+in that tab, and the two workloads do not cancel one another. Batches from
+different tabs also remain independent. Unknown workload values are rejected;
+legacy callers without the optional field use a bounded `default` scope. The
+content script also suppresses an identical in-flight page batch and keeps its
+run serial to ignore genuinely stale responses. Automatic foreground and DOM triggers reuse the normalized
 successful-batch key, so returning to a tab cannot repeat an unchanged Local API
 search. Only the user's manual recheck intentionally bypasses this suppression.
 

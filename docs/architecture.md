@@ -24,10 +24,12 @@ batch exact matching across personal and accessible group libraries, and
 revalidates returned candidates entirely within the service worker. See
 `docs/dual-backend-architecture.md`.
 
-Standard-mode batch cancellation is scoped to the sender tab. Identical
-in-flight candidate sets are reused, while a changed set supersedes only the
-older batch from the same tab. This prevents dynamic-page observers or another
-open tab from repeatedly aborting useful Local API work. Title-bearing
+Standard-mode batch cancellation is scoped to the sender tab and to a fixed
+`detail` or `references` workload. Identical in-flight candidate sets are
+reused, while a changed set supersedes only the older batch in that same scope.
+Single-article and reference-list checks in one tab therefore cannot cancel one
+another. This also prevents dynamic-page observers or another open tab from
+repeatedly aborting useful Local API work. Title-bearing
 candidates use Zotero's lightweight title/creator/year search before any
 identifier full-text fallback. Production Local API work is serial, and a timed
 out item query opens a one-minute fail-fast cooldown so aborted searches cannot
@@ -96,4 +98,5 @@ Developer mode is an opt-in diagnostic path owned by the service worker. Both
 backends emit structured phase and timing events into a 200-entry in-memory
 ring. The Options page can read or clear that ring through extension-origin-only
 messages. Content scripts cannot access it. The event schema excludes request
-bodies, query values, tokens, endpoints, and raw Zotero items.
+bodies, query values, tokens, endpoints, and raw Zotero items. Batch events may
+include the bounded `detail`, `references`, or legacy `default` workload name.
