@@ -30,7 +30,10 @@ candidates use Zotero's lightweight title/creator/year search before any
 identifier full-text fallback. Production Local API work is serial, and a timed
 out item query opens a one-minute fail-fast cooldown so aborted searches cannot
 build an invisible Zotero work queue. Automatic page retries use bounded
-exponential backoff while manual rechecks remain available.
+exponential backoff while manual rechecks remain available. Foreground,
+visibility, intersection, and DOM-change triggers never force an unchanged
+completed reference batch; only the explicit manual recheck bypasses the
+successful-batch key.
 
 ## Detection classes
 

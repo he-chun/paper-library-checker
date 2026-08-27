@@ -57,7 +57,9 @@ by tab scope and normalized input: repeated identical work in one tab reuses the
 same promise, changed work supersedes only that tab's prior batch, and batches
 from different tabs do not cancel each other. The content script also suppresses
 an identical in-flight page batch and keeps its run serial to ignore genuinely
-stale responses.
+stale responses. Automatic foreground and DOM triggers reuse the normalized
+successful-batch key, so returning to a tab cannot repeat an unchanged Local API
+search. Only the user's manual recheck intentionally bypasses this suppression.
 
 The enhanced backend owns the existing `/zotero-checker` integration: endpoint
 validation, local pairing-token access, candidate serialization, HMAC request
