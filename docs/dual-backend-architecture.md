@@ -28,11 +28,24 @@ items are excluded. Standard mode supports single-item and reference-list batch
 exact matching, but it has no fuzzy-match or possible-match capability.
 
 The standard backend enumerates every group accessible to local user ID `0`
-and searches the personal library plus each group library. A shared scheduler
-allows at most six active Local API requests. Group-list results and successful
-item-query results use bounded, expiring memory caches; item queries expire
-after five seconds and the group list after thirty seconds. No persistent or
-full-library index is created.
+and searches the personal library plus each group library. Title-bearing
+candidates first use Zotero's lightweight `titleCreatorYear` quicksearch. An
+identifier-only candidate, or a title query that did not establish an exact
+identifier match, may use `everything` as the compatibility fallback for DOI,
+PMID, ISBN, or CNKI fields stored outside the title index. Every response is
+still independently reverified.
+
+A shared scheduler permits at most six active Local API requests, but production
+standard mode deliberately defaults to one because real Zotero measurements
+showed that concurrent full-text searches are effectively serialized inside
+Zotero and can accumulate after browser-side aborts. Group-list results and
+successful item-query results use bounded, expiring memory caches; item queries
+expire after five seconds and the group list after thirty seconds. After an
+item-query timeout, further item queries fail fast with the same stable
+`local_api_timeout` code for sixty seconds instead of adding work to Zotero's
+queue. Page-side automatic retries start at sixty seconds and back off to five
+minutes; a user-initiated recheck remains available. No persistent or full-library
+index is created.
 
 Batch inputs use a stable normalized candidate key. Duplicate candidates share
 one result, concurrent identical query URLs share one request, and results are
@@ -82,8 +95,9 @@ The standard endpoint is fixed to `http://127.0.0.1:23119/api/`; the validator
 also permits the equivalent `http://localhost:23119/api/` root for injected or
 future configuration. No other scheme, host, port, path, credentials, query, or
 fragment is accepted. HTTP 403 becomes `local_api_disabled`; network failure,
-the 30-second request timeout, incompatible API versions, and malformed JSON have separate stable
-errors. These rules follow Zotero's official [Local API documentation](https://www.zotero.org/support/dev/web_api/v3/local_api).
+the 30-second request timeout, incompatible API versions, and malformed JSON
+have separate stable errors. These rules follow Zotero's official
+[Local API documentation](https://www.zotero.org/support/dev/web_api/v3/local_api).
 
 ## Unified result boundary
 

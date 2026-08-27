@@ -99,8 +99,17 @@ Identifier matches have confidence `1`; exact title matches retain confidence
 `0.95`. Attachments, notes, and annotations are not formal bibliographic items.
 
 Standard batches deduplicate normalized candidates, reuse duplicate results,
-search with at most six active requests, and expand results back into input
-order. Its item-query cache is bounded to 256 entries for five seconds; group
-membership is cached for thirty seconds. The 30-second per-request timeout is
-intended to accommodate large real libraries without creating a persistent
-full-library index.
+and expand results back into input order. Title-bearing candidates first use
+`titleCreatorYear`; identifier-only candidates retain the `everything` fallback
+needed when DOI, PMID, ISBN, or CNKI data is stored outside the title index.
+Search hits from either mode remain candidates until the same exact matcher
+rechecks them.
+
+The shared scheduler has a hard ceiling of six for injected performance tests,
+but production standard mode uses one active Local API request. Its item-query
+cache is bounded to 256 entries for five seconds; group membership is cached for
+thirty seconds. The 30-second per-request timeout accommodates large real
+libraries. An item timeout opens a sixty-second fail-fast cooldown, and page
+automatic retries back off from sixty seconds to five minutes, preventing
+browser aborts or dynamic DOM events from continuously extending Zotero's own
+search queue. No persistent full-library index is created.

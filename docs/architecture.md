@@ -25,7 +25,12 @@ revalidates returned candidates entirely within the service worker. See
 Standard-mode batch cancellation is scoped to the sender tab. Identical
 in-flight candidate sets are reused, while a changed set supersedes only the
 older batch from the same tab. This prevents dynamic-page observers or another
-open tab from repeatedly aborting useful Local API work.
+open tab from repeatedly aborting useful Local API work. Title-bearing
+candidates use Zotero's lightweight title/creator/year search before any
+identifier full-text fallback. Production Local API work is serial, and a timed
+out item query opens a one-minute fail-fast cooldown so aborted searches cannot
+build an invisible Zotero work queue. Automatic page retries use bounded
+exponential backoff while manual rechecks remain available.
 
 ## Detection classes
 

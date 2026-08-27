@@ -50,6 +50,7 @@ from 0.4.x because the user-visible connection flow and privacy boundary changed
 | Standard exact single match | PENDING | PENDING | DOI/title result is minimized; no Possible match | PENDING |
 | Standard personal/group batch | PENDING | PENDING | Up to 80 ordered results; duplicate reuse and isolated errors | PENDING |
 | Repeated dynamic-page batch trigger | PENDING | PENDING | Identical in-flight work is reused; changed work cancels only the same tab; other tabs continue | PENDING |
+| Standard timeout recovery | PENDING | PENDING | First item timeout is isolated; later automatic attempts fail fast during the one-minute cooldown and retry with bounded backoff; manual recheck remains available | PENDING |
 | Enhanced connection | PENDING | PENDING | 64-character token required; popup shows Enhanced and real-time index | PENDING |
 | Automatic prefers enhanced | PENDING | PENDING | Compatible ready add-on selected | PENDING |
 | Automatic fallback | PENDING | PENDING | Standard selected with visible fallback reason and repair action | PENDING |

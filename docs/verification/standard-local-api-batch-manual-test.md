@@ -64,7 +64,8 @@ candidates, record:
 
 - elapsed time from service-worker batch dispatch to minimized result;
 - total Local API request count;
-- peak simultaneous Local API requests, which must not exceed six;
+- peak simultaneous Local API requests, which must be one with production
+  defaults and must never exceed six in an explicitly injected stress run;
 - matched, not-found, and error counts;
 - number of accessible group libraries;
 - whether one injected timeout or failed group request affected unrelated
@@ -110,10 +111,19 @@ name needed to be recorded.
 
 The comparison shows that this Zotero instance processes the query workload
 approximately serially. It also proved that the former three-second timeout was
-too short for a real large library, so the production default is now 30 seconds.
-With that default, the 20-item real batch completed with no errors and retained
-all 20 results. Standard mode remains suitable for exact checks but can be much
-slower than enhanced mode for large batches.
+too short for a real large library, so the production default remains 30
+seconds. Production concurrency is now one. Title-bearing candidates use
+`titleCreatorYear` before an identifier `everything` fallback. If an item query
+times out, the backend rejects further item work with `local_api_timeout` for
+sixty seconds, and page automatic retries back off from sixty seconds to five
+minutes. These controls prevent browser-side aborts from continuously adding
+full-text searches to Zotero's internal queue. Restart Zotero once before the
+post-change manual run if an older extension build has already queued searches.
+
+With the earlier production timeout, the 20-item real batch completed with no
+errors and retained all 20 results. Standard mode remains suitable for exact
+checks but can be much slower than enhanced mode for identifier-only misses and
+large batches.
 
 ## Real-runtime result record
 
