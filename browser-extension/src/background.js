@@ -141,7 +141,8 @@ async function callZotero(path, body, method = "POST", context = {}) {
       result = await resolution.backend.batchCheck(body.items || [], {
         scope: context.batchScope,
         batchId: operationId,
-        workload: context.workload
+        workload: context.workload,
+        onProgress: context.onProgress
       });
     } else {
       throw new Error("unsupported_backend_operation");
@@ -215,7 +216,8 @@ function handleRuntimeMessage(message, sender, sendResponse) {
 
     callZotero(path, body, "POST", {
       batchScope: batchScopeForMessage(message, sender),
-      workload: matchWorkloadForMessage(message)
+      workload: matchWorkloadForMessage(message),
+      onProgress: isBatch ? batchProgressReporter(message, sender) : undefined
     })
       .then((result) => sendResponse({ ok: true, result }))
       .catch((error) => sendResponse({ ok: false, error: error.message }));
@@ -251,6 +253,26 @@ function matchWorkloadForMessage(message) {
   return MATCH_WORKLOADS.has(message?.workload) ? message.workload : "default";
 }
 
+function batchProgressReporter(message, sender) {
+  if (message?.workload !== "references" || !Number.isSafeInteger(message?.requestId) ||
+      message.requestId < 1 || !Number.isInteger(sender?.tab?.id)) {
+    return undefined;
+  }
+  const tabId = sender.tab.id;
+  const requestId = message.requestId;
+  return function reportBatchProgress(entry) {
+    if (!Number.isInteger(entry?.index) || entry.index < 0 || !entry?.result || typeof entry.result !== "object") {
+      return;
+    }
+    chrome.tabs?.sendMessage(tabId, {
+      type: "zotero-check:batch-progress",
+      requestId,
+      index: entry.index,
+      result: entry.result
+    }, () => { void chrome.runtime.lastError; });
+  };
+}
+
 function isTrustedMessage(message, sender) {
   if (!message || typeof message !== "object" || typeof message.type !== "string") return false;
   if (!PLCSenderSecurity.isTrustedContentScriptSender(sender, chrome.runtime.id)) return false;
@@ -259,6 +281,11 @@ function isTrustedMessage(message, sender) {
   }
   if (message.type === "zotero-check:match") {
     if (message.workload !== undefined && !MATCH_WORKLOADS.has(message.workload)) return false;
+    if (message.requestId !== undefined &&
+        (message.workload !== "references" || !Array.isArray(message.candidates) ||
+          !Number.isSafeInteger(message.requestId) || message.requestId < 1)) {
+      return false;
+    }
     return Boolean(message.candidate && typeof message.candidate === "object") || Array.isArray(message.candidates);
   }
   return false;
@@ -471,6 +498,7 @@ function makeTranslationServerError(message, details = {}) {
 if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     batchScopeForMessage,
+    batchProgressReporter,
     callZotero,
     getPopupHealth,
     probeBackend,

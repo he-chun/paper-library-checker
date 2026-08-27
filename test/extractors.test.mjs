@@ -131,6 +131,88 @@ test("repeated forced scheduling does not send the same reference batch while it
   }
 });
 
+test("reference results render incrementally while the final batch response is pending", async () => {
+  const html = await readFile(new URL("./fixtures/cnki-references.html", import.meta.url), "utf8");
+  const messages = [];
+  let messageListener;
+  let finishReferenceBatch;
+  const dom = new JSDOM(html, {
+    url: "https://kns.cnki.net/kcms2/article/abstract?v=HOST",
+    runScripts: "outside-only",
+    pretendToBeVisual: true
+  });
+  dom.window.chrome = {
+    i18n: { getMessage: () => "", getUILanguage: () => "en" },
+    storage: { sync: { get: (_defaults, callback) => callback({ autoCheckReferenceLists: true, translationServerMode: "off" }) } },
+    runtime: {
+      id: "test-extension",
+      getURL: (value) => `chrome-extension://test-extension/${value}`,
+      onMessage: { addListener: (listener) => { messageListener = listener; } },
+      sendMessage: (message, callback) => {
+        messages.push(message);
+        if (message.workload === "references") {
+          finishReferenceBatch = callback;
+        } else {
+          callback?.({ ok: true, result: { status: "not_found" } });
+        }
+      }
+    }
+  };
+  for (const name of [
+    "common/i18n.js",
+    "common/ui-state.js",
+    "common/page-controller.js",
+    "common/sender-security.js",
+    "common/normalization.js",
+    "extractors/cnki.js",
+    "extractors/generic.js",
+    "extractors/runner.js",
+    "adapters/sciencedirect.js",
+    "content.js"
+  ]) dom.window.eval(await source(name));
+
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 700));
+    const batch = messages.find((message) => message.workload === "references");
+    const anchors = dom.window.document.querySelectorAll("#quoted-references a, #quoted-citations a");
+    assert.equal(Number.isSafeInteger(batch.requestId), true);
+    assert.equal(anchors[0].dataset.zoteroCheckState, "checking");
+    assert.equal(anchors[1].dataset.zoteroCheckState, "checking");
+
+    messageListener({
+      type: "zotero-check:batch-progress",
+      requestId: batch.requestId - 1,
+      index: 0,
+      result: { status: "matched", matchType: "title", confidence: 0.95 }
+    }, {
+      id: "test-extension"
+    }, () => {});
+    assert.equal(anchors[0].dataset.zoteroCheckState, "checking");
+
+    messageListener({
+      type: "zotero-check:batch-progress",
+      requestId: batch.requestId,
+      index: 0,
+      result: { status: "matched", matchType: "title", confidence: 0.95 }
+    }, {
+      id: "test-extension"
+    }, () => {});
+
+    assert.equal(anchors[0].dataset.zoteroCheckState, "matched");
+    assert.equal(anchors[1].dataset.zoteroCheckState, "checking");
+    finishReferenceBatch({
+      ok: true,
+      result: { results: [
+        { status: "matched", matchType: "title", confidence: 0.95 },
+        { status: "not_found", matchType: null, confidence: 0 }
+      ] }
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  } finally {
+    dom.window.close();
+  }
+});
+
 test("automatic foreground and DOM triggers do not resend a completed reference batch", async () => {
   const html = await readFile(new URL("./fixtures/cnki-references.html", import.meta.url), "utf8");
   const messages = [];

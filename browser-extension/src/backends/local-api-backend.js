@@ -79,6 +79,22 @@
     return workload === "references" ? REFERENCE_PRIORITY : FOREGROUND_PRIORITY;
   }
 
+  function notifyBatchProgress(callback, index, result) {
+    if (typeof callback !== "function") return;
+    const minimized = {
+      status: result?.status || "error",
+      matchType: result?.matchType || null,
+      confidence: Number.isFinite(result?.confidence) ? result.confidence : 0
+    };
+    if (typeof result?.error === "string") minimized.error = result.error;
+    if (typeof result?.reason === "string") minimized.reason = result.reason;
+    try {
+      callback({ index, result: minimized });
+    } catch (_error) {
+      // Rendering progress must never affect the final batch result.
+    }
+  }
+
   function createLocalApiBackend(dependencies = {}) {
     const endpoint = validateLocalApiEndpoint(dependencies.endpoint || DEFAULT_ENDPOINT);
     const fetchImpl = dependencies.fetch || ((...args) => runtimeRoot.fetch(...args));
@@ -401,9 +417,11 @@
       const batchId = Number.isFinite(options.batchId) ? options.batchId : ++batchSequence;
 
       const unique = new Map();
-      for (const candidate of candidates) {
+      for (let index = 0; index < candidates.length; index += 1) {
+        const candidate = candidates[index];
         const key = matcher.candidateKey(candidate);
-        if (!unique.has(key)) unique.set(key, { candidate, promise: null });
+        if (!unique.has(key)) unique.set(key, { candidate, indices: [], promise: null });
+        unique.get(key).indices.push(index);
       }
       report("batch_started", {
         operation: "batch",
@@ -416,7 +434,7 @@
       const active = { batchId, controller, key: batchKey, promise: null };
       active.promise = (async () => {
         for (const entry of unique.values()) {
-          entry.promise = check(entry.candidate, {
+          const resultPromise = check(entry.candidate, {
             signal: controller.signal,
             batchId,
             workload: options.workload
@@ -426,6 +444,12 @@
             confidence: 0,
             error: error.code || "local_api_unavailable"
           }));
+          entry.promise = resultPromise.then((result) => {
+            for (const index of entry.indices) {
+              notifyBatchProgress(options.onProgress, index, result);
+            }
+            return result;
+          });
         }
 
         const results = await Promise.all(candidates.map((candidate) => unique.get(matcher.candidateKey(candidate)).promise));

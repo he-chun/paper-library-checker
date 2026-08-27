@@ -128,6 +128,39 @@ test("foreground detail work runs before queued reference queries", async () => 
   assert.deepEqual(itemOrder, ["Reference 1", "Detail", "Reference 2", "Reference 3"]);
 });
 
+test("standard batches publish minimized ordered progress before final completion", async () => {
+  let releaseSecond;
+  const progress = [];
+  const harness = createHarness(async (url, options) => {
+    if (url.pathname.endsWith("/groups")) return response(200, []);
+    const term = url.searchParams.get("q");
+    if (term === "Second") {
+      return new Promise((resolve, reject) => {
+        releaseSecond = () => resolve(response(200, [{ data: { itemType: "journalArticle", title: term } }]));
+        options.signal.addEventListener("abort", () => reject(Object.assign(new Error("aborted"), { name: "AbortError" })));
+      });
+    }
+    return response(200, [{ data: { itemType: "journalArticle", title: term } }]);
+  });
+
+  const batch = harness.backend.batchCheck([
+    { title: "First" },
+    { title: "Second" }
+  ], {
+    workload: "references",
+    onProgress: (entry) => progress.push(entry)
+  });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  const progressBeforeRelease = structuredClone(progress);
+  releaseSecond();
+  await batch;
+
+  assert.deepEqual(progressBeforeRelease, [{
+    index: 0,
+    result: { status: "matched", matchType: "title", confidence: 0.95 }
+  }]);
+});
+
 test("personal and group libraries are searched, failed groups are isolated, and matches return early", async () => {
   const harness = createHarness(async (url) => {
     if (url.pathname.endsWith("/groups")) {

@@ -9,6 +9,7 @@ let localStatus = 200;
 let localItems = [];
 let token = "a".repeat(64);
 let developerMode = false;
+let progressMessages = [];
 
 global.chrome = {
   runtime: {
@@ -16,6 +17,12 @@ global.chrome = {
     getURL: (value) => `chrome-extension://extension-id/${value}`,
     getManifest: () => ({ version: "0.4.1" }),
     onMessage: { addListener() {} }
+  },
+  tabs: {
+    sendMessage: (tabId, message, callback) => {
+      progressMessages.push({ tabId, message });
+      callback?.();
+    }
   },
   storage: {
     sync: {
@@ -100,6 +107,18 @@ test("same-tab detail and reference batches receive independent bounded scopes",
     workload: "unbounded-value",
     candidates: [{ title: "Synthetic" }]
   }, contentSender), false);
+  assert.equal(background.isTrustedMessage({
+    type: "zotero-check:match",
+    workload: "references",
+    requestId: 0,
+    candidates: [{ title: "Synthetic" }]
+  }, contentSender), false);
+  assert.equal(background.isTrustedMessage({
+    type: "zotero-check:match",
+    workload: "detail",
+    requestId: 1,
+    candidates: [{ title: "Synthetic" }]
+  }, contentSender), false);
 });
 
 test("popup health keeps connected and indexReady compatibility fields", async () => {
@@ -164,6 +183,35 @@ test("standard mode preserves the existing batch response envelope", async () =>
       ]
     }
   });
+});
+
+test("standard reference batches forward only correlated minimized progress", async () => {
+  connectionMode = "standard";
+  localStatus = 200;
+  progressMessages = [];
+  localItems = [{
+    key: "PRIVATEKEY",
+    data: { itemType: "journalArticle", title: "Progress title", attachments: [{ path: "private.pdf" }] }
+  }];
+
+  await send({
+    type: "zotero-check:match",
+    workload: "references",
+    requestId: 77,
+    candidates: [{ title: "Progress title" }]
+  }, contentSender);
+
+  assert.deepEqual(progressMessages, [{
+    tabId: 42,
+    message: {
+      type: "zotero-check:batch-progress",
+      requestId: 77,
+      index: 0,
+      result: { status: "matched", matchType: "title", confidence: 0.95 }
+    }
+  }]);
+  assert.equal(JSON.stringify(progressMessages).includes("PRIVATEKEY"), false);
+  assert.equal(JSON.stringify(progressMessages).includes("private.pdf"), false);
 });
 
 test("standard mode returns the stable disabled error without changing message envelopes", async () => {

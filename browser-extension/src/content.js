@@ -57,6 +57,10 @@
   let lastForegroundCheckAt = 0;
   let detailRunSerial = 0;
   let batchRunSerial = 0;
+  // A page-scoped time prefix prevents late progress from a prior navigation
+  // from colliding with a new content-script instance in the same tab.
+  let batchRequestSequence = Date.now() * 1000;
+  let activeBatchProgress = null;
   let observerDebounceTimer = null;
   let observerCheckPending = false;
 
@@ -82,6 +86,11 @@
   });
 
   chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
+    if (message?.type === "zotero-check:batch-progress") {
+      if (!senderSecurity.isTrustedExtensionContextSender(sender, chrome.runtime)) return false;
+      applyBatchProgress(message);
+      return false;
+    }
     if (!senderSecurity.isTrustedExtensionPageSender(sender, chrome.runtime)) return false;
     if (message?.type === "zotero-check:get-page-state") {
       sendResponse({ ok: true, pageState: pageController.getState() });
@@ -446,12 +455,13 @@
     return host?.shadowRoot?.querySelector(".zotero-check-choices") || null;
   }
 
-  function sendMatch(candidates, workload) {
+  function sendMatch(candidates, workload, requestId) {
     return new Promise((resolve) => {
       const message = Array.isArray(candidates)
         ? { type: "zotero-check:match", candidates }
         : { type: "zotero-check:match", candidate: candidates };
       if (Array.isArray(candidates) && workload) message.workload = workload;
+      if (Array.isArray(candidates) && Number.isSafeInteger(requestId)) message.requestId = requestId;
       chrome.runtime.sendMessage(
         message,
         (response) => resolve(response)
@@ -765,7 +775,9 @@
     }
 
     const runSerial = ++batchRunSerial;
+    const requestId = ++batchRequestSequence;
     inFlightBatchKey = batchKey;
+    activeBatchProgress = { adapter, requestId, runSerial, targets };
 
     if (!adapter) {
       targets.forEach(function (target) { applyTargetState(target, "checking"); });
@@ -773,9 +785,14 @@
 
     let response;
     try {
-      response = await sendMatch(targets.map(function (target) { return target.candidate; }), "references");
+      response = await sendMatch(
+        targets.map(function (target) { return target.candidate; }),
+        "references",
+        requestId
+      );
     } finally {
       if (inFlightBatchKey === batchKey) inFlightBatchKey = "";
+      if (activeBatchProgress?.requestId === requestId) activeBatchProgress = null;
     }
     if (runSerial !== batchRunSerial) {
       return;
@@ -821,6 +838,23 @@
           applyTargetResult(target, result);
         }
       });
+    }
+  }
+
+  function applyBatchProgress(message) {
+    const active = activeBatchProgress;
+    if (!active || message.requestId !== active.requestId || active.runSerial !== batchRunSerial ||
+        !Number.isInteger(message.index) || message.index < 0 || message.index >= active.targets.length ||
+        !message.result || typeof message.result !== "object") {
+      return;
+    }
+    const target = active.targets[message.index];
+    if (active.adapter) {
+      active.adapter.applyBatchResults([
+        Object.assign({}, message.result, { sourceId: target.sourceId || "" })
+      ]);
+    } else {
+      applyTargetResult(target, message.result);
     }
   }
 

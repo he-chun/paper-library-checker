@@ -152,6 +152,10 @@ test("extension pages and content scripts use separate trust predicates", () => 
   assert.equal(senderSecurity.isTrustedExtensionPageSender(contentSender, runtime), false);
   assert.equal(senderSecurity.isTrustedExtensionPageSender({ id: "id", url: "https://evil.example/" }, runtime), false);
   assert.equal(senderSecurity.isTrustedExtensionPageSender({ id: "id", url: "chrome-extension://evil/src/popup.html" }, runtime), false);
+  assert.equal(senderSecurity.isTrustedExtensionContextSender({ id: "id" }, runtime), true);
+  assert.equal(senderSecurity.isTrustedExtensionContextSender(extensionSender, runtime), true);
+  assert.equal(senderSecurity.isTrustedExtensionContextSender(contentSender, runtime), false);
+  assert.equal(senderSecurity.isTrustedExtensionContextSender({ id: "evil" }, runtime), false);
 });
 
 test("floating control and popup manual checks share the page controller entry point", () => {
