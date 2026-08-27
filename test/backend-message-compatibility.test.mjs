@@ -39,6 +39,9 @@ global.fetch = async (url) => {
   if (url.startsWith("http://127.0.0.1:23119/api/users/0/items?")) {
     return { ok: localStatus === 200, status: localStatus, json: async () => localItems };
   }
+  if (url.startsWith("http://127.0.0.1:23119/api/users/0/groups?")) {
+    return { ok: localStatus === 200, status: localStatus, json: async () => [] };
+  }
   return { ok: true, status: 200, json: async () => fetchPayload };
 };
 
@@ -119,6 +122,32 @@ test("auto fallback returns a degraded reason without exposing raw Zotero items"
     connected: true,
     indexReady: true,
     degradedReason: "enhanced_backend_unavailable"
+  });
+});
+
+test("standard mode preserves the existing batch response envelope", async () => {
+  connectionMode = "standard";
+  localStatus = 200;
+  localItems = [
+    { data: { itemType: "journalArticle", DOI: "10.1000/batch" } },
+    { data: { itemType: "journalArticle", title: "Batch title" } }
+  ];
+  assert.deepEqual(await send({
+    type: "zotero-check:match",
+    candidates: [
+      { DOI: "10.1000/batch" },
+      { title: "Batch title" },
+      { DOI: "10.1000/batch" }
+    ]
+  }, contentSender), {
+    ok: true,
+    result: {
+      results: [
+        { status: "matched", matchType: "doi", confidence: 1 },
+        { status: "matched", matchType: "title", confidence: 0.95 },
+        { status: "matched", matchType: "doi", confidence: 1 }
+      ]
+    }
   });
 });
 

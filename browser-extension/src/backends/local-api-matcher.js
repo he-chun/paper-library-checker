@@ -177,13 +177,36 @@
     ].filter(Boolean))];
   }
 
+  function candidateKey(candidate) {
+    const normalized = prepareCandidate(candidate);
+    return JSON.stringify({
+      identifiers: IDENTIFIER_PRIORITY.map((type) => normalized.identifiers[type] || ""),
+      title: normalized.title,
+      year: normalized.year,
+      creators: [...new Set(normalized.creators)].sort()
+    });
+  }
+
+  function itemFingerprint(item) {
+    const prepared = prepareItem(item);
+    if (!prepared) return "";
+    return JSON.stringify({
+      identifiers: IDENTIFIER_PRIORITY.map((type) => prepared.identifiers[type] || ""),
+      title: prepared.title,
+      year: prepared.year,
+      creators: [...new Set(prepared.creators)].sort()
+    });
+  }
+
   return {
     IDENTIFIER_PRIORITY,
     NON_BIBLIOGRAPHIC_TYPES,
     collectIdentifiers,
+    candidateKey,
     extractCNKIFromURL,
     extractYear,
     identifiersFromExtra,
+    itemFingerprint,
     matchCandidate,
     normalizeCreators,
     normalizeDOI,

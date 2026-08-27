@@ -21,11 +21,16 @@ function response({ status = 200, payload = [], apiVersion = "3", jsonError } = 
 
 function backendWithItems(items, options = {}) {
   const requests = [];
+  const groups = options.groups || [];
+  const groupItems = options.groupItems || {};
   const backend = localApi.createLocalApiBackend({
     ...options,
     fetch: async (url, requestOptions) => {
       requests.push({ url, options: requestOptions });
-      return response({ payload: items });
+      const parsed = new URL(url);
+      if (parsed.pathname.endsWith("/users/0/groups")) return response({ payload: groups });
+      const groupMatch = parsed.pathname.match(/\/groups\/(\d+)\/items$/);
+      return response({ payload: groupMatch ? groupItems[groupMatch[1]] || [] : items });
     }
   });
   return { backend, requests };
@@ -78,7 +83,7 @@ test("empty personal library search returns a minimal not-found result", async (
     matchType: null,
     confidence: 0
   });
-  const url = new URL(requests[0].url);
+  const url = new URL(requests.find((request) => request.url.includes("/items?" )).url);
   assert.equal(`${url.origin}${url.pathname}`, "http://127.0.0.1:23119/api/users/0/items");
   assert.equal(url.searchParams.get("q"), "Synthetic Article");
   assert.equal(url.searchParams.get("qmode"), "everything");
@@ -191,18 +196,18 @@ test("malformed JSON and request timeout return stable errors", async () => {
   await assert.rejects(() => timeout.probe(), (error) => error.code === "local_api_timeout");
 });
 
-test("standard capabilities disable fuzzy, possible, batch, realtime, and authenticated protocol", async () => {
+test("standard capabilities enable batch but disable fuzzy, possible, realtime, and authenticated protocol", async () => {
   const { backend } = backendWithItems([]);
   assert.deepEqual(backend.getCapabilities(), {
     exactIdentifiers: true,
     exactTitle: true,
     fuzzyTitle: false,
     possibleMatch: false,
-    batch: false,
+    batch: true,
     realtimeIndex: false,
     authenticatedProtocol: false
   });
-  await assert.rejects(() => backend.batchCheck([]), /standard_batch_unavailable/);
+  assert.deepEqual(await backend.batchCheck([]), { results: [] });
 });
 
 test("Local API code is service-worker-only and contains no storage or logging sink", async () => {
