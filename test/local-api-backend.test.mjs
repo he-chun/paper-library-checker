@@ -143,6 +143,36 @@ test("a candidate with title and DOI uses the lightweight title query first and 
   assert.equal(itemRequests[0].searchParams.get("qmode"), "titleCreatorYear");
 });
 
+test("title-bearing candidates do not fall through to expensive everything searches", async () => {
+  const requests = [];
+  const backend = localApi.createLocalApiBackend({
+    fetch: async (url) => {
+      const parsed = new URL(url);
+      requests.push(parsed);
+      if (parsed.pathname.endsWith("/groups")) return response({ payload: [] });
+      if (parsed.searchParams.get("qmode") === "everything") {
+        throw new Error("unexpected expensive identifier fallback");
+      }
+      return response({ payload: [{
+        data: {
+          itemType: "journalArticle",
+          title: "Different Article",
+          DOI: "10.1000/different"
+        }
+      }] });
+    }
+  });
+
+  assert.deepEqual(await backend.check({
+    title: "Requested Article",
+    DOI: "10.1000/requested",
+    cnkiFileID: "requested-cnki"
+  }), { status: "not_found", matchType: null, confidence: 0 });
+  const itemRequests = requests.filter((url) => url.pathname.endsWith("/items"));
+  assert.equal(itemRequests.length, 1);
+  assert.equal(itemRequests[0].searchParams.get("qmode"), "titleCreatorYear");
+});
+
 test("identifier-only candidates retain the exact everything-search fallback", async () => {
   const { backend, requests } = backendWithItems([{
     data: { itemType: "journalArticle", DOI: "10.1000/identifier-only" }

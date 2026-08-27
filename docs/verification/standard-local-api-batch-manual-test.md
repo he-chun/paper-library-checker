@@ -109,12 +109,21 @@ name needed to be recorded.
 | 20 absent records, temporary 10-second timeout | 20 isolated `error` | 40.11 s |
 | 20 absent DOIs, production 30-second timeout | 20 `not_found` | 71.27 s |
 
+A later developer-mode trace from the real extension showed the same asymmetry
+without recording query values: one title-bearing detail check spent 633 ms in
+`titleCreatorYear`, then 22.967 s in an unsuccessful DOI `everything` fallback
+and 815 ms in an unsuccessful CNKI fallback, for 24.972 s total. Subsequent
+reference title queries took 549–609 ms each. The full-text fallback therefore
+accounted for about 92% of the detail-check latency and blocked the serial title
+queue even though it produced no match.
+
 The comparison shows that this Zotero instance processes the query workload
 approximately serially. It also proved that the former three-second timeout was
 too short for a real large library, so the production default remains 30
-seconds. Production concurrency is now one. Title-bearing candidates use
-`titleCreatorYear` before an identifier `everything` fallback. If an item query
-times out, the backend rejects further item work with `local_api_timeout` for
+seconds. Production concurrency is now one. Title-bearing candidates use only
+`titleCreatorYear`; exact identifiers are reverified in returned records, and
+only identifier-only candidates use `everything`. If an item query times out,
+the backend rejects further item work with `local_api_timeout` for
 sixty seconds, and page automatic retries back off from sixty seconds to five
 minutes. These controls prevent browser-side aborts from continuously adding
 full-text searches to Zotero's internal queue. Restart Zotero once before the

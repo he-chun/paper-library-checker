@@ -29,11 +29,12 @@ exact matching, but it has no fuzzy-match or possible-match capability.
 
 The standard backend enumerates every group accessible to local user ID `0`
 and searches the personal library plus each group library. Title-bearing
-candidates first use Zotero's lightweight `titleCreatorYear` quicksearch. An
-identifier-only candidate, or a title query that did not establish an exact
-identifier match, may use `everything` as the compatibility fallback for DOI,
-PMID, ISBN, or CNKI fields stored outside the title index. Every response is
-still independently reverified.
+candidates use only Zotero's lightweight `titleCreatorYear` quicksearch. The
+returned records are still checked for exact DOI, PMID, ISBN, or CNKI values
+before exact-title matching, so a confirmed identifier keeps confidence `1`.
+Only identifier-only candidates use the slower `everything` compatibility
+search. This avoids an unbounded full-text fallback after every useful title
+lookup while every response remains independently reverified.
 
 A shared scheduler permits at most six active Local API requests, but production
 standard mode deliberately defaults to one because real Zotero measurements

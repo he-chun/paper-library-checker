@@ -322,10 +322,10 @@
     }
 
     function searchQueries(candidate) {
+      const title = String(candidate?.title || "").trim();
+      if (title) return [{ term: title, type: "title", qmode: "titleCreatorYear" }];
       const prepared = matcher.prepareCandidate(candidate);
       const queries = [];
-      const title = String(candidate?.title || "").trim();
-      if (title) queries.push({ term: title, type: "title", qmode: "titleCreatorYear" });
       for (const type of matcher.IDENTIFIER_PRIORITY) {
         const term = prepared.identifiers[type];
         if (term) queries.push({ term, type, qmode: "everything" });
