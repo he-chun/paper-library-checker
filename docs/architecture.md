@@ -13,6 +13,12 @@
 - Optional translation-server: separately installed local service used for
   article metadata when configured.
 
+The service worker selects a connection backend behind a shared
+`probe`/`check`/`batchCheck`/`getCapabilities` interface. The current enhanced
+backend encapsulates the existing authenticated add-on protocol; the standard
+backend is reserved for a later Zotero Local API integration. See
+`docs/dual-backend-architecture.md`.
+
 ## Detection classes
 
 Article detail detection uses site-specific and generic embedded metadata.
