@@ -6,6 +6,7 @@ var DEFAULT_OPTIONS = {
   endpoint: "http://127.0.0.1:23119/zotero-checker",
   connectionMode: "auto",
   translationServerMode: "auto",
+  developerMode: false,
   enablePageGlow: false,
   autoCheckReferenceLists: false,
   broadPageDetection: false
@@ -91,6 +92,9 @@ async function load() {
   document.querySelector("#enablePageGlow").checked = !!options.enablePageGlow;
   document.querySelector("#autoCheckReferenceLists").checked = !!options.autoCheckReferenceLists;
   document.querySelector("#broadPageDetection").checked = !!options.broadPageDetection;
+  document.querySelector("#developerMode").checked = !!options.developerMode;
+  updateDeveloperPanel(!!options.developerMode);
+  if (options.developerMode) await refreshDeveloperLog();
 }
 
 async function save() {
@@ -104,6 +108,7 @@ async function save() {
     await chrome.storage.sync.set({
       ...connection.sync,
       translationServerMode: modeRadio ? modeRadio.value : "auto",
+      developerMode: document.querySelector("#developerMode").checked,
       enablePageGlow: document.querySelector("#enablePageGlow").checked,
       autoCheckReferenceLists: document.querySelector("#autoCheckReferenceLists").checked,
       broadPageDetection: document.querySelector("#broadPageDetection").checked
@@ -111,9 +116,33 @@ async function save() {
     if (Object.keys(connection.local).length) await chrome.storage.local.set(connection.local);
     await chrome.storage.sync.remove("token");
     setStatus(optionsI18n.t("saved"), false);
+    updateDeveloperPanel(document.querySelector("#developerMode").checked);
+    if (document.querySelector("#developerMode").checked) await refreshDeveloperLog();
   } catch (error) {
     setStatus(error.message, true);
   }
+}
+
+function updateDeveloperPanel(enabled) {
+  document.querySelector("#developerPanel").hidden = !enabled;
+}
+
+function formatDeveloperEntry(entry) {
+  return JSON.stringify(entry);
+}
+
+async function refreshDeveloperLog() {
+  var output = document.querySelector("#developerLog");
+  var response = await chrome.runtime.sendMessage({ type: "zotero-check:developer-log" });
+  var entries = Array.isArray(response?.entries) ? response.entries : [];
+  output.textContent = entries.length
+    ? entries.map(formatDeveloperEntry).join("\n")
+    : optionsI18n.t("developerLogEmpty");
+}
+
+async function clearDeveloperLog() {
+  await chrome.runtime.sendMessage({ type: "zotero-check:clear-developer-log" });
+  await refreshDeveloperLog();
 }
 
 function connectionMessage(status, payload) {
@@ -169,6 +198,9 @@ if (typeof document !== "undefined") {
   document.querySelector("#save").addEventListener("click", save);
   document.querySelector("#testConnection").addEventListener("click", testConnection);
   document.querySelector("#toggleToken").addEventListener("click", toggleToken);
+  document.querySelector("#developerMode").addEventListener("change", (event) => updateDeveloperPanel(event.target.checked));
+  document.querySelector("#refreshDeveloperLog").addEventListener("click", () => refreshDeveloperLog().catch((error) => setStatus(error.message, true)));
+  document.querySelector("#clearDeveloperLog").addEventListener("click", () => clearDeveloperLog().catch((error) => setStatus(error.message, true)));
   for (var connectionRadio of document.querySelectorAll("input[name=\"connectionMode\"]")) {
     connectionRadio.addEventListener("change", () => updateConnectionFields(selectedMode()));
   }
@@ -180,10 +212,12 @@ if (typeof module !== "undefined" && module.exports) module.exports = {
   connectionStorageUpdate,
   connectionMessage,
   errorMessageKey,
+  formatDeveloperEntry,
   isCompatibleAddonVersion,
   normalizeConnectionMode,
   save,
   testConnection,
+  updateDeveloperPanel,
   updateConnectionFields,
   validateEndpoint
 };

@@ -208,6 +208,7 @@ Zotero Connector 用于把条目保存到 Zotero。Paper Library Checker 不会�
 - `enablePageGlow`：只改变视觉提示，默认 `false`。
 - `autoCheckReferenceLists`：控制自动批量检查，默认 `false`，不影响手动 `↻`。
 - `broadPageDetection`：只影响 manifest 已注入的网站，默认 `false`，不会扩大主机权限。
+- `developerMode`：在设置页显示有界的 service worker 内存日志，包括后端阶段、请求耗时、缓存使用、批次数量和稳定错误；默认 `false`。可在同一面板刷新或清空，service worker 重启也会清空。日志不包含配对令牌或 Zotero 原始条目记录。
 
 在 `auto` 模式下，带有 `citation_doi` 的 ScienceDirect 和 MDPI 页面通常使用通用提取器；MDPI References 不会被扫描。实现细节和限制请参阅[匹配规则](docs/matching.md)、[架构说明](docs/architecture.md)和[本地协议](docs/protocol.md)。
 

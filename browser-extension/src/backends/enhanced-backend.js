@@ -43,6 +43,16 @@
     const candidateNormalization = dependencies.candidateNormalization || defaultCandidateNormalization;
     const storage = dependencies.storage || runtimeRoot.chrome?.storage;
     const fetchImpl = dependencies.fetch || ((...args) => runtimeRoot.fetch(...args));
+    const clock = dependencies.clock || Date.now;
+    const onDiagnostic = typeof dependencies.onDiagnostic === "function" ? dependencies.onDiagnostic : () => {};
+
+    function report(event, details) {
+      try {
+        onDiagnostic(event, { backend: "enhanced", ...details });
+      } catch (_error) {
+        // Diagnostics must never affect matching.
+      }
+    }
 
     async function getConnectionOptions() {
       const [stored, secrets] = await Promise.all([
@@ -53,6 +63,9 @@
     }
 
     async function request(path, body, method = "POST") {
+      const startedAt = clock();
+      const operation = path === "/health" ? "probe" : path === "/batch-check" ? "batch" : "check";
+      report("backend_request_started", { operation, phase: "authenticated_request" });
       const options = await getConnectionOptions();
       const endpoint = validateLoopbackEndpoint(options.endpoint);
       if (!requestAuth.isUsableSecret(options.token)) {
@@ -71,14 +84,31 @@
         path: `/zotero-checker${path}`,
         body: bodyText
       });
-      const response = await fetchImpl(`${endpoint}${path}`, {
-        method,
-        headers,
-        body: payload ? bodyText : undefined
-      });
-      const result = await response.json().catch(() => ({}));
-      if (!response.ok) throw makeLocalApiError(response.status, result.error || "request_failed");
-      return result;
+      try {
+        const response = await fetchImpl(`${endpoint}${path}`, {
+          method,
+          headers,
+          body: payload ? bodyText : undefined
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw makeLocalApiError(response.status, result.error || "request_failed");
+        report("backend_request_completed", {
+          operation,
+          phase: "authenticated_request",
+          durationMs: clock() - startedAt,
+          httpStatus: response.status
+        });
+        return result;
+      } catch (error) {
+        report("backend_request_failed", {
+          operation,
+          phase: "authenticated_request",
+          durationMs: clock() - startedAt,
+          httpStatus: error?.status,
+          error: error?.code || "request_failed"
+        });
+        throw error;
+      }
     }
 
     return Object.freeze({

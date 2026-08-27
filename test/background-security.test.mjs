@@ -22,8 +22,13 @@ test("accepts only messages tied to the sender tab", () => {
   assert.equal(background.isTrustedMessage({ type: "zotero-check:match", candidate: {} }, { ...sender, id: "other" }), false);
 });
 
-test("popup health and options probe messages require the extension origin", () => {
-  for (const type of ["zotero-check:popup-health", "zotero-check:probe"]) {
+test("popup health, options probe, and developer logs require the extension origin", () => {
+  for (const type of [
+    "zotero-check:popup-health",
+    "zotero-check:probe",
+    "zotero-check:developer-log",
+    "zotero-check:clear-developer-log"
+  ]) {
     const message = { type };
     assert.equal(background.isTrustedExtensionMessage(message, {
     id: "extension-id",

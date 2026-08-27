@@ -213,6 +213,7 @@ See [PRIVACY.md](PRIVACY.md), [the threat model](docs/threat-model.md), and [SEC
 - `enablePageGlow`: visual result cue only; default `false`.
 - `autoCheckReferenceLists`: automatic supported-site batch checks; default `false`. Manual `↻` checks remain available.
 - `broadPageDetection`: article-detail detection only where the manifest already injects the extension; default `false`. It does not expand host permissions.
+- `developerMode`: display a bounded, service-worker-memory log in Options with backend phases, request timings, cache use, batch counts, and stable errors; default `false`. Refresh or clear it from the same panel. Pairing tokens and raw Zotero item records are never included, and restarting the service worker clears the log.
 
 ScienceDirect and MDPI pages with `citation_doi` normally use the generic extractor in `auto` mode. MDPI References are not scanned. See [matching behavior](docs/matching.md), [architecture](docs/architecture.md), and the [local protocol](docs/protocol.md) for implementation details and limits.
 

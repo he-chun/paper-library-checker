@@ -1,5 +1,6 @@
 if (typeof importScripts === "function") {
   importScripts(
+    "common/developer-diagnostics.js",
     "common/request-auth.js",
     "common/candidate-normalization.js",
     "common/sender-security.js",
@@ -11,6 +12,8 @@ if (typeof importScripts === "function") {
 }
 const PLCSenderSecurity = globalThis.PLCSenderSecurity ||
   (typeof require === "function" ? require("./common/sender-security.js") : null);
+const PLCDeveloperDiagnostics = globalThis.PLCDeveloperDiagnostics ||
+  (typeof require === "function" ? require("./common/developer-diagnostics.js") : null);
 const PLCEnhancedBackend = globalThis.PLCEnhancedBackend ||
   (typeof require === "function" ? require("./backends/enhanced-backend.js") : null);
 const PLCLocalApiBackend = globalThis.PLCLocalApiBackend ||
@@ -26,9 +29,23 @@ const TRANSLATION_SERVER_TIMEOUT_MS = 5000;
 const TRANSLATION_SERVER_PROBE_TIMEOUT_MS = 500;
 const TRANSLATION_SERVER_REACHABLE_TTL = 30000;
 let _tsReachable = null;
-const enhancedBackend = PLCEnhancedBackend.createEnhancedBackend();
-const standardBackend = PLCLocalApiBackend.createLocalApiBackend();
+const developerDiagnostics = PLCDeveloperDiagnostics.createDeveloperDiagnostics();
+const reportDiagnostic = (event, details) => developerDiagnostics.record(event, details);
+const enhancedBackend = PLCEnhancedBackend.createEnhancedBackend({ onDiagnostic: reportDiagnostic });
+const standardBackend = PLCLocalApiBackend.createLocalApiBackend({ onDiagnostic: reportDiagnostic });
 const backendResolver = PLCBackendResolver.createBackendResolver({ enhancedBackend, standardBackend });
+
+async function refreshDeveloperMode() {
+  const stored = await chrome.storage.sync.get({ developerMode: false });
+  developerDiagnostics.setEnabled(stored.developerMode === true);
+  return developerDiagnostics.isEnabled();
+}
+
+chrome.storage.onChanged?.addListener((changes, areaName) => {
+  if (areaName === "sync" && changes.developerMode) {
+    developerDiagnostics.setEnabled(changes.developerMode.newValue === true);
+  }
+});
 
 async function isTranslationServerReachable() {
   if (_tsReachable !== null && Date.now() - _tsReachable.at < TRANSLATION_SERVER_REACHABLE_TTL) {
@@ -72,8 +89,8 @@ async function resolveBackend() {
   return backendResolver.resolve();
 }
 
-async function probeBackend() {
-  const resolution = await resolveBackend();
+async function probeBackend(existingResolution) {
+  const resolution = existingResolution || await resolveBackend();
   const result = resolution.probeResult || await resolution.backend.probe();
   if (resolution.selectedMode === "enhanced") {
     const reason = PLCBackendResolver.enhancedProbeFailure(
@@ -94,20 +111,47 @@ async function probeBackend() {
 }
 
 async function callZotero(path, body, method = "POST") {
-  const resolution = await resolveBackend();
-  let result;
-  if (path === "/health" && method === "GET") {
-    result = await probeBackend();
-  } else if (path === "/check" && method === "POST") {
-    result = await resolution.backend.check(body);
-  } else if (path === "/batch-check" && method === "POST") {
-    result = await resolution.backend.batchCheck(body.items || []);
-  } else {
-    throw new Error("unsupported_backend_operation");
+  await refreshDeveloperMode();
+  const startedAt = Date.now();
+  const operation = path === "/health" ? "probe" : path === "/batch-check" ? "batch" : "check";
+  developerDiagnostics.record("operation_started", {
+    operation,
+    inputCount: operation === "batch" ? body?.items?.length || 0 : undefined
+  });
+  try {
+    const resolution = await resolveBackend();
+    developerDiagnostics.record("backend_selected", {
+      operation,
+      backend: resolution.selectedMode,
+      degradedReason: resolution.degradedReason
+    });
+    let result;
+    if (path === "/health" && method === "GET") {
+      result = await probeBackend(resolution);
+    } else if (path === "/check" && method === "POST") {
+      result = await resolution.backend.check(body);
+    } else if (path === "/batch-check" && method === "POST") {
+      result = await resolution.backend.batchCheck(body.items || []);
+    } else {
+      throw new Error("unsupported_backend_operation");
+    }
+    developerDiagnostics.record("operation_completed", {
+      operation,
+      backend: resolution.selectedMode,
+      durationMs: Date.now() - startedAt,
+      outcome: result?.status || "ok"
+    });
+    return resolution.degradedReason && result && typeof result === "object"
+      ? { ...result, degradedReason: resolution.degradedReason }
+      : result;
+  } catch (error) {
+    developerDiagnostics.record("operation_failed", {
+      operation,
+      durationMs: Date.now() - startedAt,
+      error: error?.code || error?.message || "backend_unavailable"
+    });
+    throw error;
   }
-  return resolution.degradedReason && result && typeof result === "object"
-    ? { ...result, degradedReason: resolution.degradedReason }
-    : result;
 }
 
 function handleRuntimeMessage(message, sender, sendResponse) {
@@ -115,6 +159,22 @@ function handleRuntimeMessage(message, sender, sendResponse) {
     if (!isTrustedExtensionMessage(message, sender)) return false;
     getPopupHealth().then(sendResponse);
     return true;
+  }
+
+  if (message?.type === "zotero-check:developer-log") {
+    if (!isTrustedExtensionMessage(message, sender)) return false;
+    refreshDeveloperMode().then((enabled) => sendResponse({
+      enabled,
+      entries: enabled ? developerDiagnostics.getEntries() : []
+    }));
+    return true;
+  }
+
+  if (message?.type === "zotero-check:clear-developer-log") {
+    if (!isTrustedExtensionMessage(message, sender)) return false;
+    developerDiagnostics.clear();
+    sendResponse({ ok: true });
+    return false;
   }
 
   if (!isTrustedMessage(message, sender)) {
@@ -171,7 +231,12 @@ function isTrustedMessage(message, sender) {
 }
 
 function isTrustedExtensionMessage(message, sender) {
-  return ["zotero-check:popup-health", "zotero-check:probe"].includes(message?.type) &&
+  return [
+    "zotero-check:popup-health",
+    "zotero-check:probe",
+    "zotero-check:developer-log",
+    "zotero-check:clear-developer-log"
+  ].includes(message?.type) &&
     PLCSenderSecurity.isTrustedExtensionPageSender(sender, chrome.runtime);
 }
 
@@ -380,6 +445,8 @@ if (typeof module !== "undefined" && module.exports) {
     resolveBackend,
     urlsMatch,
     validateLoopbackEndpoint: PLCEnhancedBackend.validateLoopbackEndpoint,
-    validateTranslationTarget
+    validateTranslationTarget,
+    developerDiagnostics,
+    refreshDeveloperMode
   };
 }

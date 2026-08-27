@@ -95,6 +95,14 @@ under operating-system and clipboard-manager control after copying.
 
 ## Logs
 
+The browser extension's optional Developer mode is off by default. When enabled,
+it keeps at most 200 structured performance entries in service-worker memory and
+shows them only on the extension Options page. Entries cover backend phases,
+timings, personal/group query class, cache use, counts, HTTP status, and stable
+error codes. They do not contain pairing tokens or raw Zotero item JSON, are not
+written to browser storage, and disappear when the worker restarts or the user
+selects **Clear log**.
+
 The add-on writes a bounded local diagnostic log in the Zotero profile. Project
 log calls omit library identifiers, item identifiers, item keys, titles,
 authors, URLs, and pairing secrets. The current log rotates at 1 MiB and retains

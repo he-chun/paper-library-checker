@@ -80,19 +80,35 @@
       : Math.max(1, Math.floor(dependencies.queryCacheMaxEntries));
     const groupCacheTtlMs = dependencies.groupCacheTtlMs == null ? GROUP_CACHE_TTL_MS : dependencies.groupCacheTtlMs;
     const now = dependencies.now || Date.now;
+    const clock = dependencies.clock || Date.now;
+    const onDiagnostic = typeof dependencies.onDiagnostic === "function" ? dependencies.onDiagnostic : () => {};
     const schedule = createLimiter(dependencies.concurrency || DEFAULT_CONCURRENCY);
     const queryCache = new Map();
     const queryInFlight = new Map();
     let groupCache = { expiresAt: 0, value: null, promise: null };
     let activeBatchController = null;
 
-    async function requestDirect(url, externalSignal) {
+    function report(event, details) {
+      try {
+        onDiagnostic(event, { backend: "standard", ...details });
+      } catch (_error) {
+        // Diagnostics must never affect matching.
+      }
+    }
+
+    function elapsed(startedAt) {
+      return Math.max(0, clock() - startedAt);
+    }
+
+    async function requestDirect(url, externalSignal, phase, details = {}) {
       const controller = new AbortController();
       const abortFromExternal = () => controller.abort();
       if (externalSignal?.aborted) throw makeLocalApiError("batch_superseded");
       externalSignal?.addEventListener("abort", abortFromExternal, { once: true });
       const timeout = setTimeout(() => controller.abort(), timeoutMs);
+      const startedAt = clock();
       let response;
+      report("backend_request_started", { phase, ...details });
       try {
         response = await fetchImpl(url, {
           method: "GET",
@@ -103,37 +119,67 @@
           signal: controller.signal
         });
       } catch (error) {
-        if (externalSignal?.aborted) throw makeLocalApiError("batch_superseded");
-        if (error?.name === "AbortError") throw makeLocalApiError("local_api_timeout");
-        throw makeLocalApiError("local_api_unavailable");
+        const mapped = externalSignal?.aborted
+          ? makeLocalApiError("batch_superseded")
+          : error?.name === "AbortError"
+            ? makeLocalApiError("local_api_timeout")
+            : makeLocalApiError("local_api_unavailable");
+        report("backend_request_failed", {
+          phase,
+          ...details,
+          durationMs: elapsed(startedAt),
+          error: mapped.code
+        });
+        throw mapped;
       } finally {
         clearTimeout(timeout);
         externalSignal?.removeEventListener("abort", abortFromExternal);
       }
-      if (response.status === 403) throw makeLocalApiError("local_api_disabled", 403);
-      if (response.status === 501) throw makeLocalApiError("local_api_incompatible", 501);
-      if (!response.ok) throw makeLocalApiError("local_api_unavailable", response.status);
+      let responseError = null;
+      if (response.status === 403) responseError = makeLocalApiError("local_api_disabled", 403);
+      else if (response.status === 501) responseError = makeLocalApiError("local_api_incompatible", 501);
+      else if (!response.ok) responseError = makeLocalApiError("local_api_unavailable", response.status);
+      if (responseError) {
+        report("backend_request_failed", {
+          phase,
+          ...details,
+          durationMs: elapsed(startedAt),
+          httpStatus: response.status,
+          error: responseError.code
+        });
+        throw responseError;
+      }
+      report("backend_request_completed", {
+        phase,
+        ...details,
+        durationMs: elapsed(startedAt),
+        httpStatus: response.status
+      });
       return response;
     }
 
-    function request(url, signal) {
-      return schedule(() => requestDirect(url, signal), signal);
+    function request(url, signal, phase, details) {
+      return schedule(() => requestDirect(url, signal, phase, details), signal);
     }
 
-    async function readJsonArray(url, signal) {
-      const response = await request(url, signal);
+    async function readJsonArray(url, signal, phase, details) {
+      const response = await request(url, signal, phase, details);
       let payload;
       try {
         payload = await response.json();
       } catch (_error) {
+        report("backend_response_failed", { phase, ...details, error: "local_api_malformed_response" });
         throw makeLocalApiError("local_api_malformed_response");
       }
-      if (!Array.isArray(payload)) throw makeLocalApiError("local_api_malformed_response");
+      if (!Array.isArray(payload)) {
+        report("backend_response_failed", { phase, ...details, error: "local_api_malformed_response" });
+        throw makeLocalApiError("local_api_malformed_response");
+      }
       return payload;
     }
 
     async function probe() {
-      const response = await request(endpoint);
+      const response = await request(endpoint, null, "probe");
       const apiVersion = response.headers?.get?.("Zotero-API-Version") || "";
       if (apiVersion !== "3") throw makeLocalApiError("local_api_incompatible");
       return { ok: true, version: apiVersion, indexReady: true };
@@ -153,12 +199,19 @@
     }
 
     async function getGroupIDs(signal) {
-      if (groupCache.value && groupCache.expiresAt > now()) return groupCache.value;
-      if (groupCache.promise) return groupCache.promise;
+      if (groupCache.value && groupCache.expiresAt > now()) {
+        report("cache_used", { phase: "group_list", cache: "hit", resultCount: groupCache.value.length });
+        return groupCache.value;
+      }
+      if (groupCache.promise) {
+        report("cache_used", { phase: "group_list", cache: "inflight" });
+        return groupCache.promise;
+      }
       const url = new URL("users/0/groups", endpoint);
       url.searchParams.set("format", "json");
-      const promise = readJsonArray(url.href, signal).then((payload) => {
+      const promise = readJsonArray(url.href, signal, "group_list").then((payload) => {
         const value = parseGroupIDs(payload);
+        report("group_list_loaded", { libraryCount: value.length + 1 });
         if (groupCache.promise === promise) {
           groupCache = { value, expiresAt: now() + groupCacheTtlMs, promise: null };
         }
@@ -191,7 +244,7 @@
       }
     }
 
-    async function readItems(libraryPath, term, signal) {
+    async function readItems(libraryPath, term, signal, queryType) {
       const url = new URL(`${libraryPath}/items`, endpoint);
       url.searchParams.set("format", "json");
       url.searchParams.set("include", "data");
@@ -200,11 +253,19 @@
       url.searchParams.set("q", term);
       const key = url.href;
       const cached = cachedQuery(key);
-      if (cached) return cached;
+      const library = libraryPath === "users/0" ? "personal" : "group";
+      if (cached) {
+        report("cache_used", { phase: "item_query", cache: "hit", library, queryType, resultCount: cached.length });
+        return cached;
+      }
       const existing = queryInFlight.get(key);
-      if (existing && existing.signal === signal) return existing.promise;
-      const promise = readJsonArray(key, signal).then((payload) => {
+      if (existing && existing.signal === signal) {
+        report("cache_used", { phase: "item_query", cache: "inflight", library, queryType });
+        return existing.promise;
+      }
+      const promise = readJsonArray(key, signal, "item_query", { library, queryType }).then((payload) => {
         cacheQuery(key, payload);
+        report("query_results_received", { library, queryType, resultCount: payload.length });
         return payload;
       }).finally(() => {
         if (queryInFlight.get(key)?.promise === promise) queryInFlight.delete(key);
@@ -232,6 +293,8 @@
       const signal = options.signal;
       const terms = matcher.searchTerms(candidate);
       if (!terms.length) return { status: "not_found", matchType: null, confidence: 0 };
+      const prepared = matcher.prepareCandidate(candidate);
+      const identifierTypes = new Map(Object.entries(prepared.identifiers).map(([type, value]) => [value, type]));
       const { paths, groupError } = await libraryPaths(signal);
       const errors = groupError ? [groupError] : [];
       const seenItems = new Set();
@@ -241,7 +304,8 @@
         let librarySucceeded = false;
         try {
           for (const term of terms) {
-            const items = await readItems(path, term, signal);
+            const queryType = identifierTypes.get(term) || "title";
+            const items = await readItems(path, term, signal, queryType);
             librarySucceeded = true;
             const uniqueItems = items.filter((item) => {
               const key = matcher.itemFingerprint(item);
@@ -266,6 +330,7 @@
 
     async function batchCheck(candidates) {
       if (!Array.isArray(candidates)) throw makeLocalApiError("invalid_batch_candidates");
+      const startedAt = clock();
       if (activeBatchController) activeBatchController.abort();
       const controller = new AbortController();
       activeBatchController = controller;
@@ -276,6 +341,12 @@
         const key = matcher.candidateKey(candidate);
         if (!unique.has(key)) unique.set(key, { candidate, promise: null });
       }
+      report("batch_started", {
+        operation: "batch",
+        inputCount: candidates.length,
+        uniqueCount: unique.size,
+        concurrency: dependencies.concurrency || DEFAULT_CONCURRENCY
+      });
       for (const entry of unique.values()) {
         entry.promise = check(entry.candidate, { signal: controller.signal }).catch((error) => ({
           status: "error",
@@ -287,6 +358,15 @@
 
       const results = await Promise.all(candidates.map((candidate) => unique.get(matcher.candidateKey(candidate)).promise));
       if (activeBatchController === controller) activeBatchController = null;
+      report("batch_completed", {
+        operation: "batch",
+        inputCount: candidates.length,
+        uniqueCount: unique.size,
+        durationMs: elapsed(startedAt),
+        matchedCount: results.filter((result) => result.status === "matched").length,
+        notFoundCount: results.filter((result) => result.status === "not_found").length,
+        errorCount: results.filter((result) => result.status === "error").length
+      });
       return { results };
     }
 

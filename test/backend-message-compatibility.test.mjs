@@ -8,6 +8,7 @@ let fetchPayload = { status: "matched", matchType: "doi", confidence: 1 };
 let localStatus = 200;
 let localItems = [];
 let token = "a".repeat(64);
+let developerMode = false;
 
 global.chrome = {
   runtime: {
@@ -21,7 +22,8 @@ global.chrome = {
       get: async (defaults) => ({
         ...defaults,
         endpoint: "http://127.0.0.1:23119/zotero-checker",
-        connectionMode
+        connectionMode,
+        developerMode
       })
     },
     local: { get: async () => ({ token }) }
@@ -180,4 +182,29 @@ test("options probe uses the same service-worker backend projection", async () =
   assert.equal(health.connected, true);
   assert.equal(health.mode, "standard");
   assert.equal(health.capabilities.batch, true);
+});
+
+test("developer mode exposes bounded service-worker timings only to extension pages", async () => {
+  developerMode = true;
+  connectionMode = "standard";
+  localStatus = 200;
+  localItems = [];
+  const privateTitle = "Private diagnostic title";
+  await send({ type: "zotero-check:match", candidate: { title: privateTitle } }, contentSender);
+
+  const log = await send({ type: "zotero-check:developer-log" }, {
+    id: "extension-id",
+    url: "chrome-extension://extension-id/src/options.html"
+  });
+  assert.equal(log.enabled, true);
+  assert.equal(log.entries.some((entry) => entry.event === "operation_completed"), true);
+  assert.equal(log.entries.some((entry) => entry.phase === "item_query" && Number.isFinite(entry.durationMs)), true);
+  assert.equal(JSON.stringify(log).includes(privateTitle), false);
+
+  const cleared = await send({ type: "zotero-check:clear-developer-log" }, {
+    id: "extension-id",
+    url: "chrome-extension://extension-id/src/options.html"
+  });
+  assert.deepEqual(cleared, { ok: true });
+  developerMode = false;
 });

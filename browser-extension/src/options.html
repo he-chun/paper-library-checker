@@ -63,6 +63,18 @@
       #status {
         margin-left: 10px;
       }
+      #developerLog {
+        box-sizing: border-box;
+        max-height: 320px;
+        overflow: auto;
+        padding: 10px;
+        border: 1px solid ButtonBorder;
+        border-radius: 6px;
+        background: Canvas;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        font: 12px/1.5 ui-monospace, SFMono-Regular, Consolas, monospace;
+      }
     </style>
   </head>
   <body>
@@ -121,6 +133,18 @@
       <input type="checkbox" id="broadPageDetection">
       <span data-i18n="broadPageDetection">Detect article details on supported injected websites</span>
     </label>
+    <label>
+      <input type="checkbox" id="developerMode">
+      <span data-i18n="developerMode">Developer mode — collect local performance logs</span>
+    </label>
+    <p class="choice-description" data-i18n="developerModeDescription">Logs stay in service-worker memory and show backend phases, timings, cache use, counts, and stable errors.</p>
+    <section id="developerPanel" hidden>
+      <h2 data-i18n="developerLogHeading">Developer log</h2>
+      <p data-i18n="developerLogPrivacy">Pairing tokens and raw Zotero item records are never logged. Logs are cleared when the service worker restarts.</p>
+      <button id="refreshDeveloperLog" type="button" data-i18n="refreshDeveloperLog">Refresh log</button>
+      <button id="clearDeveloperLog" type="button" data-i18n="clearDeveloperLog">Clear log</button>
+      <pre id="developerLog" aria-live="polite"></pre>
+    </section>
     <button id="save" type="button" data-i18n="save">Save</button>
     <button id="testConnection" type="button" data-i18n="testConnection">Test connection</button>
     <span id="status" role="status" aria-live="polite"></span>

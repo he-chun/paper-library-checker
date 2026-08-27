@@ -9,6 +9,27 @@ const options = require("../browser-extension/src/options.js");
 
 test("options default to automatic backend selection", () => {
   assert.equal(options.DEFAULT_OPTIONS.connectionMode, "auto");
+  assert.equal(options.DEFAULT_OPTIONS.developerMode, false);
+});
+
+test("developer mode is opt-in and reveals a local log panel", async () => {
+  const html = await readFile(new URL("../browser-extension/src/options.html", import.meta.url), "utf8");
+  const oldDocument = globalThis.document;
+  globalThis.document = new JSDOM(html).window.document;
+  try {
+    assert.equal(document.querySelector("#developerMode").checked, false);
+    options.updateDeveloperPanel(true);
+    assert.equal(document.querySelector("#developerPanel").hidden, false);
+    options.updateDeveloperPanel(false);
+    assert.equal(document.querySelector("#developerPanel").hidden, true);
+  } finally {
+    globalThis.document = oldDocument;
+  }
+});
+
+test("developer log rendering is text-only structured data", () => {
+  assert.equal(options.formatDeveloperEntry({ event: "operation_completed", durationMs: 123 }),
+    '{"event":"operation_completed","durationMs":123}');
 });
 
 test("illegal stored connection modes fall back to automatic", () => {

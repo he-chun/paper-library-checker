@@ -76,3 +76,9 @@ Standard mode hides enhanced credentials and saves without validating or
 rewriting them. Enhanced mode requires the existing 64-character token. Auto
 keeps enhanced settings available in a collapsed section. Missing or invalid
 stored modes normalize to auto without destructive storage migration.
+
+Developer mode is an opt-in diagnostic path owned by the service worker. Both
+backends emit structured phase and timing events into a 200-entry in-memory
+ring. The Options page can read or clear that ring through extension-origin-only
+messages. Content scripts cannot access it. The event schema excludes request
+bodies, query values, tokens, endpoints, and raw Zotero items.
