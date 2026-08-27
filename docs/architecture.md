@@ -6,8 +6,10 @@
   scripts extract candidates and render status. The service worker owns local
   network access and secret storage. The toolbar popup reads a minimized health
   projection from the service worker and queries page state from the active
-  tab's existing content script. Options also asks the service worker to probe;
-  it does not implement either network protocol.
+  tab's existing content script. If that state is `checking`, the popup follows
+  the same tab until the content script reports a terminal state, so its status
+  cannot remain stale after the page badge finishes. Options also asks the
+  service worker to probe; it does not implement either network protocol.
 - `zotero-plugin/`: bootstrap add-on that indexes regular Zotero items in memory,
   registers authenticated endpoints on Zotero's loopback HTTP server, and
   updates the index through Zotero notifications.

@@ -58,6 +58,7 @@ from 0.4.x because the user-visible connection flow and privacy boundary changed
 | Add/delete refresh | PENDING | PENDING | Recheck changes after cache TTL / index notification | PENDING |
 | Raw item and token leakage | PENDING | PENDING | None in page, popup, storage sync, or console | PENDING |
 | Developer mode diagnostics | PENDING | PENDING | Options shows backend phases, timings, cache/count data, and stable errors; clear works; no token or raw item data appears | PENDING |
+| Popup/page state convergence | PENDING | PENDING | Popup follows Checking to the same terminal state shown by the page badge; repeated check is disabled while pending | PENDING |
 
 Real Local API timing collected before packaging is recorded in
 [`verification/release-qualification-0.5.0.md`](verification/release-qualification-0.5.0.md).

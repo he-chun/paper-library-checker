@@ -115,6 +115,9 @@ error:  { ok: false, error: <stable error string> }
 Popup health preserves `{ connected, indexReady }` and may add actual `mode`,
 `capabilities`, `degradedReason`, and a stable repair `error`. Credentials,
 endpoint details, and raw backend responses do not cross into the popup or page.
+Page-check state remains owned by the content script. When the popup observes
+`checking`, it polls that same tab for the minimized terminal page state with a
+bounded timeout; the check action is disabled during this interval.
 The Options **Test connection** action sends an extension-origin-only probe
 message to this same projection instead of implementing HMAC or Local API logic.
 
