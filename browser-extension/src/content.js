@@ -1061,9 +1061,7 @@
         return;
       }
       lastListSignature = sig;
-      lastSuccessfulBatchKey = "";
-      forceNextBatchCheck = true;
-      scheduleIdleBatchCheck({ force: true });
+      scheduleIdleBatchCheck();
     }
 
     function isInsideBadge(node) {
@@ -1201,7 +1199,7 @@
 
     scheduleDetailCheck({ force: true, delay: 120 });
     if (_options.autoCheckReferenceLists) {
-      scheduleBatchCheck({ force: true, delay: 250 });
+      scheduleBatchCheck({ delay: 250 });
     }
   }
 
@@ -1236,7 +1234,7 @@
         sig = getCNKIListSignature();
       }
       if (sig && sig !== lastSuccessfulBatchKey) {
-        scheduleIdleBatchCheck({ force: true });
+        scheduleIdleBatchCheck();
       }
     }, 200);
   });
@@ -1267,7 +1265,7 @@
   function observeRefsContainer(target) {
     var io = new IntersectionObserver(function (entries) {
       if (entries[0].isIntersecting) {
-        scheduleIdleBatchCheck({ force: true });
+        scheduleIdleBatchCheck();
         io.disconnect();
       }
     }, { rootMargin: "200px" });

@@ -128,6 +128,79 @@ test("repeated forced scheduling does not send the same reference batch while it
   }
 });
 
+test("automatic foreground and DOM triggers do not resend a completed reference batch", async () => {
+  const html = await readFile(new URL("./fixtures/cnki-references.html", import.meta.url), "utf8");
+  const messages = [];
+  let messageListener;
+  const dom = new JSDOM(html, {
+    url: "https://kns.cnki.net/kcms2/article/abstract?v=HOST",
+    runScripts: "outside-only",
+    pretendToBeVisual: true
+  });
+  dom.window.requestIdleCallback = (callback) => dom.window.setTimeout(callback, 0);
+  dom.window.chrome = {
+    i18n: { getMessage: () => "", getUILanguage: () => "en" },
+    storage: { sync: { get: (_defaults, callback) => callback({ autoCheckReferenceLists: true, translationServerMode: "off" }) } },
+    runtime: {
+      id: "test-extension",
+      getURL: (value) => `chrome-extension://test-extension/${value}`,
+      onMessage: { addListener: (listener) => { messageListener = listener; } },
+      sendMessage: (message, callback) => {
+        messages.push(message);
+        if (Array.isArray(message.candidates) && message.candidates.some((candidate) => candidate.source === "cnki-list")) {
+          callback?.({
+            ok: true,
+            result: { results: message.candidates.map(() => ({ status: "not_found", matchType: null, confidence: 0 })) }
+          });
+        } else {
+          callback?.({ ok: true, result: { status: "not_found" } });
+        }
+      }
+    }
+  };
+  for (const name of [
+    "common/i18n.js",
+    "common/ui-state.js",
+    "common/page-controller.js",
+    "common/sender-security.js",
+    "common/normalization.js",
+    "extractors/cnki.js",
+    "extractors/generic.js",
+    "extractors/runner.js",
+    "adapters/sciencedirect.js",
+    "content.js"
+  ]) dom.window.eval(await source(name));
+
+  const referenceBatches = () => messages.filter((message) =>
+    Array.isArray(message.candidates) && message.candidates.some((candidate) => candidate.source === "cnki-list")
+  );
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 700));
+    assert.equal(referenceBatches().length, 1);
+
+    dom.window.dispatchEvent(new dom.window.Event("focus"));
+    dom.window.dispatchEvent(new dom.window.Event("pageshow"));
+    dom.window.document.body.appendChild(dom.window.document.createElement("div"));
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    assert.equal(referenceBatches().length, 1);
+
+    const addedReference = dom.window.document.createElement("a");
+    addedReference.href = "/kcms2/article/abstract?v=SYN003";
+    addedReference.title = "Synthetic Reference Three";
+    addedReference.textContent = "Synthetic Reference Three";
+    dom.window.document.querySelector("#quoted-references").appendChild(addedReference);
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    assert.equal(referenceBatches().length, 2);
+
+    const sender = { id: "test-extension", url: "chrome-extension://test-extension/src/popup.html" };
+    messageListener({ type: "zotero-check:manual-page-check" }, sender, () => {});
+    await new Promise((resolve) => setTimeout(resolve, 700));
+    assert.equal(referenceBatches().length, 3);
+  } finally {
+    dom.window.close();
+  }
+});
+
 test("an all-error reference batch is not force-retried during its cooldown", async () => {
   const html = await readFile(new URL("./fixtures/cnki-references.html", import.meta.url), "utf8");
   const messages = [];
