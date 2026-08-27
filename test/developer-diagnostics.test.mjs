@@ -24,6 +24,7 @@ test("developer diagnostics use an allowlist and discard paper and connection da
   log.record("backend_request_completed", {
     backend: "standard",
     phase: "item_query",
+    workload: "references",
     durationMs: 1250.4,
     cooldownMs: 60000,
     httpStatus: 200,
@@ -37,6 +38,7 @@ test("developer diagnostics use an allowlist and discard paper and connection da
   const serialized = JSON.stringify(log.getEntries());
   assert.match(serialized, /backend_request_completed/);
   assert.match(serialized, /item_query/);
+  assert.match(serialized, /references/);
   assert.match(serialized, /1250/);
   assert.match(serialized, /60000/);
   for (const privateValue of ["Private paper title", "10.1000/private", "127.0.0.1", secret, "creators"]) {

@@ -446,12 +446,14 @@
     return host?.shadowRoot?.querySelector(".zotero-check-choices") || null;
   }
 
-  function sendMatch(candidates) {
+  function sendMatch(candidates, workload) {
     return new Promise((resolve) => {
+      const message = Array.isArray(candidates)
+        ? { type: "zotero-check:match", candidates }
+        : { type: "zotero-check:match", candidate: candidates };
+      if (Array.isArray(candidates) && workload) message.workload = workload;
       chrome.runtime.sendMessage(
-        Array.isArray(candidates)
-          ? { type: "zotero-check:match", candidates }
-          : { type: "zotero-check:match", candidate: candidates },
+        message,
         (response) => resolve(response)
       );
     });
@@ -562,7 +564,7 @@
       uiState.PAGE_STATES.CHECKING
     );
 
-    const response = await sendMatch(extraction.candidates);
+    const response = await sendMatch(extraction.candidates, "detail");
     if (runSerial !== detailRunSerial) {
       return;
     }
@@ -771,7 +773,7 @@
 
     let response;
     try {
-      response = await sendMatch(targets.map(function (target) { return target.candidate; }));
+      response = await sendMatch(targets.map(function (target) { return target.candidate; }), "references");
     } finally {
       if (inFlightBatchKey === batchKey) inFlightBatchKey = "";
     }

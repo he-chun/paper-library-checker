@@ -257,6 +257,32 @@ test("batches from different tabs do not cancel each other", async () => {
   });
 });
 
+test("detail and reference batches in the same tab do not cancel each other", async () => {
+  let releaseDetail;
+  const harness = createHarness(async (url, options) => {
+    if (url.pathname.endsWith("/groups")) return response(200, []);
+    const term = url.searchParams.get("q");
+    if (term === "Detail") {
+      return new Promise((resolve, reject) => {
+        releaseDetail = () => resolve(response(200, [{ data: { itemType: "journalArticle", title: term } }]));
+        options.signal.addEventListener("abort", () => reject(Object.assign(new Error("aborted"), { name: "AbortError" })));
+      });
+    }
+    return response(200, [{ data: { itemType: "journalArticle", title: term } }]);
+  }, { concurrency: 2 });
+
+  const detail = harness.backend.batchCheck([{ title: "Detail" }], { scope: "tab:1:detail" });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  const references = harness.backend.batchCheck([{ title: "Reference" }], { scope: "tab:1:references" });
+  assert.deepEqual(await references, {
+    results: [{ status: "matched", matchType: "title", confidence: 0.95 }]
+  });
+  releaseDetail();
+  assert.deepEqual(await detail, {
+    results: [{ status: "matched", matchType: "title", confidence: 0.95 }]
+  });
+});
+
 test("page-side batch limit remains 80 candidates", async () => {
   const { readFile } = await import("node:fs/promises");
   const source = await readFile(new URL("../browser-extension/src/content.js", import.meta.url), "utf8");

@@ -7,7 +7,7 @@
 
   const DEFAULT_MAX_ENTRIES = 200;
   const TEXT_FIELDS = new Set([
-    "backend", "operation", "phase", "outcome", "error", "cache", "library", "queryType", "degradedReason"
+    "backend", "operation", "phase", "outcome", "error", "cache", "library", "queryType", "workload", "degradedReason"
   ]);
   const NUMBER_FIELDS = new Set([
     "durationMs", "httpStatus", "inputCount", "uniqueCount", "resultCount", "libraryCount", "matchedCount",

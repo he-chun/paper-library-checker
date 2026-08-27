@@ -74,7 +74,10 @@ test("CNKI reference and citation blocks produce a batch message", async () => {
     "content.js"
   ]) dom.window.eval(await source(name));
   await new Promise((resolve) => setTimeout(resolve, 700));
+  const detail = messages.find((message) => Array.isArray(message.candidates) && message.candidates.every((candidate) => candidate.source !== "cnki-list"));
   const batch = messages.find((message) => Array.isArray(message.candidates) && message.candidates.some((candidate) => candidate.source === "cnki-list"));
+  assert.equal(detail.workload, "detail");
+  assert.equal(batch.workload, "references");
   assert.equal(batch.candidates.length, 2);
   assert.equal(Array.from(batch.candidates, (candidate) => candidate.title).sort().join("|"), "Synthetic Citation Two|Synthetic Reference One");
   dom.window.close();

@@ -48,7 +48,7 @@ global.fetch = async (url) => {
 };
 
 const background = require("../browser-extension/src/background.js");
-const contentSender = { id: "extension-id", tab: { url: "https://journal.example/article" } };
+const contentSender = { id: "extension-id", tab: { id: 42, url: "https://journal.example/article" } };
 const popupSender = { id: "extension-id", url: "chrome-extension://extension-id/src/popup.html" };
 
 function send(message, sender) {
@@ -89,6 +89,17 @@ test("content-script batch limit remains 200 candidates", () => {
 
   assert.equal(keepChannelOpen, false);
   assert.deepEqual(response, { ok: false, error: "Batch exceeds 200 candidates" });
+});
+
+test("same-tab detail and reference batches receive independent bounded scopes", () => {
+  assert.equal(background.batchScopeForMessage({ workload: "detail" }, contentSender), "tab:42:detail");
+  assert.equal(background.batchScopeForMessage({ workload: "references" }, contentSender), "tab:42:references");
+  assert.equal(background.batchScopeForMessage({}, contentSender), "tab:42:default");
+  assert.equal(background.isTrustedMessage({
+    type: "zotero-check:match",
+    workload: "unbounded-value",
+    candidates: [{ title: "Synthetic" }]
+  }, contentSender), false);
 });
 
 test("popup health keeps connected and indexReady compatibility fields", async () => {

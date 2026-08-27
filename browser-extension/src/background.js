@@ -28,6 +28,7 @@ const TRANSLATION_SERVER_ENDPOINT = "http://127.0.0.1:1969/web";
 const TRANSLATION_SERVER_TIMEOUT_MS = 5000;
 const TRANSLATION_SERVER_PROBE_TIMEOUT_MS = 500;
 const TRANSLATION_SERVER_REACHABLE_TTL = 30000;
+const MATCH_WORKLOADS = new Set(["detail", "references"]);
 let _tsReachable = null;
 let diagnosticOperationSequence = 0;
 const developerDiagnostics = PLCDeveloperDiagnostics.createDeveloperDiagnostics();
@@ -119,6 +120,7 @@ async function callZotero(path, body, method = "POST", context = {}) {
   developerDiagnostics.record("operation_started", {
     operation,
     operationId,
+    workload: context.workload,
     inputCount: operation === "batch" ? body?.items?.length || 0 : undefined
   });
   try {
@@ -127,6 +129,7 @@ async function callZotero(path, body, method = "POST", context = {}) {
       operation,
       operationId,
       backend: resolution.selectedMode,
+      workload: context.workload,
       degradedReason: resolution.degradedReason
     });
     let result;
@@ -151,6 +154,7 @@ async function callZotero(path, body, method = "POST", context = {}) {
       operation,
       operationId,
       backend: resolution.selectedMode,
+      workload: context.workload,
       durationMs: Date.now() - startedAt,
       outcome,
       errorCount: batchErrorCount
@@ -162,6 +166,7 @@ async function callZotero(path, body, method = "POST", context = {}) {
     developerDiagnostics.record("operation_failed", {
       operation,
       operationId,
+      workload: context.workload,
       durationMs: Date.now() - startedAt,
       error: error?.code || error?.message || "backend_unavailable"
     });
@@ -207,7 +212,10 @@ function handleRuntimeMessage(message, sender, sendResponse) {
       : (message.candidate || message.candidates);
     const path = isBatch ? "/batch-check" : "/check";
 
-    callZotero(path, body, "POST", { batchScope: sender.tab?.id })
+    callZotero(path, body, "POST", {
+      batchScope: batchScopeForMessage(message, sender),
+      workload: matchWorkloadForMessage(message)
+    })
       .then((result) => sendResponse({ ok: true, result }))
       .catch((error) => sendResponse({ ok: false, error: error.message }));
 
@@ -233,6 +241,15 @@ function handleRuntimeMessage(message, sender, sendResponse) {
 
 chrome.runtime.onMessage.addListener(handleRuntimeMessage);
 
+function batchScopeForMessage(message, sender) {
+  const tabId = Number.isInteger(sender?.tab?.id) ? sender.tab.id : "unknown";
+  return `tab:${tabId}:${matchWorkloadForMessage(message)}`;
+}
+
+function matchWorkloadForMessage(message) {
+  return MATCH_WORKLOADS.has(message?.workload) ? message.workload : "default";
+}
+
 function isTrustedMessage(message, sender) {
   if (!message || typeof message !== "object" || typeof message.type !== "string") return false;
   if (!PLCSenderSecurity.isTrustedContentScriptSender(sender, chrome.runtime.id)) return false;
@@ -240,6 +257,7 @@ function isTrustedMessage(message, sender) {
     return typeof message.url === "string" && urlsMatch(message.url, sender.tab.url);
   }
   if (message.type === "zotero-check:match") {
+    if (message.workload !== undefined && !MATCH_WORKLOADS.has(message.workload)) return false;
     return Boolean(message.candidate && typeof message.candidate === "object") || Array.isArray(message.candidates);
   }
   return false;
@@ -451,12 +469,14 @@ function makeTranslationServerError(message, details = {}) {
 
 if (typeof module !== "undefined" && module.exports) {
   module.exports = {
+    batchScopeForMessage,
     callZotero,
     getPopupHealth,
     probeBackend,
     handleRuntimeMessage,
     isTrustedExtensionMessage,
     isTrustedMessage,
+    matchWorkloadForMessage,
     resolveBackend,
     urlsMatch,
     validateLoopbackEndpoint: PLCEnhancedBackend.validateLoopbackEndpoint,
