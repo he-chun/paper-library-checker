@@ -189,6 +189,53 @@ test("a new batch aborts or supersedes the previous batch", async () => {
   });
 });
 
+test("repeated identical batches reuse the active work instead of superseding it", async () => {
+  let releaseItems;
+  const harness = createHarness(async (url) => {
+    if (url.pathname.endsWith("/groups")) return response(200, []);
+    return new Promise((resolve) => {
+      releaseItems = () => resolve(response(200, [{ data: { itemType: "journalArticle", title: "Same" } }]));
+    });
+  });
+
+  const first = harness.backend.batchCheck([{ title: "Same" }], { scope: "tab-1" });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  const repeated = harness.backend.batchCheck([{ title: "Same" }], { scope: "tab-1" });
+  releaseItems();
+
+  assert.deepEqual(await first, {
+    results: [{ status: "matched", matchType: "title", confidence: 0.95 }]
+  });
+  assert.deepEqual(await repeated, await first);
+  assert.equal(harness.requests.filter((url) => url.includes("/items?")).length, 1);
+});
+
+test("batches from different tabs do not cancel each other", async () => {
+  let releaseOld;
+  const harness = createHarness(async (url, options) => {
+    if (url.pathname.endsWith("/groups")) return response(200, []);
+    const term = url.searchParams.get("q");
+    if (term === "Old") {
+      return new Promise((resolve, reject) => {
+        releaseOld = () => resolve(response(200, [{ data: { itemType: "journalArticle", title: term } }]));
+        options.signal.addEventListener("abort", () => reject(Object.assign(new Error("aborted"), { name: "AbortError" })));
+      });
+    }
+    return response(200, [{ data: { itemType: "journalArticle", title: term } }]);
+  });
+
+  const oldBatch = harness.backend.batchCheck([{ title: "Old" }], { scope: "tab-1" });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  const otherTab = harness.backend.batchCheck([{ title: "New" }], { scope: "tab-2" });
+  assert.deepEqual(await otherTab, {
+    results: [{ status: "matched", matchType: "title", confidence: 0.95 }]
+  });
+  releaseOld();
+  assert.deepEqual(await oldBatch, {
+    results: [{ status: "matched", matchType: "title", confidence: 0.95 }]
+  });
+});
+
 test("page-side batch limit remains 80 candidates", async () => {
   const { readFile } = await import("node:fs/promises");
   const source = await readFile(new URL("../browser-extension/src/content.js", import.meta.url), "utf8");

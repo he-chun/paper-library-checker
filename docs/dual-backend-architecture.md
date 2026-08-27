@@ -39,9 +39,12 @@ one result, concurrent identical query URLs share one request, and results are
 expanded back into input order. A failed item becomes a minimized per-item
 error without rejecting the batch. Failed group queries do not prevent later
 libraries from producing an exact match; without a match, an incomplete library
-search returns an error instead of a false `not_found`. A new batch aborts the
-previous standard-mode batch, while the content script's existing run serial
-continues to ignore stale responses.
+search returns an error instead of a false `not_found`. Active batches are keyed
+by tab scope and normalized input: repeated identical work in one tab reuses the
+same promise, changed work supersedes only that tab's prior batch, and batches
+from different tabs do not cancel each other. The content script also suppresses
+an identical in-flight page batch and keeps its run serial to ignore genuinely
+stale responses.
 
 The enhanced backend owns the existing `/zotero-checker` integration: endpoint
 validation, local pairing-token access, candidate serialization, HMAC request

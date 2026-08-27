@@ -22,6 +22,11 @@ batch exact matching across personal and accessible group libraries, and
 revalidates returned candidates entirely within the service worker. See
 `docs/dual-backend-architecture.md`.
 
+Standard-mode batch cancellation is scoped to the sender tab. Identical
+in-flight candidate sets are reused, while a changed set supersedes only the
+older batch from the same tab. This prevents dynamic-page observers or another
+open tab from repeatedly aborting useful Local API work.
+
 ## Detection classes
 
 Article detail detection uses site-specific and generic embedded metadata.

@@ -80,6 +80,54 @@ test("CNKI reference and citation blocks produce a batch message", async () => {
   dom.window.close();
 });
 
+test("repeated forced scheduling does not send the same reference batch while it is in flight", async () => {
+  const html = await readFile(new URL("./fixtures/cnki-references.html", import.meta.url), "utf8");
+  const messages = [];
+  const dom = new JSDOM(html, {
+    url: "https://kns.cnki.net/kcms2/article/abstract?v=HOST",
+    runScripts: "outside-only",
+    pretendToBeVisual: true
+  });
+  dom.window.chrome = {
+    i18n: { getMessage: () => "", getUILanguage: () => "en" },
+    storage: { sync: { get: (_defaults, callback) => callback({ autoCheckReferenceLists: true, translationServerMode: "off" }) } },
+    runtime: {
+      id: "test-extension",
+      getURL: (value) => `chrome-extension://test-extension/${value}`,
+      onMessage: { addListener: () => {} },
+      sendMessage: (message, callback) => {
+        messages.push(message);
+        if (!Array.isArray(message.candidates)) callback?.({ ok: true, result: { status: "not_found" } });
+      }
+    }
+  };
+  for (const name of [
+    "common/i18n.js",
+    "common/ui-state.js",
+    "common/page-controller.js",
+    "common/sender-security.js",
+    "common/normalization.js",
+    "extractors/cnki.js",
+    "extractors/generic.js",
+    "extractors/runner.js",
+    "adapters/sciencedirect.js",
+    "content.js"
+  ]) dom.window.eval(await source(name));
+
+  const referenceBatches = () => messages.filter((message) =>
+    Array.isArray(message.candidates) && message.candidates.some((candidate) => candidate.source === "cnki-list")
+  );
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 700));
+    assert.equal(referenceBatches().length, 1);
+    dom.window.dispatchEvent(new dom.window.Event("focus"));
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    assert.equal(referenceBatches().length, 1);
+  } finally {
+    dom.window.close();
+  }
+});
+
 test("manual recheck returns an unrecognized page to its final state", async () => {
   const dom = new JSDOM("<!doctype html><h1>Synthetic article without metadata</h1>", {
     url: "https://www.mdpi.com/synthetic/no-metadata",

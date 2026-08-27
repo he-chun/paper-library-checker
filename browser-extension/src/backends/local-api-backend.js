@@ -86,7 +86,8 @@
     const queryCache = new Map();
     const queryInFlight = new Map();
     let groupCache = { expiresAt: 0, value: null, promise: null };
-    let activeBatchController = null;
+    const activeBatches = new Map();
+    let batchSequence = 0;
 
     function report(event, details) {
       try {
@@ -198,20 +199,20 @@
       return result;
     }
 
-    async function getGroupIDs(signal) {
+    async function getGroupIDs(signal, batchId) {
       if (groupCache.value && groupCache.expiresAt > now()) {
-        report("cache_used", { phase: "group_list", cache: "hit", resultCount: groupCache.value.length });
+        report("cache_used", { phase: "group_list", cache: "hit", resultCount: groupCache.value.length, batchId });
         return groupCache.value;
       }
       if (groupCache.promise) {
-        report("cache_used", { phase: "group_list", cache: "inflight" });
+        report("cache_used", { phase: "group_list", cache: "inflight", batchId });
         return groupCache.promise;
       }
       const url = new URL("users/0/groups", endpoint);
       url.searchParams.set("format", "json");
-      const promise = readJsonArray(url.href, signal, "group_list").then((payload) => {
+      const promise = readJsonArray(url.href, null, "group_list", { batchId }).then((payload) => {
         const value = parseGroupIDs(payload);
-        report("group_list_loaded", { libraryCount: value.length + 1 });
+        report("group_list_loaded", { libraryCount: value.length + 1, batchId });
         if (groupCache.promise === promise) {
           groupCache = { value, expiresAt: now() + groupCacheTtlMs, promise: null };
         }
@@ -244,7 +245,7 @@
       }
     }
 
-    async function readItems(libraryPath, term, signal, queryType) {
+    async function readItems(libraryPath, term, signal, queryType, batchId) {
       const url = new URL(`${libraryPath}/items`, endpoint);
       url.searchParams.set("format", "json");
       url.searchParams.set("include", "data");
@@ -255,17 +256,17 @@
       const cached = cachedQuery(key);
       const library = libraryPath === "users/0" ? "personal" : "group";
       if (cached) {
-        report("cache_used", { phase: "item_query", cache: "hit", library, queryType, resultCount: cached.length });
+        report("cache_used", { phase: "item_query", cache: "hit", library, queryType, resultCount: cached.length, batchId });
         return cached;
       }
       const existing = queryInFlight.get(key);
       if (existing && existing.signal === signal) {
-        report("cache_used", { phase: "item_query", cache: "inflight", library, queryType });
+        report("cache_used", { phase: "item_query", cache: "inflight", library, queryType, batchId });
         return existing.promise;
       }
-      const promise = readJsonArray(key, signal, "item_query", { library, queryType }).then((payload) => {
+      const promise = readJsonArray(key, signal, "item_query", { library, queryType, batchId }).then((payload) => {
         cacheQuery(key, payload);
-        report("query_results_received", { library, queryType, resultCount: payload.length });
+        report("query_results_received", { library, queryType, resultCount: payload.length, batchId });
         return payload;
       }).finally(() => {
         if (queryInFlight.get(key)?.promise === promise) queryInFlight.delete(key);
@@ -274,11 +275,11 @@
       return promise;
     }
 
-    async function libraryPaths(signal) {
+    async function libraryPaths(signal, batchId) {
       let groupError = null;
       let groupIDs = [];
       try {
-        groupIDs = await getGroupIDs(signal);
+        groupIDs = await getGroupIDs(signal, batchId);
       } catch (error) {
         if (error.code === "batch_superseded") throw error;
         groupError = error;
@@ -291,11 +292,12 @@
 
     async function check(candidate, options = {}) {
       const signal = options.signal;
+      const batchId = options.batchId;
       const terms = matcher.searchTerms(candidate);
       if (!terms.length) return { status: "not_found", matchType: null, confidence: 0 };
       const prepared = matcher.prepareCandidate(candidate);
       const identifierTypes = new Map(Object.entries(prepared.identifiers).map(([type, value]) => [value, type]));
-      const { paths, groupError } = await libraryPaths(signal);
+      const { paths, groupError } = await libraryPaths(signal, batchId);
       const errors = groupError ? [groupError] : [];
       const seenItems = new Set();
       let successfulLibraries = 0;
@@ -305,7 +307,7 @@
         try {
           for (const term of terms) {
             const queryType = identifierTypes.get(term) || "title";
-            const items = await readItems(path, term, signal, queryType);
+            const items = await readItems(path, term, signal, queryType, batchId);
             librarySucceeded = true;
             const uniqueItems = items.filter((item) => {
               const key = matcher.itemFingerprint(item);
@@ -328,13 +330,23 @@
       return { status: "not_found", matchType: null, confidence: 0 };
     }
 
-    async function batchCheck(candidates) {
+    async function batchCheck(candidates, options = {}) {
       if (!Array.isArray(candidates)) throw makeLocalApiError("invalid_batch_candidates");
-      const startedAt = clock();
-      if (activeBatchController) activeBatchController.abort();
+      const scope = String(options.scope == null ? "default" : options.scope);
+      const batchKey = JSON.stringify(candidates.map((candidate) => matcher.candidateKey(candidate)));
+      const existing = activeBatches.get(scope);
+      if (existing?.key === batchKey) {
+        report("batch_reused", {
+          operation: "batch",
+          batchId: existing.batchId,
+          inputCount: candidates.length
+        });
+        return existing.promise;
+      }
+      if (existing) existing.controller.abort();
       const controller = new AbortController();
-      activeBatchController = controller;
-      groupCache.promise = null;
+      const startedAt = clock();
+      const batchId = Number.isFinite(options.batchId) ? options.batchId : ++batchSequence;
 
       const unique = new Map();
       for (const candidate of candidates) {
@@ -343,31 +355,41 @@
       }
       report("batch_started", {
         operation: "batch",
+        batchId,
         inputCount: candidates.length,
         uniqueCount: unique.size,
         concurrency: dependencies.concurrency || DEFAULT_CONCURRENCY
       });
-      for (const entry of unique.values()) {
-        entry.promise = check(entry.candidate, { signal: controller.signal }).catch((error) => ({
-          status: "error",
-          matchType: null,
-          confidence: 0,
-          error: error.code || "local_api_unavailable"
-        }));
-      }
+      const active = { batchId, controller, key: batchKey, promise: null };
+      active.promise = (async () => {
+        for (const entry of unique.values()) {
+          entry.promise = check(entry.candidate, { signal: controller.signal, batchId }).catch((error) => ({
+            status: "error",
+            matchType: null,
+            confidence: 0,
+            error: error.code || "local_api_unavailable"
+          }));
+        }
 
-      const results = await Promise.all(candidates.map((candidate) => unique.get(matcher.candidateKey(candidate)).promise));
-      if (activeBatchController === controller) activeBatchController = null;
-      report("batch_completed", {
-        operation: "batch",
-        inputCount: candidates.length,
-        uniqueCount: unique.size,
-        durationMs: elapsed(startedAt),
-        matchedCount: results.filter((result) => result.status === "matched").length,
-        notFoundCount: results.filter((result) => result.status === "not_found").length,
-        errorCount: results.filter((result) => result.status === "error").length
+        const results = await Promise.all(candidates.map((candidate) => unique.get(matcher.candidateKey(candidate)).promise));
+        const errorCount = results.filter((result) => result.status === "error").length;
+        report("batch_completed", {
+          operation: "batch",
+          batchId,
+          inputCount: candidates.length,
+          uniqueCount: unique.size,
+          durationMs: elapsed(startedAt),
+          matchedCount: results.filter((result) => result.status === "matched").length,
+          notFoundCount: results.filter((result) => result.status === "not_found").length,
+          errorCount,
+          outcome: errorCount === 0 ? "ok" : errorCount === results.length ? "error" : "partial"
+        });
+        return { results };
+      })().finally(() => {
+        if (activeBatches.get(scope) === active) activeBatches.delete(scope);
       });
-      return { results };
+      activeBatches.set(scope, active);
+      return active.promise;
     }
 
     return Object.freeze({

@@ -42,6 +42,7 @@
   let checkCount = 0;
   let lastSuccessfulCandidateKey = "";
   let lastSuccessfulBatchKey = "";
+  let inFlightBatchKey = "";
   let detailTimer = null;
   let batchTimer = null;
   let detailRetryTimer = null;
@@ -710,7 +711,6 @@
   }
 
   async function runBatchCheck() {
-    const runSerial = ++batchRunSerial;
     const force = forceNextBatchCheck;
     forceNextBatchCheck = false;
     const userInitiated = _batchUserInitiated;
@@ -727,9 +727,9 @@
 
     if (adapter) {
       // Compute fast signature before expensive collectBatchTargets
-      if (!force && typeof adapter.getBatchSignature === "function") {
+      if (typeof adapter.getBatchSignature === "function") {
         signature = adapter.getBatchSignature();
-        if (signature && signature === lastSuccessfulBatchKey) {
+        if (!force && signature && signature === lastSuccessfulBatchKey) {
           return;
         }
       }
@@ -743,19 +743,30 @@
     }
 
     var batchKey = targets.map(function (t) { return t.sourceId || t.key; }).join(";");
-    if (!force && signature) {
+    if (signature) {
       // Use the pre-computed signature if available
       batchKey = signature;
     }
     if (!force && batchKey === lastSuccessfulBatchKey) {
       return;
     }
+    if (batchKey === inFlightBatchKey) {
+      return;
+    }
+
+    const runSerial = ++batchRunSerial;
+    inFlightBatchKey = batchKey;
 
     if (!adapter) {
       targets.forEach(function (target) { applyTargetState(target, "checking"); });
     }
 
-    const response = await sendMatch(targets.map(function (target) { return target.candidate; }));
+    let response;
+    try {
+      response = await sendMatch(targets.map(function (target) { return target.candidate; }));
+    } finally {
+      if (inFlightBatchKey === batchKey) inFlightBatchKey = "";
+    }
     if (runSerial !== batchRunSerial) {
       return;
     }

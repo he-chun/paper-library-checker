@@ -29,6 +29,7 @@ const TRANSLATION_SERVER_TIMEOUT_MS = 5000;
 const TRANSLATION_SERVER_PROBE_TIMEOUT_MS = 500;
 const TRANSLATION_SERVER_REACHABLE_TTL = 30000;
 let _tsReachable = null;
+let diagnosticOperationSequence = 0;
 const developerDiagnostics = PLCDeveloperDiagnostics.createDeveloperDiagnostics();
 const reportDiagnostic = (event, details) => developerDiagnostics.record(event, details);
 const enhancedBackend = PLCEnhancedBackend.createEnhancedBackend({ onDiagnostic: reportDiagnostic });
@@ -110,18 +111,21 @@ async function probeBackend(existingResolution) {
   };
 }
 
-async function callZotero(path, body, method = "POST") {
+async function callZotero(path, body, method = "POST", context = {}) {
   await refreshDeveloperMode();
   const startedAt = Date.now();
+  const operationId = ++diagnosticOperationSequence;
   const operation = path === "/health" ? "probe" : path === "/batch-check" ? "batch" : "check";
   developerDiagnostics.record("operation_started", {
     operation,
+    operationId,
     inputCount: operation === "batch" ? body?.items?.length || 0 : undefined
   });
   try {
     const resolution = await resolveBackend();
     developerDiagnostics.record("backend_selected", {
       operation,
+      operationId,
       backend: resolution.selectedMode,
       degradedReason: resolution.degradedReason
     });
@@ -131,15 +135,25 @@ async function callZotero(path, body, method = "POST") {
     } else if (path === "/check" && method === "POST") {
       result = await resolution.backend.check(body);
     } else if (path === "/batch-check" && method === "POST") {
-      result = await resolution.backend.batchCheck(body.items || []);
+      result = await resolution.backend.batchCheck(body.items || [], {
+        scope: context.batchScope,
+        batchId: operationId
+      });
     } else {
       throw new Error("unsupported_backend_operation");
     }
+    const batchResults = Array.isArray(result?.results) ? result.results : null;
+    const batchErrorCount = batchResults?.filter((entry) => entry.status === "error").length || 0;
+    const outcome = batchResults
+      ? batchErrorCount === 0 ? "ok" : batchErrorCount === batchResults.length ? "error" : "partial"
+      : result?.status || "ok";
     developerDiagnostics.record("operation_completed", {
       operation,
+      operationId,
       backend: resolution.selectedMode,
       durationMs: Date.now() - startedAt,
-      outcome: result?.status || "ok"
+      outcome,
+      errorCount: batchErrorCount
     });
     return resolution.degradedReason && result && typeof result === "object"
       ? { ...result, degradedReason: resolution.degradedReason }
@@ -147,6 +161,7 @@ async function callZotero(path, body, method = "POST") {
   } catch (error) {
     developerDiagnostics.record("operation_failed", {
       operation,
+      operationId,
       durationMs: Date.now() - startedAt,
       error: error?.code || error?.message || "backend_unavailable"
     });
@@ -192,7 +207,7 @@ function handleRuntimeMessage(message, sender, sendResponse) {
       : (message.candidate || message.candidates);
     const path = isBatch ? "/batch-check" : "/check";
 
-    callZotero(path, body)
+    callZotero(path, body, "POST", { batchScope: sender.tab?.id })
       .then((result) => sendResponse({ ok: true, result }))
       .catch((error) => sendResponse({ ok: false, error: error.message }));
 

@@ -82,5 +82,24 @@ test("standard backend reports probe, group, item, cache, and batch timings", as
   assert.equal(events.some((entry) => entry.event === "backend_request_completed" && entry.phase === "item_query"), true);
   assert.equal(events.some((entry) => entry.event === "cache_used" && entry.phase === "item_query"), true);
   assert.equal(events.some((entry) => entry.event === "batch_completed" && entry.inputCount === 2 && entry.uniqueCount === 1), true);
+  const batchStart = events.find((entry) => entry.event === "batch_started");
+  assert.equal(Number.isFinite(batchStart.batchId), true);
+  assert.equal(events.some((entry) => entry.phase === "item_query" && entry.batchId === batchStart.batchId), true);
+  assert.equal(events.some((entry) => entry.event === "batch_completed" && entry.batchId === batchStart.batchId && entry.outcome === "ok"), true);
   assert.equal(JSON.stringify(events).includes("10.1000/example"), false);
+});
+
+test("failed standard batches are correlated and do not report an ok outcome", async () => {
+  const events = [];
+  const backend = localApi.createLocalApiBackend({
+    fetch: async (url) => url.includes("/groups?")
+      ? { ok: true, status: 200, json: async () => [] }
+      : { ok: false, status: 500, json: async () => ({}) },
+    onDiagnostic: (event, details) => events.push({ event, ...details })
+  });
+  const result = await backend.batchCheck([{ title: "Private title" }], { batchId: 42 });
+  assert.equal(result.results[0].status, "error");
+  assert.equal(events.some((entry) =>
+    entry.event === "batch_completed" && entry.batchId === 42 && entry.outcome === "error" && entry.errorCount === 1
+  ), true);
 });
