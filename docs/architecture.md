@@ -16,7 +16,8 @@
 The service worker selects a connection backend behind a shared
 `probe`/`check`/`batchCheck`/`getCapabilities` interface. The enhanced backend
 encapsulates the existing authenticated add-on protocol. The standard backend
-uses Zotero's built-in read-only Local API for single-item exact matching and
+uses Zotero's built-in read-only Local API for single-item and reference-list
+batch exact matching across personal and accessible group libraries, and
 revalidates returned candidates entirely within the service worker. See
 `docs/dual-backend-architecture.md`.
 

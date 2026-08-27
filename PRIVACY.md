@@ -21,6 +21,10 @@ attachments, notes, collections, tags, or local paths.
 - Standard-mode reads go only to Zotero's fixed Local API root on port 23119.
   Raw Local API item JSON remains in service-worker memory and is not returned
   to pages, written to browser storage or logs, or forwarded elsewhere.
+  Personal and accessible group libraries are queried only for the current
+  candidate set. Successful query responses may be retained in a bounded
+  five-second memory cache, and the group list in a thirty-second memory cache.
+  No persistent full-library index is created.
 - When enabled, Zotero translation-server receives the current public HTTP(S)
   page URL at its fixed loopback endpoint. Private, local, and mismatched URLs
   are rejected by the extension.

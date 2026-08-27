@@ -24,8 +24,24 @@ personal-library items resource with local user ID `0`. It sends only GET reques
 Local API version 3 and `Zotero-Allowed-Request`. Search responses are candidate
 sets, not matches: identifier, title, year, and creator values are normalized
 and verified again in service-worker memory. Attachment, note, and annotation
-items are excluded. The first standard backend supports single-item exact
-matching only; it has no batch or fuzzy-match capability.
+items are excluded. Standard mode supports single-item and reference-list batch
+exact matching, but it has no fuzzy-match or possible-match capability.
+
+The standard backend enumerates every group accessible to local user ID `0`
+and searches the personal library plus each group library. A shared scheduler
+allows at most six active Local API requests. Group-list results and successful
+item-query results use bounded, expiring memory caches; item queries expire
+after five seconds and the group list after thirty seconds. No persistent or
+full-library index is created.
+
+Batch inputs use a stable normalized candidate key. Duplicate candidates share
+one result, concurrent identical query URLs share one request, and results are
+expanded back into input order. A failed item becomes a minimized per-item
+error without rejecting the batch. Failed group queries do not prevent later
+libraries from producing an exact match; without a match, an incomplete library
+search returns an error instead of a false `not_found`. A new batch aborts the
+previous standard-mode batch, while the content script's existing run serial
+continues to ignore stale responses.
 
 The enhanced backend owns the existing `/zotero-checker` integration: endpoint
 validation, local pairing-token access, candidate serialization, HMAC request
@@ -89,10 +105,9 @@ worker responds to a content script.
 
 `browser-extension/src/backends/local-api-backend.js` is injected into the
 resolver as `standardBackend`. Matching normalization and candidate
-reverification live in `local-api-matcher.js`. A later standard-mode batch or
-fuzzy implementation can extend these modules without changing content-script
-messages, but must first update capabilities and add bounded-query, privacy,
-and compatibility tests.
+reverification live in `local-api-matcher.js`. A later fuzzy implementation can
+extend these modules without changing content-script messages, but must first
+update capabilities and add bounded-query, privacy, and compatibility tests.
 
 No caller outside the resolver should branch on backend type. HMAC and pairing
 remain enhanced-backend concerns, while Local API credentials and permissions

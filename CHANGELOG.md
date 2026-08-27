@@ -8,6 +8,9 @@ Versioning while remaining pre-1.0.
 - Adds a standard single-item backend using Zotero's built-in read-only Local
   API, with exact identifier/title verification in the extension service worker
   and no Paper Library Checker XPI requirement.
+- Extends standard mode to personal and accessible group libraries plus ordered
+  reference-list batches with six-request concurrency, stable deduplication,
+  bounded memory caches, per-item errors, and stale-batch cancellation.
 - Makes automatic mode prefer a healthy compatible enhanced backend and fall
   back to standard mode with a minimized degradation reason.
 

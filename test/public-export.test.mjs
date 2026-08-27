@@ -43,7 +43,8 @@ test("public export manifest excludes superseded engineering reports", async () 
       "docs/verification/public-export-boundary.md",
       "docs/verification/release-qualification-0.3.0.json",
       "docs/verification/release-qualification-0.3.0.md",
-      "docs/verification/reproducible-artifact-policy.md"
+      "docs/verification/reproducible-artifact-policy.md",
+      "docs/verification/standard-local-api-batch-manual-test.md"
     ]
   );
 });

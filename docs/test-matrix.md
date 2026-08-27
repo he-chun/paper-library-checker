@@ -41,6 +41,10 @@ The complete redacted result is recorded in
 Run this targeted feature smoke with Zotero 9.0.6 and the dedicated Edge
 profile; it does not replace or expand the release support matrix.
 
+The no-XPI standard-mode personal/group library and ordered batch procedure is
+maintained separately in
+[`verification/standard-local-api-batch-manual-test.md`](verification/standard-local-api-batch-manual-test.md).
+
 | Test item | Expected result | Actual result |
 | --- | --- | --- |
 | Zotero 9.0.6 add-on install | Add-on installs and starts normally | PASS (2026-08-19) |
