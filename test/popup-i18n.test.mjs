@@ -75,10 +75,39 @@ test("popup page-state colors preserve saved, possible-match, not-saved, and err
   assert.match(contentCss, /\.zotero-check-badge\[data-state="missing"\][^{]*\{\s*color:\s*#164b86;/i);
 });
 
+test("popup follows a checking page through to its final state", async () => {
+  const document = await popupDocument();
+  let reads = 0;
+  const chromeObject = {
+    runtime: {
+      sendMessage: async () => ({ connected: true, indexReady: true, mode: "standard" })
+    },
+    tabs: {
+      query: async () => [{ id: 42 }],
+      sendMessage: async (_tabId, message) => {
+        assert.equal(message.type, "zotero-check:get-page-state");
+        reads += 1;
+        return {
+          ok: true,
+          pageState: { state: reads === 1 ? uiState.PAGE_STATES.CHECKING : uiState.PAGE_STATES.NOT_SAVED }
+        };
+      }
+    }
+  };
+
+  await popup.refresh(document, chromeObject);
+
+  assert.equal(reads, 2);
+  assert.equal(document.querySelector("#pageState").textContent, "Not saved");
+  assert.equal(document.querySelector("#pageState").dataset.state, "missing");
+  assert.equal(document.querySelector("#checkPage").disabled, false);
+});
+
 test("Check this page targets the active tab and Open options uses the standard API", async () => {
   const document = await popupDocument();
   const messages = [];
   let optionsOpened = false;
+  let manualStarted = false;
   const chromeObject = {
     runtime: {
       sendMessage: async () => ({ connected: true, indexReady: true }),
@@ -88,16 +117,21 @@ test("Check this page targets the active tab and Open options uses the standard 
       query: async () => [{ id: 42 }],
       sendMessage: async (tabId, message) => {
         messages.push({ tabId, message });
-        if (message.type === "zotero-check:get-page-state") return { ok: true, pageState: { state: "not_checked" } };
+        if (message.type === "zotero-check:get-page-state") {
+          return { ok: true, pageState: { state: manualStarted ? "not_saved" : "not_checked" } };
+        }
+        manualStarted = true;
         return { ok: true, pageState: { state: "checking" } };
       }
     }
   };
   await popup.initialize(document, chromeObject);
   document.querySelector("#checkPage").click();
-  await new Promise((resolve) => setTimeout(resolve, 0));
+  await new Promise((resolve) => setTimeout(resolve, 250));
   document.querySelector("#openOptions").click();
   assert(messages.some(({ tabId, message }) => tabId === 42 && message.type === "zotero-check:manual-page-check"));
+  assert.equal(document.querySelector("#pageState").textContent, "Not saved");
+  assert.equal(document.querySelector("#checkPage").disabled, false);
   assert.equal(optionsOpened, true);
 });
 

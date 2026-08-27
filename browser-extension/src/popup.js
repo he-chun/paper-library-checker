@@ -6,6 +6,9 @@
   root.PLCPopup = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;
 })(typeof globalThis !== "undefined" ? globalThis : this, function (i18n, uiState) {
+  const PAGE_STATE_POLL_INTERVAL_MS = 200;
+  const PAGE_STATE_POLL_TIMEOUT_MS = 35000;
+
   function setText(documentObject, id, text, state) {
     const node = documentObject.querySelector(`#${id}`);
     if (!node) return;
@@ -81,7 +84,9 @@
     setText(documentObject, "pageState", i18n.t(uiState.messageKeyForPageState(state)),
       good ? "good" : missing ? "missing" : warning ? "warning" : "error");
     const checkButton = documentObject.querySelector("#checkPage");
-    if (checkButton) checkButton.disabled = state === uiState.PAGE_STATES.UNSUPPORTED;
+    if (checkButton) {
+      checkButton.disabled = [uiState.PAGE_STATES.UNSUPPORTED, uiState.PAGE_STATES.CHECKING].includes(state);
+    }
   }
 
   async function getActiveTab(chromeObject) {
@@ -92,12 +97,54 @@
   async function readPageState(chromeObject) {
     const tab = await getActiveTab(chromeObject);
     if (!tab || typeof tab.id !== "number") return { tab: null, state: uiState.PAGE_STATES.UNSUPPORTED };
+    return { tab, state: await readTabPageState(chromeObject, tab.id) };
+  }
+
+  async function readTabPageState(chromeObject, tabId) {
     try {
-      const response = await chromeObject.tabs.sendMessage(tab.id, { type: "zotero-check:get-page-state" });
-      return { tab, state: response?.ok ? response.pageState?.state : uiState.PAGE_STATES.ERROR };
+      const response = await chromeObject.tabs.sendMessage(tabId, { type: "zotero-check:get-page-state" });
+      return response?.ok
+        ? uiState.normalizePageState(response.pageState?.state)
+        : uiState.PAGE_STATES.ERROR;
     } catch (_error) {
-      return { tab, state: uiState.PAGE_STATES.UNSUPPORTED };
+      return uiState.PAGE_STATES.UNSUPPORTED;
     }
+  }
+
+  function wait(milliseconds) {
+    return new Promise((resolve) => setTimeout(resolve, milliseconds));
+  }
+
+  async function waitForFinalPageState(chromeObject, tabId, initialState, options = {}) {
+    let state = uiState.normalizePageState(initialState);
+    if (state !== uiState.PAGE_STATES.CHECKING) return state;
+    const intervalMs = options.intervalMs ?? PAGE_STATE_POLL_INTERVAL_MS;
+    const timeoutMs = options.timeoutMs ?? PAGE_STATE_POLL_TIMEOUT_MS;
+    const deadline = Date.now() + timeoutMs;
+    while (state === uiState.PAGE_STATES.CHECKING && Date.now() < deadline) {
+      await wait(intervalMs);
+      state = await readTabPageState(chromeObject, tabId);
+    }
+    return state;
+  }
+
+  async function settlePageState(documentObject, chromeObject, page) {
+    renderPageState(documentObject, page.state);
+    if (!page.tab || page.state !== uiState.PAGE_STATES.CHECKING) return page;
+    const state = await waitForFinalPageState(chromeObject, page.tab.id, page.state);
+    renderPageState(documentObject, state);
+    return { ...page, state };
+  }
+
+  function renderPageLiveStatus(documentObject, state) {
+    const key = state === uiState.PAGE_STATES.UNSUPPORTED
+      ? "popupStatusUnsupported"
+      : state === uiState.PAGE_STATES.ERROR
+        ? "popupStatusError"
+        : state === uiState.PAGE_STATES.CHECKING
+          ? "popupStatusCheckStarted"
+          : "popupStatusReady";
+    setText(documentObject, "liveStatus", i18n.t(key));
   }
 
   async function refresh(documentObject, chromeObject) {
@@ -106,9 +153,9 @@
       readPageState(chromeObject)
     ]);
     renderHealth(documentObject, health);
-    renderPageState(documentObject, page.state);
-    setText(documentObject, "liveStatus", i18n.t(page.state === uiState.PAGE_STATES.UNSUPPORTED ? "popupStatusUnsupported" : "popupStatusReady"));
-    return page;
+    const settledPage = await settlePageState(documentObject, chromeObject, page);
+    renderPageLiveStatus(documentObject, settledPage.state);
+    return settledPage;
   }
 
   async function checkCurrentPage(documentObject, chromeObject) {
@@ -120,9 +167,20 @@
     }
     try {
       const response = await chromeObject.tabs.sendMessage(page.tab.id, { type: "zotero-check:manual-page-check" });
-      renderPageState(documentObject, response?.ok ? response.pageState?.state : uiState.PAGE_STATES.ERROR);
-      setText(documentObject, "liveStatus", i18n.t(response?.ok ? "popupStatusCheckStarted" : "popupStatusError"));
-      return response?.ok === true;
+      if (!response?.ok) {
+        renderPageState(documentObject, uiState.PAGE_STATES.ERROR);
+        setText(documentObject, "liveStatus", i18n.t("popupStatusError"));
+        return false;
+      }
+      const startedPage = {
+        tab: page.tab,
+        state: uiState.normalizePageState(response.pageState?.state)
+      };
+      renderPageState(documentObject, startedPage.state);
+      setText(documentObject, "liveStatus", i18n.t("popupStatusCheckStarted"));
+      const settledPage = await settlePageState(documentObject, chromeObject, startedPage);
+      renderPageLiveStatus(documentObject, settledPage.state);
+      return true;
     } catch (_error) {
       renderPageState(documentObject, uiState.PAGE_STATES.UNSUPPORTED);
       setText(documentObject, "liveStatus", i18n.t("popupStatusUnsupported"));
@@ -149,8 +207,10 @@
     getActiveTab,
     initialize,
     readPageState,
+    readTabPageState,
     refresh,
     renderHealth,
-    renderPageState
+    renderPageState,
+    waitForFinalPageState
   };
 });
