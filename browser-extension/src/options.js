@@ -2,6 +2,7 @@ var optionsI18n = globalThis.PLCI18n || (typeof require === "function" ? require
 
 var DEFAULT_OPTIONS = {
   endpoint: "http://127.0.0.1:23119/zotero-checker",
+  connectionMode: "auto",
   translationServerMode: "auto",
   enablePageGlow: false,
   autoCheckReferenceLists: false,
@@ -123,6 +124,7 @@ if (typeof document !== "undefined") {
 }
 
 if (typeof module !== "undefined" && module.exports) module.exports = {
+  DEFAULT_OPTIONS,
   connectionMessage,
   isCompatibleAddonVersion,
   validateEndpoint

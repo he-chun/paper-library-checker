@@ -5,6 +5,10 @@ import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
 const options = require("../browser-extension/src/options.js");
 
+test("options default to automatic backend selection without adding UI", () => {
+  assert.equal(options.DEFAULT_OPTIONS.connectionMode, "auto");
+});
+
 test("options endpoint validation matches granted loopback permissions", () => {
   assert.equal(options.validateEndpoint("http://127.0.0.1:23119/zotero-checker"), "http://127.0.0.1:23119/zotero-checker");
   assert.equal(options.validateEndpoint("http://localhost:23119/zotero-checker/"), "http://localhost:23119/zotero-checker");

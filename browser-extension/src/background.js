@@ -1,14 +1,20 @@
 if (typeof importScripts === "function") {
-  importScripts("common/request-auth.js", "common/candidate-normalization.js", "common/sender-security.js");
+  importScripts(
+    "common/request-auth.js",
+    "common/candidate-normalization.js",
+    "common/sender-security.js",
+    "backends/enhanced-backend.js",
+    "backends/backend-resolver.js"
+  );
 }
-const PLCRequestAuth = globalThis.PLCRequestAuth || (typeof require === "function" ? require("./common/request-auth.js") : null);
-const PLCCandidateNormalization = globalThis.PLCCandidateNormalization ||
-  (typeof require === "function" ? require("./common/candidate-normalization.js") : null);
 const PLCSenderSecurity = globalThis.PLCSenderSecurity ||
   (typeof require === "function" ? require("./common/sender-security.js") : null);
+const PLCEnhancedBackend = globalThis.PLCEnhancedBackend ||
+  (typeof require === "function" ? require("./backends/enhanced-backend.js") : null);
+const PLCBackendResolver = globalThis.PLCBackendResolver ||
+  (typeof require === "function" ? require("./backends/backend-resolver.js") : null);
 
-const DEFAULT_OPTIONS = {
-  endpoint: "http://127.0.0.1:23119/zotero-checker",
+const TRANSLATION_OPTIONS = {
   translationServerMode: "auto"
 };
 const TRANSLATION_SERVER_ENDPOINT = "http://127.0.0.1:1969/web";
@@ -16,6 +22,8 @@ const TRANSLATION_SERVER_TIMEOUT_MS = 5000;
 const TRANSLATION_SERVER_PROBE_TIMEOUT_MS = 500;
 const TRANSLATION_SERVER_REACHABLE_TTL = 30000;
 let _tsReachable = null;
+const enhancedBackend = PLCEnhancedBackend.createEnhancedBackend();
+const backendResolver = PLCBackendResolver.createBackendResolver({ enhancedBackend });
 
 async function isTranslationServerReachable() {
   if (_tsReachable !== null && Date.now() - _tsReachable.at < TRANSLATION_SERVER_REACHABLE_TTL) {
@@ -51,49 +59,23 @@ const PRIORITY_TRANSLATION_SERVER_DOMAINS = [
 ];
 
 async function getOptions() {
-  const [stored, secrets] = await Promise.all([
-    chrome.storage.sync.get(DEFAULT_OPTIONS),
-    chrome.storage.local.get({ token: "" })
-  ]);
-  return { ...DEFAULT_OPTIONS, ...stored, token: secrets.token || "" };
+  const stored = await chrome.storage.sync.get(TRANSLATION_OPTIONS);
+  return { ...TRANSLATION_OPTIONS, ...stored };
+}
+
+async function resolveBackend() {
+  return backendResolver.resolve();
 }
 
 async function callZotero(path, body, method = "POST") {
-  const options = await getOptions();
-  const endpoint = validateLoopbackEndpoint(options.endpoint);
-  if (!PLCRequestAuth.isUsableSecret(options.token)) {
-    throw new Error("Pairing token is not configured");
-  }
-  const payload = method === "GET"
-    ? null
-    : path === "/batch-check"
-      ? { items: (body.items || []).map(PLCCandidateNormalization.normalizeCandidateForLocalAPI) }
-      : { item: PLCCandidateNormalization.normalizeCandidateForLocalAPI(body) };
-  const bodyText = payload ? JSON.stringify(payload) : "";
-  const headers = await PLCRequestAuth.createHeaders({
-    secret: options.token,
-    method,
-    path: `/zotero-checker${path}`,
-    body: bodyText
-  });
-  const response = await fetch(`${endpoint}${path}`, {
-    method,
-    headers,
-    body: payload ? bodyText : undefined
-  });
-  const result = await response.json().catch(() => ({}));
-  if (!response.ok) throw makeLocalApiError(response.status, result.error || "request_failed");
-  return result;
+  const { backend } = await resolveBackend();
+  if (path === "/health" && method === "GET") return backend.probe();
+  if (path === "/check" && method === "POST") return backend.check(body);
+  if (path === "/batch-check" && method === "POST") return backend.batchCheck(body.items || []);
+  throw new Error("unsupported_backend_operation");
 }
 
-function makeLocalApiError(status, code) {
-  const error = new Error(code);
-  error.status = status;
-  error.code = code;
-  return error;
-}
-
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+function handleRuntimeMessage(message, sender, sendResponse) {
   if (message?.type === "zotero-check:popup-health") {
     if (!isTrustedExtensionMessage(message, sender)) return false;
     getPopupHealth().then(sendResponse);
@@ -137,7 +119,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   return false;
-});
+}
+
+chrome.runtime.onMessage.addListener(handleRuntimeMessage);
 
 function isTrustedMessage(message, sender) {
   if (!message || typeof message !== "object" || typeof message.type !== "string") return false;
@@ -173,16 +157,6 @@ function urlsMatch(left, right) {
   } catch (error) {
     return false;
   }
-}
-
-function validateLoopbackEndpoint(value) {
-  const url = new URL(value);
-  if (url.protocol !== "http:" || url.username || url.password || url.search || url.hash ||
-      !["127.0.0.1", "localhost"].includes(url.hostname) ||
-      url.pathname.replace(/\/$/, "") !== "/zotero-checker") {
-    throw new Error("Zotero endpoint must use HTTP on a loopback hostname");
-  }
-  return url.href.replace(/\/$/, "");
 }
 
 function validateTranslationTarget(value, tabUrl) {
@@ -350,11 +324,12 @@ if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     callZotero,
     getPopupHealth,
+    handleRuntimeMessage,
     isTrustedExtensionMessage,
     isTrustedMessage,
-    makeLocalApiError,
+    resolveBackend,
     urlsMatch,
-    validateLoopbackEndpoint,
+    validateLoopbackEndpoint: PLCEnhancedBackend.validateLoopbackEndpoint,
     validateTranslationTarget
   };
 }
