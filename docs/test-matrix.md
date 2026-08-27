@@ -51,6 +51,7 @@ from 0.4.x because the user-visible connection flow and privacy boundary changed
 | Standard personal/group batch | PENDING | PENDING | Up to 80 ordered results; duplicate reuse and isolated errors | PENDING |
 | Repeated dynamic-page batch trigger | PENDING | PENDING | Identical in-flight work is reused; foreground and unrelated DOM events do not resend completed work; changed references and manual recheck still run; other tabs continue | PENDING |
 | Same-tab workload isolation | PENDING | PENDING | A detail check and reference-list batch do not cancel one another; a newer batch still supersedes stale work in its own workload | PENDING |
+| Standard foreground responsiveness | PENDING | PENDING | Popup/Options probe completes during a reference batch; queued detail work runs before remaining reference queries without cancelling either result | PENDING |
 | Standard timeout recovery | PENDING | PENDING | First item timeout is isolated; later automatic attempts fail fast during the one-minute cooldown and retry with bounded backoff; manual recheck remains available | PENDING |
 | Enhanced connection | PENDING | PENDING | 64-character token required; popup shows Enhanced and real-time index | PENDING |
 | Automatic prefers enhanced | PENDING | PENDING | Compatible ready add-on selected | PENDING |

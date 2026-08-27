@@ -43,9 +43,12 @@ successful item-query results use bounded, expiring memory caches; item queries
 expire after five seconds and the group list after thirty seconds. After an
 item-query timeout, further item queries fail fast with the same stable
 `local_api_timeout` code for sixty seconds instead of adding work to Zotero's
-queue. Page-side automatic retries start at sixty seconds and back off to five
-minutes; a user-initiated recheck remains available. No persistent or full-library
-index is created.
+queue. Within the serial item scheduler, queued `detail` work has priority over
+queued `references` work without aborting the active request. The small root API
+probe is independent of that scheduler, preventing popup and Options health from
+waiting behind all queued item searches. Page-side automatic retries start at
+sixty seconds and back off to five minutes; a user-initiated recheck remains
+available. No persistent or full-library index is created.
 
 Batch inputs use a stable normalized candidate key. Duplicate candidates share
 one result, concurrent identical query URLs share one request, and results are

@@ -107,9 +107,11 @@ rechecks them.
 
 The shared scheduler has a hard ceiling of six for injected performance tests,
 but production standard mode uses one active Local API request. Its item-query
-cache is bounded to 256 entries for five seconds; group membership is cached for
-thirty seconds. The 30-second per-request timeout accommodates large real
-libraries. An item timeout opens a sixty-second fail-fast cooldown, and page
+queue is stable within each priority, with detail-page work ahead of queued
+reference-list work; lightweight health probes do not join that queue. Its
+item-query cache is bounded to 256 entries for five seconds; group membership is
+cached for thirty seconds. The 30-second per-request timeout accommodates large
+real libraries. An item timeout opens a sixty-second fail-fast cooldown, and page
 automatic retries back off from sixty seconds to five minutes, preventing
 browser aborts or dynamic DOM events from continuously extending Zotero's own
 search queue. No persistent full-library index is created.

@@ -33,7 +33,10 @@ repeatedly aborting useful Local API work. Title-bearing
 candidates use Zotero's lightweight title/creator/year search before any
 identifier full-text fallback. Production Local API work is serial, and a timed
 out item query opens a one-minute fail-fast cooldown so aborted searches cannot
-build an invisible Zotero work queue. Automatic page retries use bounded
+build an invisible Zotero work queue. Queued detail-page work takes precedence
+over queued reference-list queries, while the lightweight connection probe runs
+outside the item-query queue so popup and Options health cannot wait behind an
+entire page batch. Automatic page retries use bounded
 exponential backoff while manual rechecks remain available. Foreground,
 visibility, intersection, and DOM-change triggers never force an unchanged
 completed reference batch; only the explicit manual recheck bypasses the
