@@ -65,6 +65,12 @@ content script also suppresses an identical in-flight page batch and keeps its
 run serial to ignore genuinely stale responses. Automatic foreground and DOM triggers reuse the normalized
 successful-batch key, so returning to a tab cannot repeat an unchanged Local API
 search. Only the user's manual recheck intentionally bypasses this suppression.
+While a standard reference batch is active, completed items may additionally be
+delivered through a correlated service-worker-to-content-script progress message
+so rows do not remain uniformly pending until the slowest query finishes. The
+message contains only an input index and a minimized match result. A page-scoped
+request ID rejects progress from a superseded batch or prior navigation; the
+final ordered batch response remains authoritative and backward compatible.
 
 The enhanced backend owns the existing `/zotero-checker` integration: endpoint
 validation, local pairing-token access, candidate serialization, HMAC request
@@ -116,6 +122,10 @@ single: { ok: true, result: <existing single match result> }
 batch:  { ok: true, result: <existing batch match result> }
 error:  { ok: false, error: <stable error string> }
 ```
+
+The optional standard-mode progress projection uses the same minimized result
+shape and does not replace or alter these final envelopes. Enhanced callers and
+legacy content-script requests continue to rely only on the final response.
 
 Popup health preserves `{ connected, indexReady }` and may add actual `mode`,
 `capabilities`, `degradedReason`, and a stable repair `error`. Credentials,

@@ -103,7 +103,9 @@ and expand results back into input order. Title-bearing candidates first use
 `titleCreatorYear`; identifier-only candidates retain the `everything` fallback
 needed when DOI, PMID, ISBN, or CNKI data is stored outside the title index.
 Search hits from either mode remain candidates until the same exact matcher
-rechecks them.
+rechecks them. During a standard reference batch, each completed minimized
+result can update its page row immediately; the final response still contains
+the complete input-ordered array.
 
 The shared scheduler has a hard ceiling of six for injected performance tests,
 but production standard mode uses one active Local API request. Its item-query

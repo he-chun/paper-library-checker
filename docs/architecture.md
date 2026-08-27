@@ -42,6 +42,14 @@ visibility, intersection, and DOM-change triggers never force an unchanged
 completed reference batch; only the explicit manual recheck bypasses the
 successful-batch key.
 
+Standard reference batches publish each completed minimized result back to the
+originating content script before the final ordered batch response is ready.
+Progress is correlated with a page-scoped request ID, so navigation and newer
+batches ignore stale updates. These internal progress messages contain only the
+input index and the normal status/matchType/confidence/error boundary; raw Local
+API items remain confined to service-worker memory. Enhanced mode and the
+existing final request/response envelopes are unchanged.
+
 ## Detection classes
 
 Article detail detection uses site-specific and generic embedded metadata.
