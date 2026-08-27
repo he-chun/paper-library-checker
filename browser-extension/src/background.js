@@ -72,11 +72,32 @@ async function resolveBackend() {
   return backendResolver.resolve();
 }
 
+async function probeBackend() {
+  const resolution = await resolveBackend();
+  const result = resolution.probeResult || await resolution.backend.probe();
+  if (resolution.selectedMode === "enhanced") {
+    const reason = PLCBackendResolver.enhancedProbeFailure(
+      result,
+      chrome.runtime.getManifest?.().version || ""
+    );
+    if (reason) {
+      const error = new Error(reason);
+      error.code = reason;
+      throw error;
+    }
+  }
+  return {
+    ...result,
+    mode: resolution.selectedMode,
+    capabilities: resolution.backend.getCapabilities()
+  };
+}
+
 async function callZotero(path, body, method = "POST") {
   const resolution = await resolveBackend();
   let result;
   if (path === "/health" && method === "GET") {
-    result = resolution.probeResult || await resolution.backend.probe();
+    result = await probeBackend();
   } else if (path === "/check" && method === "POST") {
     result = await resolution.backend.check(body);
   } else if (path === "/batch-check" && method === "POST") {
@@ -90,7 +111,7 @@ async function callZotero(path, body, method = "POST") {
 }
 
 function handleRuntimeMessage(message, sender, sendResponse) {
-  if (message?.type === "zotero-check:popup-health") {
+  if (["zotero-check:popup-health", "zotero-check:probe"].includes(message?.type)) {
     if (!isTrustedExtensionMessage(message, sender)) return false;
     getPopupHealth().then(sendResponse);
     return true;
@@ -150,18 +171,30 @@ function isTrustedMessage(message, sender) {
 }
 
 function isTrustedExtensionMessage(message, sender) {
-  return message?.type === "zotero-check:popup-health" &&
+  return ["zotero-check:popup-health", "zotero-check:probe"].includes(message?.type) &&
     PLCSenderSecurity.isTrustedExtensionPageSender(sender, chrome.runtime);
 }
 
 async function getPopupHealth() {
   try {
     const result = await callZotero("/health", null, "GET");
-    const health = { connected: true, indexReady: result.indexReady === true };
+    const health = {
+      connected: true,
+      indexReady: result.indexReady === true,
+      mode: result.mode,
+      capabilities: result.capabilities
+    };
     if (result.degradedReason) health.degradedReason = result.degradedReason;
     return health;
-  } catch (_error) {
-    return { connected: false, indexReady: false };
+  } catch (error) {
+    const publicError = error?.message === "Pairing token is not configured"
+      ? "authentication_missing"
+      : error?.code || error?.message || "backend_unavailable";
+    return {
+      connected: false,
+      indexReady: false,
+      error: publicError
+    };
   }
 }
 
@@ -340,6 +373,7 @@ if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     callZotero,
     getPopupHealth,
+    probeBackend,
     handleRuntimeMessage,
     isTrustedExtensionMessage,
     isTrustedMessage,

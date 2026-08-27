@@ -16,12 +16,60 @@
   function renderHealth(documentObject, health) {
     const connected = health?.connected === true;
     setText(documentObject, "zoteroState", i18n.t(connected ? "connected" : "offline"), connected ? "good" : "error");
-    setText(
-      documentObject,
-      "indexState",
-      i18n.t(connected && health?.indexReady === true ? "ready" : "indexing"),
-      connected && health?.indexReady === true ? "good" : "warning"
-    );
+    const modeKey = health?.mode === "enhanced" ? "activeModeEnhanced" :
+      health?.mode === "standard" ? "activeModeStandard" : "activeModeUnavailable";
+    setText(documentObject, "modeState", i18n.t(modeKey), connected ? "good" : "error");
+
+    let capabilityKey = "matchingUnavailable";
+    let capabilityState = "error";
+    if (connected && health?.mode === "standard") {
+      capabilityKey = "standardMatchingCapabilities";
+      capabilityState = "good";
+    } else if (connected && health?.mode === "enhanced") {
+      capabilityKey = health?.indexReady === true ? "enhancedMatchingCapabilities" : "indexing";
+      capabilityState = health?.indexReady === true ? "good" : "warning";
+    }
+    setText(documentObject, "indexState", i18n.t(capabilityKey), capabilityState);
+
+    const fallback = documentObject.querySelector("#fallbackState");
+    const fallbackLabel = documentObject.querySelector("#fallbackLabel");
+    const hasFallback = connected && Boolean(health?.degradedReason);
+    if (fallback) {
+      fallback.hidden = !hasFallback;
+      fallback.textContent = hasFallback ? i18n.t(degradedReasonKey(health.degradedReason)) : "";
+    }
+    if (fallbackLabel) fallbackLabel.hidden = !hasFallback;
+
+    const repairHint = documentObject.querySelector("#repairHint");
+    const repairButton = documentObject.querySelector("#repairConnection");
+    const needsRepair = !connected || hasFallback;
+    if (repairHint) {
+      repairHint.hidden = !needsRepair;
+      repairHint.textContent = needsRepair
+        ? i18n.t(hasFallback ? "repairEnhancedHint" : errorHintKey(health?.error))
+        : "";
+    }
+    if (repairButton) repairButton.hidden = !needsRepair;
+  }
+
+  function degradedReasonKey(reason) {
+    const keys = {
+      enhanced_backend_unavailable: "fallbackEnhancedUnavailable",
+      enhanced_backend_incompatible: "fallbackEnhancedIncompatible",
+      enhanced_index_unavailable: "fallbackEnhancedIndexUnavailable"
+    };
+    return keys[reason] || "fallbackEnhancedUnavailable";
+  }
+
+  function errorHintKey(error) {
+    const keys = {
+      local_api_disabled: "repairLocalApiDisabled",
+      local_api_incompatible: "repairLocalApiIncompatible",
+      enhanced_backend_incompatible: "repairEnhancedIncompatible",
+      enhanced_index_unavailable: "repairEnhancedIndex",
+      authentication_missing: "repairAuthentication"
+    };
+    return keys[error] || "repairZoteroOffline";
   }
 
   function renderPageState(documentObject, pageState) {
@@ -86,6 +134,7 @@
     i18n.localizeDocument(documentObject);
     documentObject.querySelector("#checkPage")?.addEventListener("click", () => checkCurrentPage(documentObject, chromeObject));
     documentObject.querySelector("#openOptions")?.addEventListener("click", () => chromeObject.runtime.openOptionsPage());
+    documentObject.querySelector("#repairConnection")?.addEventListener("click", () => chromeObject.runtime.openOptionsPage());
     return refresh(documentObject, chromeObject);
   }
 
@@ -93,5 +142,15 @@
     document.addEventListener("DOMContentLoaded", () => initialize(document, chrome));
   }
 
-  return { checkCurrentPage, getActiveTab, initialize, readPageState, refresh, renderHealth, renderPageState };
+  return {
+    checkCurrentPage,
+    degradedReasonKey,
+    errorHintKey,
+    getActiveTab,
+    initialize,
+    readPageState,
+    refresh,
+    renderHealth,
+    renderPageState
+  };
 });

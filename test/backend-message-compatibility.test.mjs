@@ -92,10 +92,11 @@ test("content-script batch limit remains 200 candidates", () => {
 test("popup health keeps connected and indexReady compatibility fields", async () => {
   connectionMode = "enhanced";
   fetchPayload = { ok: true, version: "0.4.1", indexReady: true, token: "not-projected" };
-  assert.deepEqual(await send({ type: "zotero-check:popup-health" }, popupSender), {
-    connected: true,
-    indexReady: true
-  });
+  const health = await send({ type: "zotero-check:popup-health" }, popupSender);
+  assert.equal(health.connected, true);
+  assert.equal(health.indexReady, true);
+  assert.equal(health.mode, "enhanced");
+  assert.equal(health.capabilities.possibleMatch, true);
 });
 
 test("auto fallback returns a degraded reason without exposing raw Zotero items", async () => {
@@ -118,11 +119,12 @@ test("auto fallback returns a degraded reason without exposing raw Zotero items"
       degradedReason: "enhanced_backend_unavailable"
     }
   });
-  assert.deepEqual(await send({ type: "zotero-check:popup-health" }, popupSender), {
-    connected: true,
-    indexReady: true,
-    degradedReason: "enhanced_backend_unavailable"
-  });
+  const health = await send({ type: "zotero-check:popup-health" }, popupSender);
+  assert.equal(health.connected, true);
+  assert.equal(health.indexReady, true);
+  assert.equal(health.mode, "standard");
+  assert.equal(health.degradedReason, "enhanced_backend_unavailable");
+  assert.equal(health.capabilities.possibleMatch, false);
 });
 
 test("standard mode preserves the existing batch response envelope", async () => {
@@ -163,6 +165,19 @@ test("standard mode returns the stable disabled error without changing message e
   });
   assert.deepEqual(await send({ type: "zotero-check:popup-health" }, popupSender), {
     connected: false,
-    indexReady: false
+    indexReady: false,
+    error: "local_api_disabled"
   });
+});
+
+test("options probe uses the same service-worker backend projection", async () => {
+  connectionMode = "standard";
+  localStatus = 200;
+  const health = await send({ type: "zotero-check:probe" }, {
+    id: "extension-id",
+    url: "chrome-extension://extension-id/src/options.html"
+  });
+  assert.equal(health.connected, true);
+  assert.equal(health.mode, "standard");
+  assert.equal(health.capabilities.batch, true);
 });

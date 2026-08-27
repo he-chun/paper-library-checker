@@ -18,14 +18,31 @@ async function popupDocument() {
   return new JSDOM(html).window.document;
 }
 
-test("popup renders Connected, Offline, Ready, and Indexing states", async () => {
+test("popup renders connection, actual mode, and matching capabilities", async () => {
   const document = await popupDocument();
-  popup.renderHealth(document, { connected: true, indexReady: true });
+  popup.renderHealth(document, { connected: true, indexReady: true, mode: "enhanced" });
   assert.equal(document.querySelector("#zoteroState").textContent, "Connected");
-  assert.equal(document.querySelector("#indexState").textContent, "Ready");
+  assert.equal(document.querySelector("#modeState").textContent, "Enhanced");
+  assert.equal(document.querySelector("#indexState").textContent, "Full matching and real-time index");
   popup.renderHealth(document, { connected: false, indexReady: false });
   assert.equal(document.querySelector("#zoteroState").textContent, "Offline");
-  assert.equal(document.querySelector("#indexState").textContent, "Indexing");
+  assert.equal(document.querySelector("#modeState").textContent, "Unavailable");
+  assert.equal(document.querySelector("#indexState").textContent, "Unavailable");
+});
+
+test("popup renders standard capability, automatic fallback, and a repair action", async () => {
+  const document = await popupDocument();
+  popup.renderHealth(document, {
+    connected: true,
+    indexReady: true,
+    mode: "standard",
+    degradedReason: "enhanced_backend_unavailable"
+  });
+  assert.equal(document.querySelector("#modeState").textContent, "Standard");
+  assert.equal(document.querySelector("#indexState").textContent, "Exact matching and batch");
+  assert.equal(document.querySelector("#fallbackState").textContent, "Enhanced mode unavailable");
+  assert.equal(document.querySelector("#fallbackState").hidden, false);
+  assert.equal(document.querySelector("#repairConnection").hidden, false);
 });
 
 test("popup renders supported, unchecked, and unsupported page states", async () => {

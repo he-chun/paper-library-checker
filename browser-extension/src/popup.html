@@ -12,14 +12,20 @@
       <dl class="status-grid">
         <dt data-i18n="zoteroLabel">Zotero</dt>
         <dd id="zoteroState" data-state="pending">…</dd>
-        <dt data-i18n="indexLabel">Index</dt>
+        <dt data-i18n="actualModeLabel">Active mode</dt>
+        <dd id="modeState" data-state="pending">…</dd>
+        <dt data-i18n="capabilitiesLabel">Matching</dt>
         <dd id="indexState" data-state="pending">…</dd>
         <dt data-i18n="currentPageLabel">Current page</dt>
         <dd id="pageState" data-state="pending">…</dd>
+        <dt id="fallbackLabel" data-i18n="fallbackReasonLabel" hidden>Fallback</dt>
+        <dd id="fallbackState" data-state="warning" hidden></dd>
       </dl>
+      <p id="repairHint" class="repair-hint" hidden></p>
       <div class="actions">
         <button id="checkPage" type="button" data-i18n="checkThisPage">Check this page</button>
         <button id="openOptions" type="button" class="secondary" data-i18n="openOptions">Open options</button>
+        <button id="repairConnection" type="button" class="secondary full" data-i18n="repairConnection" hidden>Fix connection</button>
       </div>
       <p id="liveStatus" class="sr-only" role="status" aria-live="polite" data-i18n="popupStatusLoading">Checking Zotero and the current page</p>
     </main>

@@ -25,6 +25,29 @@
       input[type="checkbox"] {
         width: auto;
       }
+      fieldset {
+        margin: 20px 0;
+        border: 1px solid ButtonBorder;
+        border-radius: 6px;
+        padding: 12px 16px;
+      }
+      legend {
+        font-weight: 700;
+      }
+      .choice-description {
+        margin: 2px 0 10px 26px;
+        color: GrayText;
+      }
+      details {
+        margin-top: 14px;
+        padding: 10px 12px;
+        border: 1px solid ButtonBorder;
+        border-radius: 6px;
+      }
+      summary {
+        cursor: pointer;
+        font-weight: 600;
+      }
       button {
         margin-top: 18px;
         padding: 8px 14px;
@@ -45,13 +68,34 @@
   <body>
     <h1 data-i18n="optionsHeading">Paper Library Checker</h1>
     <p data-i18n="productTagline">A third-party add-on for Zotero</p>
-    <label for="endpoint" data-i18n="endpointLabel">Zotero plugin endpoint</label>
-    <input id="endpoint" type="url" value="http://127.0.0.1:23119/zotero-checker">
-    <label for="token" data-i18n="pairingTokenLabel">Pairing token</label>
-    <div class="token-row">
-      <input id="token" type="password" value="" autocomplete="off" spellcheck="false">
-      <button id="toggleToken" type="button" aria-pressed="false" data-i18n="showToken">Show</button>
-    </div>
+    <fieldset>
+      <legend data-i18n="connectionModeLabel">Connection method</legend>
+      <label>
+        <input type="radio" name="connectionMode" value="auto" checked>
+        <span data-i18n="connectionModeAuto">Automatic (recommended)</span>
+      </label>
+      <p class="choice-description" data-i18n="connectionModeAutoDescription">Use enhanced mode when available, otherwise use standard mode.</p>
+      <label>
+        <input type="radio" name="connectionMode" value="standard">
+        <span data-i18n="connectionModeStandard">Standard mode</span>
+      </label>
+      <p class="choice-description" data-i18n="connectionModeStandardDescription">No Zotero add-on required. Supports exact matching and reference-list batch checks.</p>
+      <label>
+        <input type="radio" name="connectionMode" value="enhanced">
+        <span data-i18n="connectionModeEnhanced">Enhanced mode</span>
+      </label>
+      <p class="choice-description" data-i18n="connectionModeEnhancedDescription">With the Zotero add-on: faster batches, full fuzzy matching, Possible match, and real-time index updates.</p>
+      <details id="enhancedSettings">
+        <summary data-i18n="enhancedSettingsLabel">Enhanced mode connection settings</summary>
+        <label for="endpoint" data-i18n="endpointLabel">Zotero plugin endpoint</label>
+        <input id="endpoint" type="url" value="http://127.0.0.1:23119/zotero-checker">
+        <label for="token" data-i18n="pairingTokenLabel">Pairing token</label>
+        <div class="token-row">
+          <input id="token" type="password" value="" autocomplete="off" spellcheck="false">
+          <button id="toggleToken" type="button" aria-pressed="false" data-i18n="showToken">Show</button>
+        </div>
+      </details>
+    </fieldset>
     <label data-i18n="translationModeLabel">Translation-server mode</label>
     <label>
       <input type="radio" name="translationServerMode" value="off">
