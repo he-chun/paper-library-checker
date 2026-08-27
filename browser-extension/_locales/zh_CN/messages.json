@@ -1,10 +1,10 @@
 {
   "extensionName": { "message": "文献库检查器" },
-  "extensionDescription": { "message": "一个第三方 Zotero 附加组件，用于检查学术文章是否已存在于本地文献库中。" },
+  "extensionDescription": { "message": "通过标准模式或增强模式检查学术页面是否已存在于本地 Zotero 文献库。" },
   "actionTitle": { "message": "文献库检查器" },
   "optionsTitle": { "message": "文献库检查器设置" },
   "optionsHeading": { "message": "文献库检查器" },
-  "productTagline": { "message": "一个第三方 Zotero 附加组件" },
+  "productTagline": { "message": "本地优先的 Zotero 文献库检查工具" },
   "connectionModeLabel": { "message": "连接方式" },
   "connectionModeAuto": { "message": "自动（推荐）" },
   "connectionModeAutoDescription": { "message": "增强模式可用时优先使用，否则回退到标准模式。" },

@@ -1,7 +1,9 @@
 # Matching rules
 
-The Zotero plugin builds an in-memory index from Zotero items and refreshes it
-when Zotero emits item notifications.
+Enhanced mode uses the Zotero plugin's in-memory index and refreshes it when
+Zotero emits item notifications. Standard mode searches personal and accessible
+group libraries through Zotero's built-in Local API, then independently
+re-validates every returned candidate in the extension service worker.
 
 ## Result structure
 
@@ -29,6 +31,7 @@ Supported formal keys:
 - DOI
 - PMID
 - ISBN
+- CNKI file identifier or a supported CNKI URL
 
 DOIs are normalized by removing `https://doi.org/`, `http://dx.doi.org/`, and
 `doi:`, then trimming and lowercasing. PMID and ISBN values are lowercased and
@@ -87,3 +90,17 @@ Thresholds:
 - lower scores return `not_found`
 
 Fuzzy matches still use the same year and author hints when present.
+
+Fuzzy matching and `possible_match` are enhanced-mode capabilities only.
+Standard mode implements exact identifiers and normalized exact title matching;
+it returns `matched`, `not_found`, or an isolated stable error and never upgrades
+a Local API search hit without rechecking identifiers, title, year, and authors.
+Identifier matches have confidence `1`; exact title matches retain confidence
+`0.95`. Attachments, notes, and annotations are not formal bibliographic items.
+
+Standard batches deduplicate normalized candidates, reuse duplicate results,
+search with at most six active requests, and expand results back into input
+order. Its item-query cache is bounded to 256 entries for five seconds; group
+membership is cached for thirty seconds. The 30-second per-request timeout is
+intended to accommodate large real libraries without creating a persistent
+full-library index.

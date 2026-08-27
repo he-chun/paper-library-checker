@@ -12,10 +12,13 @@
 1. An untrusted web page provides DOM and embedded metadata to an isolated
    content script.
 2. The content script sends typed messages to the extension service worker.
-3. The service worker sends authenticated requests to Zotero's loopback server.
+3. In enhanced mode, the service worker sends authenticated requests to the
+   add-on on Zotero's loopback server.
 4. Optionally, the service worker sends the current public URL to a separately
    installed translation-server on loopback.
-5. In standard mode, the service worker reads candidate records from Zotero's
+5. In standard mode, the service worker sends unauthenticated read-only requests
+   to the fixed Zotero Local API root, reads candidate records, and performs
+   exact-match verification in memory.
    built-in Local API and performs exact-match verification in memory.
 
 ## Threats and controls
@@ -31,7 +34,8 @@
 | Library metadata disclosure | Match result or logs are overbroad | Default response is status/matchType/confidence only; health is minimal; enhanced requests are authenticated; logs redact and rotate | Status badge itself is a match oracle visible to the page DOM. |
 | Raw Local API item disclosure | Standard-mode queries return editable Zotero item JSON | Only the service worker imports the Local API modules; candidate JSON is held in memory, filtered to bibliographic items, reverified locally, and reduced to a minimal match result without logging or storage | Any local process can read an enabled unauthenticated Local API; users must not expose port 23119 beyond loopback. |
 | Local API search false positive | Zotero quicksearch returns approximate or field-adjacent candidates | Search responses are never treated as matches; DOI, PMID, ISBN, CNKI ID, normalized title, year, and creators are independently rechecked | Standard mode intentionally omits full-library fuzzy matching and possible-match results. |
-| Local API batch exhaustion | Many candidates multiplied by many accessible groups | Stable candidate and item deduplication, six-request shared concurrency limit, five-second bounded query cache, thirty-second group cache, existing 80-candidate page limit, and stale-batch abort/ignore behavior | A large group count still increases total direct-query latency; real-runtime measurements are required before considering a persistent index. |
+| Local API batch exhaustion | Many candidates multiplied by many accessible groups | Stable candidate and item deduplication, six-request shared concurrency limit, 30-second per-request timeout, five-second bounded query cache, thirty-second group cache, existing 80-candidate page limit, and stale-batch abort/ignore behavior | A large library or group count still increases total direct-query latency; enhanced mode is the faster option. |
+| Extension page probes privileged backends | A website imitates the popup or options message | Popup health and Options probe use the extension-page sender predicate with exact runtime origin; content-script sender checks remain separate | A compromised extension process remains in scope of browser compromise. |
 | Secret or metadata leakage through sync/log/error | Normal use or failure | Secret in `storage.local`, migration removes sync copy, long-term key never transported, strict `{item}`/`{items}` envelopes, bounded deep rejection of credential keys or the secret value, custom media type avoids Zotero 9.0.6's known plain-JSON body logging branch, minimized stable errors | Zotero core logs short-lived signature headers; Zotero 9.0.6 debug-log integration remains a required real-runtime gate. Browser profile malware and clipboard managers remain out of scope. |
 
 ## Loopback assumptions

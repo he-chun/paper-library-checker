@@ -8,7 +8,7 @@
 
 **一个本地优先的 Zotero 配套工具：在保存前判断当前论文是否已经存在于 Zotero 文献库，避免重复收藏和重复条目。**
 
-Paper Library Checker 将受支持学术页面的元数据与本地 Zotero 9 文献库比较，直接在页面上显示“已保存”“可能匹配”或“未保存”。它适用于知网（CNKI）等文献检索流程；项目无遥测，也不会上传 Zotero 文献库。
+Paper Library Checker 将知网（CNKI）等受支持学术页面的元数据与本地 Zotero 9 文献库比较，显示“已保存”“可能匹配”或“未保存”。标准模式直接使用 Zotero 内置 Local API，无需安装 Paper Library Checker Zotero 附加组件；增强模式提供更快批量检查、完整模糊匹配、“可能匹配”和实时索引更新。项目无遥测，也不会上传 Zotero 文献库。
 
 [从 Chrome Web Store 安装](https://chromewebstore.google.com/detail/paper-library-checker/pmfobjnkoiiplambnbbkfdlfjcbdogon) · [下载发布版本](https://github.com/he-chun/paper-library-checker/releases) · [快速开始](#快速开始) · [支持的网站](#支持的网站与状态) · [隐私说明](#本地数据流和隐私) · [English](README.md)
 
@@ -32,18 +32,24 @@ Zotero 是 Corporation for Digital Scholarship 的注册商标。本独立项目
 | Zotero 桌面端 | 仅支持 Zotero 9.0.x；发布时精确实测版本为 9.0.6。 |
 | Google Chrome | Chrome Web Store 是浏览器扩展的主要公开分发渠道；商店版 0.4.1 已通过安装、连接、popup 和代表性页面检查。 |
 | Microsoft Edge | 可以从 Chrome Web Store 安装扩展；站点支持边界仍以本文的支持表为准。 |
-| 分发方式 | 浏览器扩展默认从 Chrome Web Store 安装，Zotero XPI 从 GitHub Releases 安装；GitHub 浏览器 ZIP 保留用于开发、审计或手动安装。 |
+| 分发方式 | 浏览器扩展默认从 Chrome Web Store 安装；GitHub Releases 中的 Zotero XPI 是可选的，用于启用增强模式。GitHub 浏览器 ZIP 保留用于开发、审计或手动安装。 |
 
-Paper Library Checker 包含两个必需组件：Zotero 桌面附加组件和浏览器扩展。使用期间请保持 Zotero 运行。
+浏览器扩展和 Zotero 桌面端是必需组件；配套 Zotero 附加组件仅为增强模式所需。使用任一模式时都请保持 Zotero 运行。
 
 ## 快速开始
 
 1. [从 Chrome Web Store 安装浏览器扩展](https://chromewebstore.google.com/detail/paper-library-checker/pmfobjnkoiiplambnbbkfdlfjcbdogon)。
-2. 从 [GitHub v0.4.1 Release](https://github.com/he-chun/paper-library-checker/releases/tag/v0.4.1) 下载 Zotero XPI。在 Zotero 中打开**工具（Tools）> 插件（Plugins）**，选择**从文件安装插件（Install Plugin From File）**并安装 XPI。
-3. 重启 Zotero。
-4. 在 Zotero 中选择**工具 > 文献库检查器：复制配对令牌**（**Tools > Paper Library Checker: Copy pairing token**）。
-5. 打开浏览器扩展的**设置（Options）**，把令牌粘贴到**配对令牌（Pairing token）**，点击**保存（Save）**，再点击**测试连接（Test connection）**。
-6. 打开受支持的文章页，点击工具栏图标，再选择**检查当前页面（Check this page）**。
+2. 启动 Zotero 9；如果其内置 Local API 被关闭，请先启用。
+3. 打开浏览器扩展**设置**，保留**自动（推荐）**或选择**标准模式**，然后点击**测试连接（Test connection）**。标准模式不需要配对令牌或 XPI。
+4. 打开受支持的文章页，点击工具栏图标，再选择**检查当前页面（Check this page）**。
+
+### 可选的增强模式
+
+1. 从 [GitHub v0.4.1 Release](https://github.com/he-chun/paper-library-checker/releases/tag/v0.4.1) 下载 Zotero XPI，并通过 Zotero 的**工具（Tools）> 插件（Plugins）> 从文件安装插件（Install Plugin From File）**安装。
+2. 重启 Zotero，选择**工具 > 文献库检查器：复制配对令牌**。
+3. 在扩展**设置**中选择**增强模式**（或保留**自动**），展开增强模式连接设置，把 64 字符令牌粘贴到**配对令牌（Pairing token）**，再点击**测试连接**。
+
+增强模式提供更快的参考文献批量检查、完整模糊题名匹配、“可能匹配”和实时索引更新。
 
 ### 手动/开发者安装
 
@@ -82,15 +88,15 @@ unpacked 版和商店版，否则重复 content script 可能产生重复状态�
 
 ### 检查文章详情页
 
-1. 保持 Zotero 运行。Zotero **工具**菜单中禁用的 `文献库检查器（<版本号>）`；英文界面中的 `Paper Library Checker (<version>)` 表示附加组件已加载。
+1. 保持 Zotero 运行。标准模式使用 Zotero 内置 Local API；增强模式下，Zotero **工具**菜单中禁用的 `文献库检查器（<版本号>）` 表示附加组件已加载。
 2. 打开[支持的网站与状态](#支持的网站与状态)所覆盖的文章详情页。
 3. 等待页面标题附近或右下角出现状态徽标。
 
-扩展会提取页面元数据，并与 Zotero 附加组件的本地内存索引匹配。浮动 `↻` 按钮可以重新检查文章、在受支持的列表页手动启动批量检查，也可以拖动。通过 Zotero Connector 保存条目或在 Zotero 中编辑条目后，请点击 `↻` 或刷新页面。
+扩展会提取页面元数据，并请求所选后端完成匹配。标准模式在 service worker 中重新核验 Local API 搜索候选；增强模式使用附加组件的本地内存索引。浮动 `↻` 按钮可以重新检查文章、在受支持的列表页手动启动批量检查，也可以拖动。保存或编辑 Zotero 条目后，请点击 `↻` 或刷新页面。
 
 ### 工具栏弹窗
 
-点击浏览器工具栏中的**文献库检查器**，可以查看 **Zotero**（“已连接”或“离线”）、**索引**（“就绪”或“正在索引”）和**当前页面**（“已保存”“可能匹配”“未保存”“无法识别”“尚未检查”“不支持当前页面”或“错误”）。**检查当前页面**与 `↻` 共用入口；**打开设置**会打开扩展设置页。
+点击浏览器工具栏中的**文献库检查器**，可以查看 Zotero 连接状态、当前实际模式、索引或匹配能力、当前页面状态和自动回退原因。需要处理问题时，**修复连接**会打开设置入口。旧有 `connected` 和 `indexReady` 健康字段继续兼容。**检查当前页面**与 `↻` 共用入口。
 
 “不支持当前页面”表示活动标签中没有注入内容脚本，例如浏览器内部页面或 manifest 站点列表以外的网站；它不代表新增了站点支持。浏览器界面跟随浏览器显示语言，Zotero 工具菜单跟随 Zotero/Gecko 语言设置。项目内置英文和简体中文。
 
@@ -100,12 +106,12 @@ unpacked 版和商店版，否则重复 content script 可能产生重复状态�
 | --- | --- | --- |
 | `文献库：正在检查` | `Library: checking` | 正在执行检查。 |
 | `文献库：已保存` | `Library: saved` | 在本地文献库中找到匹配。 |
-| `文献库：可能匹配` | `Library: possible match` | 找到模糊匹配，需要人工确认。 |
+| `文献库：可能匹配` | `Library: possible match` | 增强模式找到模糊匹配，需要人工确认；标准模式不会产生此状态。 |
 | `文献库：未保存` | `Library: not saved` | 使用当前页面提供的元数据没有找到匹配。 |
 | `文献库：无法识别` | `Library: unrecognized` | 没有识别到受支持的元数据。 |
 | `文献库：选择条目` | `Library: choose item` | translation-server 返回多个候选。 |
-| `文献库：离线` | `Library: offline` | 无法连接附加组件或配对失败。 |
-| `文献库：正在索引` | `Library: indexing` | 本地索引尚未准备好。 |
+| `文献库：离线` | `Library: offline` | 无法通过所选模式连接。 |
+| `文献库：正在索引` | `Library: indexing` | 增强模式本地索引尚未准备好。 |
 
 徽标和页面边缘效果使用红色表示已保存/匹配，橙色表示可能匹配，蓝色表示未保存，黄色表示正在检查/无法识别/选择条目，紫色表示离线/正在索引/错误。`文献库：未保存`（`Library: not saved`）只描述当前页面元数据的检查结果，不是对整个 Zotero 文献库的绝对证明。
 
@@ -130,7 +136,7 @@ unpacked 版和商店版，否则重复 content script 可能产生重复状态�
 | 问题 | 检查方法 |
 | --- | --- |
 | 没有状态徽标 | 确认 Zotero 正在运行、附加组件已加载且扩展已启用；确认域名出现在支持表中，且页面提供可用的 citation、DC、COinS、JSON-LD 或 CNKI 元数据。刷新或点击 `↻`。 |
-| `文献库：离线` / `Library: offline` | 保留默认端点并点击**保存**；检查令牌是否已重置或撤销。点击**测试连接**，必要时重新复制令牌。 |
+| `文献库：离线` / `Library: offline` | 启动 Zotero 并点击**测试连接**。标准模式需启用 Zotero Local API；增强模式需保留默认端点，必要时重新复制令牌。 |
 | `文献库：正在索引` / `Library: indexing` | 等待本地索引完成后点击 `↻`；如果持续出现，再重启 Zotero。 |
 | `文献库：可能匹配` / `Library: possible match` | 这是模糊题名匹配，不是确定已收藏；请在 Zotero 中核对题名、年份和作者。 |
 | `文献库：无法识别` / `Library: unrecognized` | 页面没有提供可用的受支持元数据；PDF 页面尤其可能缺少足够元数据。 |
@@ -152,7 +158,7 @@ unpacked 版和商店版，否则重复 content script 可能产生重复状态�
 3. 在 Zotero 的**工具 > 插件**中移除附加组件。
 4. 如果使用手动安装，请在浏览器不再列出扩展后删除解压的浏览器扩展目录。
 
-从 0.2 开发构建升级的用户还应阅读 [0.3 迁移说明](docs/migration-0.3.md)。
+从 0.4.x 升级的用户请阅读[双模式迁移说明](docs/migration-0.5.md)。从 0.2 开发构建升级的用户还应阅读 [0.3 迁移说明](docs/migration-0.3.md)。
 
 ## 与 Zotero Connector 的区别
 
@@ -166,7 +172,7 @@ Zotero Connector 用于把条目保存到 Zotero。Paper Library Checker 不会�
 
 ### 是否会上传 Zotero 文献库？
 
-不会。匹配使用附加组件的本地内存索引；项目无遥测，不会上传 Zotero 文献库数据。可选的 translation-server 集成只把当前公开页面 URL 发送到另行安装的本地服务。
+不会。标准模式通过 Zotero 内置 Local API 读取匹配候选，原始记录只在扩展 service worker 内处理；增强模式使用附加组件经过认证的本地内存索引并返回最小化结果。项目不会上传 Zotero 文献库数据，也不会用于遥测。可选 translation-server 只接收当前公开页面 URL。
 
 ### 这是论文内容查重工具吗？
 
@@ -175,17 +181,15 @@ Zotero Connector 用于把条目保存到 Zotero。Paper Library Checker 不会�
 ## 本地数据流和隐私
 
 ```text
-学术页面 DOM
-    -> 隔离的浏览器内容脚本
-    -> 扩展 service worker
-    -> 经过身份验证的 HTTP 本机回环请求
-    -> Zotero 附加组件内存索引
-    -> 状态 / 匹配类型 / 置信度
+学术页面 DOM -> 内容脚本 -> 扩展 service worker
+    标准模式 -> Zotero 内置 Local API -> service worker 重新核验
+    增强模式 -> 认证附加组件 API -> 附加组件内存索引
+两者都只返回状态 / 匹配类型 / 置信度
 ```
 
 候选元数据可能包括题名、公开标识符、日期、数量有限的作者值和当前文章 URL。匹配始终通过本机回环接口完成；响应不会暴露 Zotero item ID、key、已存储 URL、附件、笔记、分类或无关的文献库元数据。
 
-配对密钥保存在 `chrome.storage.local`，不会进入同步存储。本地 API 使用版本化 HMAC-SHA256 请求认证；可重复使用的密钥不会随请求发送，旧式 bearer token 和 token-in-JSON 请求会被拒绝。可选的 translation-server 集成只把当前公开页面 URL 发送给另行安装在 `127.0.0.1:1969` 的本地服务。访问过的页面可以观察徽标对 DOM 的修改。
+标准模式不需要令牌。Zotero Local API 原始 item JSON 只存在于 service worker 内存，不返回网页、不存储、不记录日志、不上传，也不用于遥测。增强模式配对密钥继续保存在 `chrome.storage.local`，不会进入同步存储；附加组件请求使用版本化 HMAC-SHA256 认证并返回最小化结果，旧式 bearer token 和 token-in-JSON 请求会被拒绝。可选 translation-server 只接收当前公开页面 URL。访问过的页面可以观察徽标对 DOM 的修改。
 
 参见 [PRIVACY.md](PRIVACY.md)、[威胁模型](docs/threat-model.md)和 [SECURITY.md](SECURITY.md)。请勿在公开 issue 中报告漏洞。
 
@@ -195,6 +199,9 @@ Zotero Connector 用于把条目保存到 Zotero。Paper Library Checker 不会�
 <summary>面向高级用户的配置选项</summary>
 
 - `endpoint`：保留默认值 `http://127.0.0.1:23119/zotero-checker`。
+- `connectionMode=auto`：优先使用健康且兼容的增强后端，失败后回退标准模式并报告原因。
+- `connectionMode=standard`：只使用 Zotero 内置 Local API，不探测附加组件。
+- `connectionMode=enhanced`：只使用认证附加组件，不自动回退。
 - `translationServerMode=off`：从不使用 translation-server。
 - `translationServerMode=auto`：仅在优先学术域名需要时尝试，失败后回退到本地提取器。
 - `translationServerMode=always`：优先调用 translation-server。
@@ -227,6 +234,7 @@ npm test
 npm run check
 npm run build
 npm run inspect:artifacts
+npm run verify:release
 ```
 
 PowerShell 兼容入口仍为 `.\scripts\package-zotero-plugin.ps1`。合成测试样例政策和手动站点检查见 [docs/test-matrix.md](docs/test-matrix.md)，架构与协议细节见 [docs/architecture.md](docs/architecture.md) 和 [docs/protocol.md](docs/protocol.md)。

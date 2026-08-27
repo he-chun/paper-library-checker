@@ -5,11 +5,11 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   const EN_MESSAGES = Object.freeze({
     extensionName: "Paper Library Checker",
-    extensionDescription: "A third-party add-on for Zotero that checks whether scholarly articles exist in a local library.",
+    extensionDescription: "Check scholarly pages against a local Zotero library in standard or enhanced mode.",
     actionTitle: "Paper Library Checker",
     optionsTitle: "Paper Library Checker Options",
     optionsHeading: "Paper Library Checker",
-    productTagline: "A third-party add-on for Zotero",
+    productTagline: "A local-first Zotero library checker",
     connectionModeLabel: "Connection method",
     connectionModeAuto: "Automatic (recommended)",
     connectionModeAutoDescription: "Use enhanced mode when available, otherwise use standard mode.",

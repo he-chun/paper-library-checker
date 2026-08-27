@@ -10,16 +10,20 @@ display states such as Saved, Possible match, and Not saved.
 
 The extension may handle public bibliographic information from the current
 page, the current page URL, title, DOI and other public identifiers, authors,
-year, a local pairing token, and local connection, index, and match state.
+year, standard-mode Local API candidate records, an optional enhanced-mode
+pairing token, and local connection, mode, capability, index, and match state.
 
 This data is processed on the user's computer. It is not sent to the
 maintainer, sold, used for advertising, used for profiling, or used for credit,
 insurance, employment, or any unrelated purpose. The project has no telemetry.
 The extension does not upload the user's Zotero library.
 
-The pairing token is stored in `chrome.storage.local` and is not sent to the
-maintainer. Authenticated matching communicates with the companion Zotero
-add-on on the loopback interface. If enabled by the user, the extension may
+Standard mode reads matching candidates from Zotero's built-in Local API. Raw
+records remain in service-worker memory and are not returned to visited pages,
+persisted, logged, uploaded, or used for telemetry. The enhanced-mode pairing
+token is stored in `chrome.storage.local` and is not sent to the maintainer;
+authenticated matching communicates with the companion Zotero add-on on the
+loopback interface and returns minimized results. If enabled, the extension may
 send the current public page URL to a separately installed translation-server
 on the loopback interface.
 

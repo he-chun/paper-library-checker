@@ -66,9 +66,11 @@ defaults to `auto`. Its allowed values and current resolution are:
 | `standard` | Standard backend only; do not probe enhanced |
 | Any other value | Normalize to `auto` |
 
-There is no settings-page control yet. Existing installations need no
-migration: absence of the field behaves as `auto`, while the enhanced endpoint
-remains unchanged and the pairing token remains in `chrome.storage.local`.
+The settings page exposes all three modes. Existing installations need no
+destructive migration: absence of the field behaves as `auto`, while the
+enhanced endpoint remains unchanged and the pairing token remains in
+`chrome.storage.local`. Saving standard mode does not validate, overwrite, move,
+or delete either enhanced value, so returning to enhanced mode is reversible.
 Explicit `enhanced` never falls back, and explicit `standard` never probes the
 enhanced endpoint. Successful automatic fallback includes `degradedReason` as
 optional response metadata.
@@ -77,7 +79,7 @@ The standard endpoint is fixed to `http://127.0.0.1:23119/api/`; the validator
 also permits the equivalent `http://localhost:23119/api/` root for injected or
 future configuration. No other scheme, host, port, path, credentials, query, or
 fragment is accepted. HTTP 403 becomes `local_api_disabled`; network failure,
-timeout, incompatible API versions, and malformed JSON have separate stable
+the 30-second request timeout, incompatible API versions, and malformed JSON have separate stable
 errors. These rules follow Zotero's official [Local API documentation](https://www.zotero.org/support/dev/web_api/v3/local_api).
 
 ## Unified result boundary
@@ -91,9 +93,11 @@ batch:  { ok: true, result: <existing batch match result> }
 error:  { ok: false, error: <stable error string> }
 ```
 
-Popup health remains the minimized `{ connected, indexReady }` projection.
-Backend selection, capability details, credentials, endpoint details, and raw
-responses outside that projection do not cross into the popup or page.
+Popup health preserves `{ connected, indexReady }` and may add actual `mode`,
+`capabilities`, `degradedReason`, and a stable repair `error`. Credentials,
+endpoint details, and raw backend responses do not cross into the popup or page.
+The Options **Test connection** action sends an extension-origin-only probe
+message to this same projection instead of implementing HMAC or Local API logic.
 
 The backend boundary is also a privacy boundary. Raw Zotero library data,
 including item keys, stored URLs, attachments, notes, collections, and

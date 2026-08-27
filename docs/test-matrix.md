@@ -1,8 +1,9 @@
 # Paper Library Checker Manual Test Matrix
 
-Use this matrix to verify the browser extension and Zotero plugin together.
-Before testing, install the Zotero plugin, reload the unpacked browser
-extension, and confirm the extension options point to the local plugin endpoint.
+Use this matrix to verify both extension backends. Begin with standard mode and
+Zotero's built-in Local API without the project XPI. Then install the XPI and
+repeat the enhanced and automatic-mode rows. Reload the exact unpacked browser
+candidate before every browser run.
 
 For pages where `translationServerMode=auto` applies, follow the source
 expectation in each row. Pages with embedded citation metadata can use local
@@ -35,6 +36,29 @@ optional for this alpha.
 
 The complete redacted result is recorded in
 [`verification/final-release-gates-v4.md`](verification/final-release-gates-v4.md).
+
+## 0.5.0 dual-mode release-candidate matrix
+
+These rows are release gates for the 0.5.0 candidate. Do not inherit a PASS
+from 0.4.x because the user-visible connection flow and privacy boundary changed.
+
+| Test item | Chrome | Edge | Expected result | Actual result |
+| --- | --- | --- | --- | --- |
+| Fresh install default | PENDING | PENDING | Options selects Automatic (recommended) | PENDING |
+| 0.4.1 storage migration | PENDING | PENDING | Endpoint/token retained; switch to standard and back is reversible | PENDING |
+| Standard connection, no XPI/token | PENDING | PENDING | Local API probe succeeds and popup shows Standard | PENDING |
+| Standard exact single match | PENDING | PENDING | DOI/title result is minimized; no Possible match | PENDING |
+| Standard personal/group batch | PENDING | PENDING | Up to 80 ordered results; duplicate reuse and isolated errors | PENDING |
+| Enhanced connection | PENDING | PENDING | 64-character token required; popup shows Enhanced and real-time index | PENDING |
+| Automatic prefers enhanced | PENDING | PENDING | Compatible ready add-on selected | PENDING |
+| Automatic fallback | PENDING | PENDING | Standard selected with visible fallback reason and repair action | PENDING |
+| Explicit modes do not fall back | PENDING | PENDING | Only selected backend is probed | PENDING |
+| Add/delete refresh | PENDING | PENDING | Recheck changes after cache TTL / index notification | PENDING |
+| Raw item and token leakage | PENDING | PENDING | None in page, popup, storage sync, or console | PENDING |
+
+Real Local API timing collected before packaging is recorded in
+[`verification/release-qualification-0.5.0.md`](verification/release-qualification-0.5.0.md).
+Exact-artifact Chrome and Edge rows remain pending.
 
 ## Toolbar popup and localization smoke
 

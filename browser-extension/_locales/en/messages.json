@@ -1,10 +1,10 @@
 {
   "extensionName": { "message": "Paper Library Checker" },
-  "extensionDescription": { "message": "A third-party add-on for Zotero that checks whether scholarly articles exist in a local library." },
+  "extensionDescription": { "message": "Check scholarly pages against a local Zotero library in standard or enhanced mode." },
   "actionTitle": { "message": "Paper Library Checker" },
   "optionsTitle": { "message": "Paper Library Checker Options" },
   "optionsHeading": { "message": "Paper Library Checker" },
-  "productTagline": { "message": "A third-party add-on for Zotero" },
+  "productTagline": { "message": "A local-first Zotero library checker" },
   "connectionModeLabel": { "message": "Connection method" },
   "connectionModeAuto": { "message": "Automatic (recommended)" },
   "connectionModeAutoDescription": { "message": "Use enhanced mode when available, otherwise use standard mode." },

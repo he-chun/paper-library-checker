@@ -9,7 +9,7 @@
   "use strict";
 
   const DEFAULT_ENDPOINT = "http://127.0.0.1:23119/api/";
-  const REQUEST_TIMEOUT_MS = 3000;
+  const REQUEST_TIMEOUT_MS = 30000;
   const DEFAULT_CONCURRENCY = 6;
   const QUERY_CACHE_TTL_MS = 5000;
   const QUERY_CACHE_MAX_ENTRIES = 256;

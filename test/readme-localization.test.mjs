@@ -71,7 +71,7 @@ test("Simplified Chinese support matrix preserves qualified support levels", () 
   for (const row of rows) assert(chinese.includes(row), row);
 });
 
-test("both READMEs retain installation and pairing instructions", () => {
+test("both READMEs put standard installation before optional enhanced pairing", () => {
   for (const marker of [
     "Tools > Plugins",
     "Install Plugin From File",
@@ -92,6 +92,8 @@ test("both READMEs retain installation and pairing instructions", () => {
   ]) assert(chinese.includes(marker), marker);
   assert(english.includes("pairing token"));
   assert(chinese.includes("配对令牌"));
+  assert(english.indexOf("Standard mode needs no pairing token") < english.indexOf("Optional enhanced mode"));
+  assert(chinese.indexOf("标准模式不需要配对令牌") < chinese.indexOf("可选的增强模式"));
 });
 
 test("both READMEs prefer store installation and document unpacked migration", () => {

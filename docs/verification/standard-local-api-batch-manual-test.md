@@ -8,10 +8,9 @@ candidate counts, status counts, and pass/fail observations. Do not capture or
 publish item JSON, item keys, group IDs, titles, creators, URLs, attachments,
 notes, library names, profile paths, or debug logs containing library data.
 
-The automated run on 2026-08-27 found Zotero installed but not running, and the
-Local API was unavailable. Real-library timing was therefore not collected.
-Starting Zotero can trigger user-profile activity and synchronization, so this
-automated run did not start it. The real-runtime rows below remain `NOT_RUN`.
+On 2026-08-27, Zotero 9.0.6 was started for a read-only Local API check. The
+record below contains only minimized results and aggregate timings. Browser
+exact-artifact, group-library, CNKI page, and add/delete rows remain `NOT_RUN`.
 
 ## Prerequisites
 
@@ -92,16 +91,42 @@ ceiling, result order, and request counts.
 | 20 candidates across 12 groups | 560.95 ms | 261 | 6 |
 | Ordered timeout and partial-failure case | 14.24 ms | 5 | 4 |
 
+## Real Local API performance observation
+
+The current real personal library is large. Deliberately absent synthetic DOI
+queries were used so no real title, author, identifier, key, group, or library
+name needed to be recorded.
+
+| Scenario | Result | Elapsed |
+| --- | --- | ---: |
+| Local API v3 probe | PASS | 1.09 s |
+| 1 absent DOI, 30-second timeout | `not_found` | 3.45–5.14 s |
+| 6 absent DOIs, concurrency 1 | 6 `not_found` | 17.92 s |
+| 6 absent DOIs, concurrency 2 | 6 `not_found` | 17.81 s |
+| 6 absent DOIs, concurrency 3 | 6 `not_found` | 18.01 s |
+| 6 absent DOIs, concurrency 6 | 6 `not_found` | 19.19 s |
+| 20 absent records, temporary 10-second timeout | 20 isolated `error` | 40.11 s |
+| 20 absent DOIs, production 30-second timeout | 20 `not_found` | 71.27 s |
+
+The comparison shows that this Zotero instance processes the query workload
+approximately serially. It also proved that the former three-second timeout was
+too short for a real large library, so the production default is now 30 seconds.
+With that default, the 20-item real batch completed with no errors and retained
+all 20 results. Standard mode remains suitable for exact checks but can be much
+slower than enhanced mode for large batches.
+
 ## Real-runtime result record
 
 | Boundary | Zotero 9.0.x | Chrome | Edge | Result | Notes |
 | --- | --- | --- | --- | --- | --- |
-| Personal library | NOT_RUN | NOT_RUN | NOT_RUN | NOT_RUN | Requires dedicated synthetic profile |
+| Personal library backend | 9.0.6 | NOT_RUN | NOT_RUN | PARTIAL_PASS | Real probe and minimized absent-item checks passed; exact-artifact UI remains pending |
 | Group libraries | NOT_RUN | NOT_RUN | NOT_RUN | NOT_RUN | Record group count only |
 | Large library | NOT_RUN | NOT_RUN | NOT_RUN | NOT_RUN | Record synthetic item-count band only |
 | CNKI 80-reference list | NOT_RUN | NOT_RUN | NOT_RUN | NOT_RUN | Verify order and duplicate reuse |
 | Add/delete refresh | NOT_RUN | NOT_RUN | NOT_RUN | NOT_RUN | Wait at least five seconds |
 
-No persistent or full-library index is justified by simulated measurements.
-Evaluate an index only in a separate design change if the completed real Zotero
-matrix demonstrates unacceptable direct-query latency.
+The real measurements demonstrate direct-query latency on a large library but
+do not by themselves justify silently adding IndexedDB or a persistent
+full-library index to this release. Enhanced mode already supplies the fast
+indexed path. Any standard-mode persistent index requires a separate design and
+privacy review after the complete Chrome/Edge matrix is recorded.

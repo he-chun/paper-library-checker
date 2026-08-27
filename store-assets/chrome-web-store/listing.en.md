@@ -27,12 +27,24 @@ whether to save the item.
 Requirements:
 
 - Zotero 9.0.x.
-- The companion Paper Library Checker Zotero add-on.
-- Zotero and the add-on must be running; Offline is expected when they are not.
+- Zotero must be running with its built-in Local API enabled.
 
-The extension does not save papers and does not replace Zotero Connector. It
-does not upload the user's Zotero library. There is no telemetry, advertising,
-or developer-operated server. Matching and pairing stay on the user's computer.
+Offline is expected when Zotero is not running or the selected backend cannot
+connect.
+
+Standard mode requires no Paper Library Checker Zotero add-on and supports
+exact identifier/title matching plus reference-list batch checks. The optional
+enhanced mode uses the companion add-on for faster batches, complete fuzzy
+matching, Possible match, and real-time index updates. Automatic mode prefers a
+healthy compatible enhanced backend and otherwise reports its fallback to
+standard mode.
+
+The extension does not save papers and does not replace Zotero Connector. In
+standard mode, raw Local API records are processed only in extension
+service-worker memory and never returned to a webpage. Enhanced mode uses
+authenticated loopback requests and minimized results. The extension does not
+upload the user's Zotero library or use it for telemetry. There is no telemetry,
+advertising, or developer-operated server.
 
 Chrome is the target browser for this Chrome Web Store listing. Microsoft Edge
 can usually install extensions from the Chrome Web Store, but not every Edge

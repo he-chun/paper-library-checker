@@ -8,7 +8,7 @@
 
 **A local-first Zotero companion that tells you whether the paper you are viewing is already saved—before you create a duplicate item.**
 
-Paper Library Checker compares metadata from supported scholarly pages with your local Zotero 9 library and displays `Saved`, `Possible match`, or `Not saved` on the page. It is designed for CNKI and other literature-search workflows, with no telemetry and no Zotero library upload.
+Paper Library Checker compares metadata from supported scholarly pages, including CNKI, with your local Zotero 9 library and displays `Saved`, `Possible match`, or `Not saved`. Standard mode works with Zotero's built-in Local API and needs no Paper Library Checker Zotero add-on. Enhanced mode adds faster batches, complete fuzzy matching, `Possible match`, and real-time index updates. The project has no telemetry and no Zotero library upload.
 
 [Install from Chrome Web Store](https://chromewebstore.google.com/detail/paper-library-checker/pmfobjnkoiiplambnbbkfdlfjcbdogon) · [Download releases](https://github.com/he-chun/paper-library-checker/releases) · [Quick start](#quick-start) · [Supported sites](#supported-sites-and-status) · [Privacy](#local-data-flow-and-privacy) · [简体中文](README.zh-CN.md)
 
@@ -32,18 +32,24 @@ Zotero is a registered trademark of the Corporation for Digital Scholarship. Thi
 | Zotero desktop | Zotero 9.0.x only; 9.0.6 is the exact release-tested version. |
 | Google Chrome | The Chrome Web Store is the primary public browser-extension channel. Store version 0.4.1 passed installation, connection, popup, and a representative page check. |
 | Microsoft Edge | Can install the extension from the Chrome Web Store; site support remains limited to the matrix below. |
-| Distribution | Install the browser extension from the Chrome Web Store and the Zotero XPI from GitHub Releases. The GitHub browser ZIP remains available for development, auditing, or manual installation. |
+| Distribution | Install the browser extension from the Chrome Web Store. The Zotero XPI from GitHub Releases is optional and enables enhanced mode. The GitHub browser ZIP remains available for development, auditing, or manual installation. |
 
-Paper Library Checker has two required components: a Zotero desktop add-on and a browser extension. Keep Zotero running while using it.
+The browser extension and Zotero desktop are required. The companion Zotero add-on is required only for enhanced mode. Keep Zotero running while using either mode.
 
 ## Quick start
 
 1. [Install the browser extension from the Chrome Web Store](https://chromewebstore.google.com/detail/paper-library-checker/pmfobjnkoiiplambnbbkfdlfjcbdogon).
-2. Download the Zotero XPI from the [GitHub v0.4.1 Release](https://github.com/he-chun/paper-library-checker/releases/tag/v0.4.1). In Zotero, open **Tools > Plugins**, choose **Install Plugin From File**, and install the XPI.
-3. Restart Zotero.
-4. In Zotero, choose **Tools > Paper Library Checker: Copy pairing token**.
-5. Open the browser extension **Options**, paste the token into **Pairing token**, click **Save**, and then **Test connection**.
-6. Open a supported article page, select the toolbar icon, and choose **Check this page**.
+2. Start Zotero 9 and enable its built-in Local API if it is disabled.
+3. Open the browser extension **Options**, leave **Connection method** set to **Automatic (recommended)** or choose **Standard mode**, then select **Test connection**. Standard mode needs no pairing token or XPI.
+4. Open a supported article page, select the toolbar icon, and choose **Check this page**.
+
+### Optional enhanced mode
+
+1. Download the Zotero XPI from the [GitHub v0.4.1 Release](https://github.com/he-chun/paper-library-checker/releases/tag/v0.4.1). In Zotero, open **Tools > Plugins**, choose **Install Plugin From File**, and install the XPI.
+2. Restart Zotero and choose **Tools > Paper Library Checker: Copy pairing token**.
+3. In extension **Options**, choose **Enhanced mode** (or keep **Automatic**), expand the enhanced connection settings, paste the 64-character **Pairing token**, and select **Test connection**.
+
+Enhanced mode provides faster reference-list batches, full fuzzy-title matching, `Possible match`, and real-time index updates.
 
 ### Manual/developer installation
 
@@ -84,15 +90,15 @@ The extension does not handle PDFs without usable page metadata, save records, m
 
 ### Check an article
 
-1. Keep Zotero running. The disabled `Paper Library Checker (<version>)` item in Zotero's **Tools** menu confirms that the add-on has loaded.
+1. Keep Zotero running. Standard mode uses Zotero's built-in Local API. In enhanced mode, the disabled `Paper Library Checker (<version>)` item in Zotero's **Tools** menu confirms that the add-on has loaded.
 2. Open an article-detail page covered by [Supported sites and status](#supported-sites-and-status).
 3. Wait for a status badge near the page title or in the lower-right corner.
 
-The extension extracts page metadata and compares it with the Zotero add-on's local in-memory index. The floating `↻` button re-checks an article, manually starts a batch check on supported list pages, and can be dragged. After saving with Zotero Connector or editing an item in Zotero, click `↻` or refresh the page.
+The extension extracts page metadata and asks the selected backend to match it. Standard mode re-validates Local API search candidates in the service worker; enhanced mode uses the add-on's local in-memory index. The floating `↻` button re-checks an article, manually starts a batch check on supported list pages, and can be dragged. After saving with Zotero Connector or editing an item in Zotero, click `↻` or refresh the page.
 
 ### Toolbar popup
 
-Select **Paper Library Checker** in the browser toolbar to see **Zotero** (`Connected` or `Offline`), **Index** (`Ready` or `Indexing`), and **Current page** (`Saved`, `Possible match`, `Not saved`, `Unrecognized`, `Not checked`, `Unsupported page`, or `Error`). **Check this page** uses the same manual-check entry point as `↻`; **Open options** opens the extension Options page.
+Select **Paper Library Checker** in the browser toolbar to see Zotero connection state, the actual active mode, matching/index capability, current-page state, and any automatic fallback reason. When repair is needed, **Fix connection** opens the relevant Options entry point. The legacy connection and index-readiness health fields remain compatible. **Check this page** uses the same manual-check entry point as `↻`.
 
 `Unsupported page` means the extension has no content script on the active tab, such as a browser-internal page or a website outside the manifest site list. It is not a new site-support claim. Browser UI follows the browser display language; the Zotero Tools menu follows the Zotero/Gecko locale. English and Simplified Chinese are included.
 
@@ -102,12 +108,12 @@ Select **Paper Library Checker** in the browser toolbar to see **Zotero** (`Conn
 | --- | --- |
 | `Library: checking` | A check is in progress. |
 | `Library: saved` | A matching item was found in the local library. |
-| `Library: possible match` | A fuzzy match was found and requires manual confirmation. |
+| `Library: possible match` | Enhanced mode found a fuzzy match that requires manual confirmation. Standard mode does not produce this state. |
 | `Library: not saved` | No match was found using the metadata supplied by the current page. |
 | `Library: unrecognized` | No supported metadata was recognized. |
 | `Library: choose item` | translation-server returned multiple candidates. |
-| `Library: offline` | The extension could not connect to the add-on or pairing failed. |
-| `Library: indexing` | The local index is not ready yet. |
+| `Library: offline` | The extension could not connect using the selected mode. |
+| `Library: indexing` | The enhanced-mode local index is not ready yet. |
 
 Badge and page-glow colors use red for saved/matched, orange for possible matches, blue for not saved, yellow for checking/unrecognized/choice, and purple for offline/indexing/error. `Library: not saved` is not absolute proof about the entire Zotero library; it describes the result for the metadata supplied by the current page.
 
@@ -132,7 +138,7 @@ After **Reset pairing token**, paste the new token in extension Options, click *
 | Problem | What to check |
 | --- | --- |
 | No badge appears | Confirm that Zotero is running, the add-on is loaded, and the extension is enabled. Confirm that the domain appears in the support table and that the page exposes usable citation, DC, COinS, JSON-LD, or CNKI metadata. Refresh or click `↻`. |
-| `Library: offline` | Keep the default endpoint, click **Save**, and check whether the token was reset or revoked. Click **Test connection** and copy the token again if necessary. |
+| `Library: offline` | Start Zotero and select **Test connection**. For standard mode, enable Zotero Local API. For enhanced mode, keep the default endpoint and copy the token again if necessary. |
 | `Library: indexing` | Wait for the local index and click `↻`; restart Zotero if the status persists. |
 | `Library: possible match` | This is a fuzzy title match, not a confirmed saved item. Compare the title, year, and authors in Zotero. |
 | `Library: unrecognized` | The page did not provide usable supported metadata. PDF pages are especially likely to lack enough metadata. |
@@ -157,7 +163,7 @@ To uninstall cleanly:
 3. Remove the Zotero add-on from **Tools > Plugins**.
 4. If it was installed manually, delete the unpacked browser-extension directory after the browser no longer lists it.
 
-Users upgrading from a 0.2 development build should also follow [the 0.3 migration](docs/migration-0.3.md).
+Users upgrading from 0.4.x should read [the dual-mode migration guide](docs/migration-0.5.md). Users upgrading from a 0.2 development build should also follow [the 0.3 migration](docs/migration-0.3.md).
 
 ## How it differs from Zotero Connector
 
@@ -171,7 +177,7 @@ Yes. CNKI Chinese article details are supported and tested. CNKI English details
 
 ### Does it upload my Zotero library?
 
-No. Matching uses the add-on's local in-memory index. The project has no telemetry and does not upload Zotero library data. Optional translation-server integration sends only the current public page URL to a separately installed local service.
+No. Standard mode reads only matching candidates through Zotero's built-in Local API and processes raw records inside the extension service worker. Enhanced mode uses the add-on's authenticated local in-memory index and returns minimized results. The project does not upload Zotero library data or use it for telemetry. Optional translation-server integration sends only the current public page URL to a separately installed local service.
 
 ### Is this a plagiarism checker?
 
@@ -180,17 +186,15 @@ No. Paper Library Checker checks whether a bibliographic item already exists in 
 ## Local data flow and privacy
 
 ```text
-Scholarly page DOM
-    -> isolated browser content script
-    -> extension service worker
-    -> authenticated HTTP loopback request
-    -> Zotero add-on in-memory index
-    -> status / match type / confidence
+Scholarly page DOM -> content script -> extension service worker
+    standard -> Zotero built-in Local API -> service-worker verification
+    enhanced -> authenticated add-on API -> add-on in-memory index
+Both return only status / match type / confidence
 ```
 
 Candidate metadata may include title, public identifiers, date, limited creator values, and the current article URL. Matching stays on loopback, and responses do not expose Zotero item IDs, keys, stored URLs, attachments, notes, collections, or unrelated library metadata.
 
-The pairing secret is stored in `chrome.storage.local`, not sync storage. Local API requests use versioned HMAC-SHA256 authentication; the reusable secret is not sent in requests, and legacy bearer-token or token-in-JSON requests fail closed. Optional translation-server integration sends only the current public page URL to a separately installed service at `127.0.0.1:1969`. Page badges remain observable by the visited page.
+Standard mode requires no token. Raw Zotero Local API item JSON stays in service-worker memory and is not returned to the webpage, stored, logged, uploaded, or used for telemetry. Enhanced-mode pairing secrets remain in `chrome.storage.local`, not sync storage; its add-on requests use versioned HMAC-SHA256 authentication and minimized responses. Legacy bearer-token and token-in-JSON requests fail closed. Optional translation-server integration sends only the current public page URL to a separately installed service at `127.0.0.1:1969`. Page badges remain observable by the visited page.
 
 See [PRIVACY.md](PRIVACY.md), [the threat model](docs/threat-model.md), and [SECURITY.md](SECURITY.md). Do not report vulnerabilities in a public issue.
 
@@ -200,6 +204,9 @@ See [PRIVACY.md](PRIVACY.md), [the threat model](docs/threat-model.md), and [SEC
 <summary>Options intended for advanced users</summary>
 
 - `endpoint`: keep the default `http://127.0.0.1:23119/zotero-checker`.
+- `connectionMode=auto`: prefer a healthy compatible enhanced backend, then fall back to standard mode and report the reason.
+- `connectionMode=standard`: use only Zotero's built-in Local API; do not probe the add-on.
+- `connectionMode=enhanced`: use only the authenticated add-on; do not fall back.
 - `translationServerMode=off`: never use translation-server.
 - `translationServerMode=auto`: try translation-server only when needed on priority academic domains; fall back to the local extractor if it fails.
 - `translationServerMode=always`: try translation-server first.
@@ -232,6 +239,7 @@ npm test
 npm run check
 npm run build
 npm run inspect:artifacts
+npm run verify:release
 ```
 
 The PowerShell compatibility entry remains available as `.\scripts\package-zotero-plugin.ps1`. Synthetic fixture policy and manual site checks are documented in [docs/test-matrix.md](docs/test-matrix.md). Architecture and protocol details are in [docs/architecture.md](docs/architecture.md) and [docs/protocol.md](docs/protocol.md).

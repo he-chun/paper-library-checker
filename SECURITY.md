@@ -2,10 +2,10 @@
 
 ## Supported versions
 
-Version 0.3.0 is the supported public alpha. It targets Zotero 9.0.x and was
-tested exactly on Zotero 9.0.6 and Microsoft Edge 151.0.4129.78. Chrome is
-experimental and is not a release gate. Security fixes are provided on the
-latest supported release line.
+Version 0.4.1 is the supported public alpha. The 0.5.0 dual-mode candidate
+targets Zotero 9.0.x and requires fresh Chrome and Edge runtime qualification
+before its version metadata may be promoted. Security fixes are provided on
+the latest supported release line.
 
 ## Reporting a vulnerability
 
@@ -26,8 +26,9 @@ API, response data leakage, secret storage or logging, malicious-page boundary
 bypass, translation-server URL validation, denial of service, and unsafe release
 artifacts. The assumptions and residual risks are in `docs/threat-model.md`.
 
-Local API requests use HMAC-SHA256 with a timestamp, cryptographic nonce, exact
-body hash, method, and path. The reusable pairing secret is not transported.
+Enhanced add-on requests use HMAC-SHA256 with a timestamp, cryptographic nonce,
+exact body hash, method, and path. The reusable pairing secret is not
+transported.
 The production request body uses only a strict `{item}` or `{items}` envelope.
 Credential-bearing JSON keys and any JSON string equal to the current pairing
 secret fail closed with the same minimized `legacy_auth_rejected` response;
@@ -38,3 +39,10 @@ used isolated Zotero and Edge profiles, synthetic data, normal browser
 restarts, and independent Zotero-core, project-log, and Edge-console leakage
 and coverage checks. See the public
 [`release qualification`](docs/verification/release-qualification-0.3.0.md).
+
+Standard mode uses Zotero's built-in read-only Local API and no pairing token.
+Only the extension service worker may contact its two fixed loopback roots.
+Search responses are treated as untrusted candidates and are re-verified before
+a minimized result is returned. Raw item JSON must not reach a page, storage,
+logs, telemetry, or a remote service. Reports involving this boundary should
+use synthetic metadata and must not attach real Local API responses.

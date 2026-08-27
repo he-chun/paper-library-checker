@@ -31,6 +31,20 @@ attachments, notes, collections, tags, or local paths.
 - The project has no telemetry, analytics, advertising, crash upload, or remote
   account service.
 
+## Mode-specific privacy boundaries
+
+Standard mode and enhanced mode have intentionally different trust boundaries:
+
+- **Standard mode:** the extension service worker reads search candidates from
+  Zotero's built-in read-only Local API. Raw records can exist briefly in that
+  worker's memory so identifiers, normalized title, year, and authors can be
+  re-verified. They never cross into the content script or visited page and are
+  not uploaded to a developer-operated server or used for telemetry.
+- **Enhanced mode:** the separately installed Zotero add-on owns the full local
+  index. The browser sends authenticated, minimized candidates over loopback and
+  receives only minimized match results and capabilities. Raw Zotero records do
+  not enter the browser extension.
+
 The extension does not upload Zotero library data. A separately installed
 translation-server may fetch the public page URL supplied to it; users should
 review that project's behavior independently.
@@ -114,8 +128,9 @@ batch checking remains limited to explicit adapters.
 
 ## Retention and deletion
 
-Matching caches are memory-only and expire or are cleared when the add-on stops,
-the index changes, or the token rotates. Remove the extension's local storage
-from the browser and revoke the Zotero token to remove pairing state.
+Standard-mode query and group-list caches are bounded, memory-only, and expire
+within seconds. Enhanced-mode matching caches and indexes remain within the
+add-on and are cleared when it stops or its index changes. Remove the
+extension's local storage and revoke the Zotero token to remove pairing state.
 
 Report privacy concerns using the private process in `SECURITY.md`.

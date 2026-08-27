@@ -13,6 +13,15 @@ Versioning while remaining pre-1.0.
   bounded memory caches, per-item errors, and stale-batch cancellation.
 - Makes automatic mode prefer a healthy compatible enhanced backend and fall
   back to standard mode with a minimized degradation reason.
+- Adds localized automatic, standard, and enhanced connection controls; keeps
+  enhanced endpoint/token storage reversible and routes connection tests through
+  the service worker.
+- Expands the popup with actual mode, matching capability, fallback reason, and
+  repair guidance while retaining `connected` and `indexReady` compatibility.
+- Raises the standard Local API request timeout to 30 seconds after real Zotero
+  9.0.6 large-library measurements demonstrated that three seconds was too low.
+- Prepares dual-mode installation, migration, privacy, security, store, reviewer,
+  and release-qualification documentation for 0.5.0.
 
 ## [0.4.1] - 2026-08-24
 

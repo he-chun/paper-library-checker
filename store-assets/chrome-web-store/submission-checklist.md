@@ -8,6 +8,20 @@
 This records the completed public launch without including dashboard screenshots,
 Google account information, or internal review data.
 
+## 0.5.0 candidate preparation
+
+- [x] English and Simplified Chinese listing copy explains standard mode first.
+- [x] Privacy practices distinguish Local API service-worker reads from the
+  authenticated enhanced add-on boundary.
+- [x] Reviewer instructions cover no-XPI standard mode, enhanced mode, automatic
+  preference/fallback, popup capabilities, and repair actions.
+- [x] Permission justifications retain the existing permission set.
+- [ ] Exact final artifact passes Chrome and Edge dual-mode runtime validation.
+- [ ] Version metadata, update manifest, screenshots, hashes, and release links
+  are synchronized to 0.5.0 after that runtime gate.
+- [ ] Candidate is uploaded and submitted for review only after maintainer
+  approval; this repository task does not perform publication.
+
 - [x] Chrome Web Store developer account is registered.
 - [x] Contact email and account security requirements were completed.
 - [x] GitHub Release v0.4.1 and its reviewer XPI are public and hash-verified.
