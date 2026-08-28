@@ -92,7 +92,8 @@ Thresholds:
 Fuzzy matches still use the same year and author hints when present.
 
 Fuzzy matching and `possible_match` are enhanced-mode capabilities only.
-Standard mode implements exact identifiers and normalized exact title matching;
+The current Direct standard engine verifies exact identifiers and normalized
+exact titles in the quicksearch candidate set;
 it returns `matched`, `not_found`, or an isolated stable error and never upgrades
 a Local API search hit without rechecking identifiers, title, year, and authors.
 Identifier matches have confidence `1`; exact title matches retain confidence
@@ -102,13 +103,13 @@ Standard batches deduplicate normalized candidates, reuse duplicate results,
 and expand results back into input order. Title-bearing candidates use
 `titleCreatorYear` without launching a second full-text search; exact identifiers
 are still reverified in every returned title candidate. Identifier-only
-candidates retain the `everything` fallback needed when DOI, PMID, ISBN, or CNKI
+candidates retain the `everything` compatibility path needed when DOI, PMID, ISBN, or CNKI
 data is stored outside the title index. Search hits from either mode remain
 candidates until the same exact matcher rechecks them. During a standard
 reference batch, each completed minimized result can update its page row
 immediately; the final response still contains the complete input-ordered array.
 
-The shared scheduler has a hard ceiling of six active Local API requests.
+The shared scheduler has a hard ceiling of four active Local API item requests.
 Production uses up to four concurrent lightweight title queries, while the
 identifier-only `everything` lane remains limited to one because real Zotero
 measurements showed that its full-text searches serialize internally. Each lane
@@ -119,4 +120,7 @@ cached for thirty seconds. The 30-second per-request timeout accommodates large
 real libraries. An item timeout opens a sixty-second fail-fast cooldown, and page
 automatic retries back off from sixty seconds to five minutes, preventing
 browser aborts or dynamic DOM events from continuously extending Zotero's own
-search queue. No persistent full-library index is created.
+search queue. No persistent full-library index is created. Direct misses return
+`complete=false` with `reason=direct_search_no_candidate`; therefore the legacy
+`exactIdentifiers` and `exactTitle` capability flags describe exact verification,
+not complete recall or a complete negative result.

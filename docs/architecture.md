@@ -18,10 +18,12 @@
 
 The service worker selects a connection backend behind a shared
 `probe`/`check`/`batchCheck`/`getCapabilities` interface. The enhanced backend
-encapsulates the existing authenticated add-on protocol. The standard backend
-uses Zotero's built-in read-only Local API for single-item and reference-list
-batch exact matching across personal and accessible group libraries, and
-revalidates returned candidates entirely within the service worker. See
+encapsulates the existing authenticated add-on protocol. The current standard
+engine, `DirectLocalApiBackend`, uses Zotero's built-in read-only Local API for
+single-item and reference-list candidate searches across personal and accessible
+group libraries, and revalidates returned candidates entirely within the service
+worker. Its positive matches are exact, but quicksearch misses are explicitly
+incomplete. See
 `docs/dual-backend-architecture.md`.
 
 Standard-mode batch cancellation is scoped to the sender tab and to a fixed
@@ -33,8 +35,8 @@ repeatedly aborting useful Local API work. Title-bearing candidates use only
 Zotero's lightweight title/creator/year search; exact identifiers are reverified
 in the returned records, while identifier-only candidates retain the full-text
 compatibility fallback. Production permits four concurrent lightweight title
-queries but keeps identifier-only full-text work serial, within the existing
-six-request hard ceiling. A timed out item query opens a one-minute fail-fast
+queries but keeps identifier-only full-text work serial, within a four-item-request
+hard ceiling. A timed out item query opens a one-minute fail-fast
 cooldown so aborted searches cannot build an invisible Zotero work queue. Queued
 detail-page work takes precedence over queued reference-list queries in each
 lane, while the lightweight connection probe runs

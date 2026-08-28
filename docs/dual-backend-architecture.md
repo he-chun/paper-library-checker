@@ -19,13 +19,15 @@ batchCheck(candidates)
 getCapabilities()
 ```
 
-The standard backend probes the fixed `/api/` loopback endpoint and queries the
+The current standard-mode engine is `DirectLocalApiBackend`. It is a compatibility
+and fallback engine, not a complete library index. It probes the fixed `/api/` loopback endpoint and queries the
 personal-library items resource with local user ID `0`. It sends only GET requests with
 Local API version 3 and `Zotero-Allowed-Request`. Search responses are candidate
 sets, not matches: identifier, title, year, and creator values are normalized
 and verified again in service-worker memory. Attachment, note, and annotation
-items are excluded. Standard mode supports single-item and reference-list batch
-exact matching, but it has no fuzzy-match or possible-match capability.
+items are excluded. It supports verified positive single-item and reference-list
+matches, but quicksearch candidate recall is incomplete and a Direct `not_found`
+is not proof that the item is absent from the whole library.
 
 The standard backend enumerates every group accessible to local user ID `0`
 and searches the personal library plus each group library. Title-bearing
@@ -36,8 +38,8 @@ Only identifier-only candidates use the slower `everything` compatibility
 search. This avoids an unbounded full-text fallback after every useful title
 lookup while every response remains independently reverified.
 
-A shared scheduler permits at most six active Local API requests. Production
-standard mode permits four lightweight `titleCreatorYear` requests while a
+A shared scheduler permits at most four active Local API item requests. Production
+Direct mode permits four lightweight `titleCreatorYear` requests while a
 separate lane keeps identifier-only `everything` work at one active request.
 Real Zotero measurements showed that concurrent full-text searches are
 effectively serialized inside Zotero and can accumulate after browser-side
@@ -126,6 +128,15 @@ batch:  { ok: true, result: <existing batch match result> }
 error:  { ok: false, error: <stable error string> }
 ```
 
+Direct results add `engine: "direct"` and `indexState: "unavailable"`. A verified
+positive keeps the legacy `status`, `matchType`, and `confidence` fields. A Direct
+miss additionally returns `complete: false` and
+`reason: "direct_search_no_candidate"`. The legacy capability fields
+`exactIdentifiers` and `exactTitle` mean that returned candidates are exactly
+verified; they do not promise complete candidate recall. The explicit capability
+fields `exactIdentifierVerification`, `completeIdentifierRecall`,
+`exactTitleVerification`, and `completeNegativeResults` carry that distinction.
+
 The optional standard-mode progress projection uses the same minimized result
 shape and does not replace or alter these final envelopes. Enhanced callers and
 legacy content-script requests continue to rely only on the final response.
@@ -145,13 +156,15 @@ unrelated records, must never be returned to a webpage. A future backend must
 reduce its source data to the same match-result contract before the service
 worker responds to a content script.
 
-## LocalApiBackend extension point
+## DirectLocalApiBackend extension point
 
-`browser-extension/src/backends/local-api-backend.js` is injected into the
-resolver as `standardBackend`. Matching normalization and candidate
-reverification live in `local-api-matcher.js`. A later fuzzy implementation can
-extend these modules without changing content-script messages, but must first
-update capabilities and add bounded-query, privacy, and compatibility tests.
+`browser-extension/src/backends/direct-local-api-backend.js` is injected into the
+resolver as `standardBackend`; `local-api-backend.js` remains a thin compatibility
+entry point for old Node/CommonJS imports. Matching normalization and candidate
+reverification live in `local-api-matcher.js`. A later indexed standard backend
+can replace Direct as the primary standard engine behind the resolver while
+retaining Direct as the cold-start/error fallback, without changing content-script
+message names or legacy result fields.
 
 No caller outside the resolver should branch on backend type. HMAC and pairing
 remain enhanced-backend concerns, while Local API credentials and permissions

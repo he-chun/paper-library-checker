@@ -33,7 +33,7 @@ getCapabilities()
 
 - `browser-extension/src/backends/backend-resolver.js`
 - `browser-extension/src/backends/enhanced-backend.js`
-- `browser-extension/src/backends/local-api-backend.js`
+- `browser-extension/src/backends/local-api-backend.js` (later retained as a compatibility entry point)
 - `browser-extension/src/backends/local-api-matcher.js`
 
 模式解析规则：
@@ -252,10 +252,12 @@ DOI 全文搜索返回 0 条结果，却占总时间约 92%。
 
 - `titleCreatorYear` 最多并发 4。
 - identifier-only `everything` 并发固定为 1。
-- 所有 Local API item 请求总并发不超过 6。
+- 当时所有 Local API item 请求总并发不超过 6；后续 Direct 语义修正已将硬上限改为 4。
 - 两个通道继续支持详情优先级、取消和错误隔离。
 
-该修改已经通过模拟测试，但尚无修改后的真实 Zotero 日志验证。此前给出的
+该修改已经通过模拟测试，但尚无修改后的真实 Zotero 日志验证。后续
+`docs/verification/direct-local-api-concurrency.md` 已补充直接调用生产后端对真实
+Zotero 9.0.6 Local API 的有限验证；Chrome service worker 重载验证仍受阻。此前给出的
 8–12 秒是根据四并发推算的估计值，不是实测结果，也仍达不到接近 XPI 的
 目标。
 

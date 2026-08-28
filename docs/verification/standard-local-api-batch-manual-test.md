@@ -64,8 +64,9 @@ candidates, record:
 
 - elapsed time from service-worker batch dispatch to minimized result;
 - total Local API request count;
-- peak simultaneous Local API requests, which must be one with production
-  defaults and must never exceed six in an explicitly injected stress run;
+- peak simultaneous Local API item requests, which must not exceed four for
+  title queries and must remain one for identifier-only queries, even when a
+  higher concurrency is injected;
 - matched, not-found, and error counts;
 - number of accessible group libraries;
 - whether one injected timeout or failed group request affected unrelated
@@ -79,8 +80,10 @@ large synthetic-library profiles.
 
 These figures are repeatable fake-fetch measurements from Node and are not a
 substitute for real Zotero timing. Each ordinary item request used a synthetic
-2 ms delay; group-heavy requests used 1 ms. Assertions enforce the six-request
-ceiling, result order, and request counts.
+2 ms delay; group-heavy requests used 1 ms. The table below records the earlier
+six-request implementation and is retained as historical evidence; the current
+Direct backend has a four-item-request ceiling and its current measurements are
+recorded in `direct-local-api-concurrency.md`.
 
 | Scenario | Elapsed | Requests | Peak concurrency |
 | --- | ---: | ---: | ---: |
