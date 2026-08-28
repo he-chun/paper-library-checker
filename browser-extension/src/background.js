@@ -6,6 +6,7 @@ if (typeof importScripts === "function") {
     "common/sender-security.js",
     "backends/enhanced-backend.js",
     "backends/local-api-matcher.js",
+    "backends/direct-local-api-backend.js",
     "backends/local-api-backend.js",
     "backends/backend-resolver.js"
   );
@@ -16,8 +17,8 @@ const PLCDeveloperDiagnostics = globalThis.PLCDeveloperDiagnostics ||
   (typeof require === "function" ? require("./common/developer-diagnostics.js") : null);
 const PLCEnhancedBackend = globalThis.PLCEnhancedBackend ||
   (typeof require === "function" ? require("./backends/enhanced-backend.js") : null);
-const PLCLocalApiBackend = globalThis.PLCLocalApiBackend ||
-  (typeof require === "function" ? require("./backends/local-api-backend.js") : null);
+const PLCDirectLocalApiBackend = globalThis.PLCDirectLocalApiBackend ||
+  (typeof require === "function" ? require("./backends/direct-local-api-backend.js") : null);
 const PLCBackendResolver = globalThis.PLCBackendResolver ||
   (typeof require === "function" ? require("./backends/backend-resolver.js") : null);
 
@@ -34,7 +35,7 @@ let diagnosticOperationSequence = 0;
 const developerDiagnostics = PLCDeveloperDiagnostics.createDeveloperDiagnostics();
 const reportDiagnostic = (event, details) => developerDiagnostics.record(event, details);
 const enhancedBackend = PLCEnhancedBackend.createEnhancedBackend({ onDiagnostic: reportDiagnostic });
-const standardBackend = PLCLocalApiBackend.createLocalApiBackend({ onDiagnostic: reportDiagnostic });
+const standardBackend = PLCDirectLocalApiBackend.createDirectLocalApiBackend({ onDiagnostic: reportDiagnostic });
 const backendResolver = PLCBackendResolver.createBackendResolver({ enhancedBackend, standardBackend });
 
 async function refreshDeveloperMode() {

@@ -66,6 +66,7 @@
   "activeModeEnhanced": { "message": "Enhanced" },
   "activeModeUnavailable": { "message": "Unavailable" },
   "standardMatchingCapabilities": { "message": "Exact matching and batch" },
+  "directMatchingCapabilities": { "message": "Direct fallback; unmatched results may be incomplete" },
   "enhancedMatchingCapabilities": { "message": "Full matching and real-time index" },
   "matchingUnavailable": { "message": "Unavailable" },
   "fallbackEnhancedUnavailable": { "message": "Enhanced mode unavailable" },

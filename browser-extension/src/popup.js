@@ -26,8 +26,10 @@
     let capabilityKey = "matchingUnavailable";
     let capabilityState = "error";
     if (connected && health?.mode === "standard") {
-      capabilityKey = "standardMatchingCapabilities";
-      capabilityState = "good";
+      const isDirect = health?.capabilities?.engine === "direct" ||
+        health?.capabilities?.completeNegativeResults === false;
+      capabilityKey = isDirect ? "directMatchingCapabilities" : "standardMatchingCapabilities";
+      capabilityState = isDirect ? "warning" : "good";
     } else if (connected && health?.mode === "enhanced") {
       capabilityKey = health?.indexReady === true ? "enhancedMatchingCapabilities" : "indexing";
       capabilityState = health?.indexReady === true ? "good" : "warning";

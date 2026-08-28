@@ -66,6 +66,7 @@
   "activeModeEnhanced": { "message": "增强模式" },
   "activeModeUnavailable": { "message": "不可用" },
   "standardMatchingCapabilities": { "message": "精确匹配和批量检查" },
+  "directMatchingCapabilities": { "message": "直接查询回退；未命中结果可能不完整" },
   "enhancedMatchingCapabilities": { "message": "完整匹配和实时索引" },
   "matchingUnavailable": { "message": "不可用" },
   "fallbackEnhancedUnavailable": { "message": "增强模式不可用" },

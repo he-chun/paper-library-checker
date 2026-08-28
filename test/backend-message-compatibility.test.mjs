@@ -148,6 +148,8 @@ test("auto fallback returns a degraded reason without exposing raw Zotero items"
       status: "matched",
       matchType: "doi",
       confidence: 1,
+      engine: "direct",
+      indexState: "unavailable",
       degradedReason: "enhanced_backend_unavailable"
     }
   });
@@ -157,6 +159,8 @@ test("auto fallback returns a degraded reason without exposing raw Zotero items"
   assert.equal(health.mode, "standard");
   assert.equal(health.degradedReason, "enhanced_backend_unavailable");
   assert.equal(health.capabilities.possibleMatch, false);
+  assert.equal(health.capabilities.engine, "direct");
+  assert.equal(health.capabilities.completeNegativeResults, false);
 });
 
 test("standard mode preserves the existing batch response envelope", async () => {
@@ -177,9 +181,9 @@ test("standard mode preserves the existing batch response envelope", async () =>
     ok: true,
     result: {
       results: [
-        { status: "matched", matchType: "doi", confidence: 1 },
-        { status: "matched", matchType: "title", confidence: 0.95 },
-        { status: "matched", matchType: "doi", confidence: 1 }
+        { status: "matched", matchType: "doi", confidence: 1, engine: "direct", indexState: "unavailable" },
+        { status: "matched", matchType: "title", confidence: 0.95, engine: "direct", indexState: "unavailable" },
+        { status: "matched", matchType: "doi", confidence: 1, engine: "direct", indexState: "unavailable" }
       ]
     }
   });
@@ -207,7 +211,13 @@ test("standard reference batches forward only correlated minimized progress", as
       type: "zotero-check:batch-progress",
       requestId: 77,
       index: 0,
-      result: { status: "matched", matchType: "title", confidence: 0.95 }
+      result: {
+        status: "matched",
+        matchType: "title",
+        confidence: 0.95,
+        engine: "direct",
+        indexState: "unavailable"
+      }
     }
   }]);
   assert.equal(JSON.stringify(progressMessages).includes("PRIVATEKEY"), false);

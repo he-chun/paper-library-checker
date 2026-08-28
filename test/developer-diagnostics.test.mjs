@@ -4,7 +4,7 @@ import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
 const diagnostics = require("../browser-extension/src/common/developer-diagnostics.js");
-const localApi = require("../browser-extension/src/backends/local-api-backend.js");
+const localApi = require("../browser-extension/src/backends/direct-local-api-backend.js");
 
 test("developer diagnostics are disabled by default and bounded in memory", () => {
   const log = diagnostics.createDeveloperDiagnostics({ maxEntries: 2, now: () => 1000 });
@@ -72,7 +72,7 @@ test("standard backend reports probe, group, item, cache, and batch timings", as
       json: async () => [{ data: { itemType: "journalArticle", DOI: "10.1000/example" } }]
     };
   };
-  const backend = localApi.createLocalApiBackend({ fetch, onDiagnostic: (event, details) => events.push({ event, ...details }) });
+  const backend = localApi.createDirectLocalApiBackend({ fetch, onDiagnostic: (event, details) => events.push({ event, ...details }) });
 
   await backend.probe();
   await backend.batchCheck([
@@ -95,7 +95,7 @@ test("standard backend reports probe, group, item, cache, and batch timings", as
 
 test("failed standard batches are correlated and do not report an ok outcome", async () => {
   const events = [];
-  const backend = localApi.createLocalApiBackend({
+  const backend = localApi.createDirectLocalApiBackend({
     fetch: async (url) => url.includes("/groups?")
       ? { ok: true, status: 200, json: async () => [] }
       : { ok: false, status: 500, json: async () => ({}) },

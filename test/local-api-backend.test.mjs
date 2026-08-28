@@ -4,7 +4,8 @@ import { createRequire } from "node:module";
 import { readFile } from "node:fs/promises";
 
 const require = createRequire(import.meta.url);
-const localApi = require("../browser-extension/src/backends/local-api-backend.js");
+const localApi = require("../browser-extension/src/backends/direct-local-api-backend.js");
+const compatibilityLocalApi = require("../browser-extension/src/backends/local-api-backend.js");
 const matcher = require("../browser-extension/src/backends/local-api-matcher.js");
 
 function response({ status = 200, payload = [], apiVersion = "3", jsonError } = {}) {
@@ -56,7 +57,13 @@ test("probe detects an enabled compatible Local API with browser-safe v3 headers
       return response();
     }
   });
-  assert.deepEqual(await backend.probe(), { ok: true, version: "3", indexReady: true });
+  assert.deepEqual(await backend.probe(), {
+    ok: true,
+    version: "3",
+    indexReady: true,
+    engine: "direct",
+    indexState: "unavailable"
+  });
   assert.equal(requests[0].url, "http://127.0.0.1:23119/api/");
   assert.equal(requests[0].options.method, "GET");
   assert.deepEqual(requests[0].options.headers, {
@@ -111,7 +118,11 @@ test("empty personal library search returns a minimal not-found result", async (
   assert.deepEqual(await backend.check({ title: "Synthetic Article" }), {
     status: "not_found",
     matchType: null,
-    confidence: 0
+    confidence: 0,
+    engine: "direct",
+    indexState: "unavailable",
+    complete: false,
+    reason: "direct_search_no_candidate"
   });
   const url = new URL(requests.find((request) => request.url.includes("/items?" )).url);
   assert.equal(`${url.origin}${url.pathname}`, "http://127.0.0.1:23119/api/users/0/items");
@@ -135,7 +146,9 @@ test("a candidate with title and DOI uses the lightweight title query first and 
   assert.deepEqual(await backend.check({ title: "Exact title", DOI: "10.1000/exact" }), {
     status: "matched",
     matchType: "doi",
-    confidence: 1
+    confidence: 1,
+    engine: "direct",
+    indexState: "unavailable"
   });
   const itemRequests = requests.filter((url) => url.pathname.endsWith("/items"));
   assert.equal(itemRequests.length, 1);
@@ -167,7 +180,15 @@ test("title-bearing candidates do not fall through to expensive everything searc
     title: "Requested Article",
     DOI: "10.1000/requested",
     cnkiFileID: "requested-cnki"
-  }), { status: "not_found", matchType: null, confidence: 0 });
+  }), {
+    status: "not_found",
+    matchType: null,
+    confidence: 0,
+    engine: "direct",
+    indexState: "unavailable",
+    complete: false,
+    reason: "direct_search_no_candidate"
+  });
   const itemRequests = requests.filter((url) => url.pathname.endsWith("/items"));
   assert.equal(itemRequests.length, 1);
   assert.equal(itemRequests[0].searchParams.get("qmode"), "titleCreatorYear");
@@ -193,7 +214,15 @@ test("Local API search hits are only candidates and are independently reverified
   assert.deepEqual(await backend.check({
     title: "Requested Article",
     DOI: "10.1000/requested"
-  }), { status: "not_found", matchType: null, confidence: 0 });
+  }), {
+    status: "not_found",
+    matchType: null,
+    confidence: 0,
+    engine: "direct",
+    indexState: "unavailable",
+    complete: false,
+    reason: "direct_search_no_candidate"
+  });
 });
 
 test("DOI matching revalidates case and URL-prefix normalization without leaking raw item data", async () => {
@@ -208,7 +237,13 @@ test("DOI matching revalidates case and URL-prefix normalization without leaking
   };
   const { backend } = backendWithItems([raw]);
   const result = await backend.check({ DOI: "https://doi.org/10.1000/abc" });
-  assert.deepEqual(result, { status: "matched", matchType: "doi", confidence: 1 });
+  assert.deepEqual(result, {
+    status: "matched",
+    matchType: "doi",
+    confidence: 1,
+    engine: "direct",
+    indexState: "unavailable"
+  });
   assert.equal(JSON.stringify(result).includes("PRIVATEKEY"), false);
   assert.equal(JSON.stringify(result).includes("private.pdf"), false);
 });
@@ -320,18 +355,29 @@ test("an item-query timeout opens a cooldown without changing the stable error c
   assert.equal(itemRequests, 2);
 });
 
-test("standard capabilities enable batch but disable fuzzy, possible, realtime, and authenticated protocol", async () => {
+test("Direct capabilities distinguish exact verification from complete recall", async () => {
   const { backend } = backendWithItems([]);
   assert.deepEqual(backend.getCapabilities(), {
+    engine: "direct",
+    indexState: "unavailable",
     exactIdentifiers: true,
     exactTitle: true,
     fuzzyTitle: false,
     possibleMatch: false,
     batch: true,
     realtimeIndex: false,
-    authenticatedProtocol: false
+    authenticatedProtocol: false,
+    exactIdentifierVerification: true,
+    completeIdentifierRecall: false,
+    exactTitleVerification: true,
+    completeNegativeResults: false
   });
   assert.deepEqual(await backend.batchCheck([]), { results: [] });
+});
+
+test("legacy Local API module remains a thin CommonJS compatibility entry point", () => {
+  assert.equal(compatibilityLocalApi.createLocalApiBackend, localApi.createDirectLocalApiBackend);
+  assert.equal(compatibilityLocalApi.CAPABILITIES.engine, "direct");
 });
 
 test("Local API code is service-worker-only and contains no storage or logging sink", async () => {
@@ -339,7 +385,7 @@ test("Local API code is service-worker-only and contains no storage or logging s
   const contentScripts = manifest.content_scripts.flatMap((entry) => entry.js || []);
   assert.equal(contentScripts.some((entry) => entry.includes("backends/local-api")), false);
 
-  for (const name of ["local-api-backend.js", "local-api-matcher.js"]) {
+  for (const name of ["direct-local-api-backend.js", "local-api-backend.js", "local-api-matcher.js"]) {
     const source = await readFile(new URL(`../browser-extension/src/backends/${name}`, import.meta.url), "utf8");
     assert.doesNotMatch(source, /chrome\.storage|console\.|translation-server|https:\/\//i);
   }

@@ -36,10 +36,12 @@ test("popup renders standard capability, automatic fallback, and a repair action
     connected: true,
     indexReady: true,
     mode: "standard",
+    capabilities: { engine: "direct", completeNegativeResults: false },
     degradedReason: "enhanced_backend_unavailable"
   });
   assert.equal(document.querySelector("#modeState").textContent, "Standard");
-  assert.equal(document.querySelector("#indexState").textContent, "Exact matching and batch");
+  assert.equal(document.querySelector("#indexState").textContent, "Direct fallback; unmatched results may be incomplete");
+  assert.equal(document.querySelector("#indexState").dataset.state, "warning");
   assert.equal(document.querySelector("#fallbackState").textContent, "Enhanced mode unavailable");
   assert.equal(document.querySelector("#fallbackState").hidden, false);
   assert.equal(document.querySelector("#repairConnection").hidden, false);

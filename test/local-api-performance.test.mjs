@@ -4,7 +4,7 @@ import { performance } from "node:perf_hooks";
 import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
-const localApi = require("../browser-extension/src/backends/local-api-backend.js");
+const localApi = require("../browser-extension/src/backends/direct-local-api-backend.js");
 
 function response(status, payload) {
   return {
@@ -29,7 +29,7 @@ function performanceBackend(route, { timeoutMs = 100 } = {}) {
   let active = 0;
   let maximumActive = 0;
   let requestCount = 0;
-  const backend = localApi.createLocalApiBackend({
+  const backend = localApi.createDirectLocalApiBackend({
     concurrency: 6,
     timeoutMs,
     fetch: async (url, options) => {
@@ -64,7 +64,7 @@ for (const size of [1, 20, 50, 80]) {
 
     assert.equal(result.results.length, size);
     assert.equal(result.results.every((entry) => entry.status === "matched" && entry.matchType === "title"), true);
-    assert.equal(harness.maximumActive() <= 6, true);
+    assert.equal(harness.maximumActive() <= 4, true);
     assert.equal(harness.requestCount(), size + 1);
     t.diagnostic(JSON.stringify({ size, elapsedMs, requests: harness.requestCount(), maxConcurrency: harness.maximumActive() }));
   });
@@ -86,7 +86,7 @@ test("simulated 80-item duplicate DOI batch performs one item query", async (t) 
   t.diagnostic(JSON.stringify({ size: 80, duplicateDOI: true, elapsedMs, requests: 2 }));
 });
 
-test("simulated multi-group batch remains within six active requests", async (t) => {
+test("simulated multi-group batch remains within four active requests", async (t) => {
   const groups = Array.from({ length: 12 }, (_, index) => ({ id: index + 1 }));
   const harness = performanceBackend(async (url, options) => {
     if (url.pathname.endsWith("/groups")) return delayed(response(200, groups), 1, options.signal);
@@ -102,7 +102,7 @@ test("simulated multi-group batch remains within six active requests", async (t)
   const elapsedMs = Number((performance.now() - started).toFixed(2));
 
   assert.equal(result.results.every((entry) => entry.status === "matched"), true);
-  assert.equal(harness.maximumActive() <= 6, true);
+  assert.equal(harness.maximumActive() <= 4, true);
   t.diagnostic(JSON.stringify({ candidates: 20, groups: 12, elapsedMs, requests: harness.requestCount(), maxConcurrency: harness.maximumActive() }));
 });
 
@@ -126,6 +126,6 @@ test("simulated timeout and partial request failure are isolated in order", asyn
   assert.deepEqual(result.results.map((entry) => entry.status), ["matched", "error", "error", "matched"]);
   assert.equal(result.results[1].error, "local_api_timeout");
   assert.equal(result.results[2].error, "local_api_unavailable");
-  assert.equal(harness.maximumActive() <= 6, true);
+  assert.equal(harness.maximumActive() <= 4, true);
   t.diagnostic(JSON.stringify({ partialFailure: true, elapsedMs, maxConcurrency: harness.maximumActive() }));
 });

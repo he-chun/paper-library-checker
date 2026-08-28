@@ -71,6 +71,7 @@
     activeModeEnhanced: "Enhanced",
     activeModeUnavailable: "Unavailable",
     standardMatchingCapabilities: "Exact matching and batch",
+    directMatchingCapabilities: "Direct fallback; unmatched results may be incomplete",
     enhancedMatchingCapabilities: "Full matching and real-time index",
     matchingUnavailable: "Unavailable",
     fallbackEnhancedUnavailable: "Enhanced mode unavailable",

@@ -3,8 +3,9 @@ import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
-const localApi = require("../browser-extension/src/backends/local-api-backend.js");
+const localApi = require("../browser-extension/src/backends/direct-local-api-backend.js");
 const matcher = require("../browser-extension/src/backends/local-api-matcher.js");
+const DIRECT = { engine: "direct", indexState: "unavailable" };
 
 function response(status, payload) {
   return {
@@ -19,7 +20,7 @@ function createHarness(route, options = {}) {
   const requests = [];
   let active = 0;
   let maximumActive = 0;
-  const backend = localApi.createLocalApiBackend({
+  const backend = localApi.createDirectLocalApiBackend({
     timeoutMs: 50,
     ...options,
     fetch: async (url, requestOptions) => {
@@ -53,9 +54,9 @@ test("batch uses stable candidate deduplication and restores input order", async
   ]);
 
   assert.deepEqual(result.results, [
-    { status: "matched", matchType: "doi", confidence: 1 },
-    { status: "matched", matchType: "title", confidence: 0.95 },
-    { status: "matched", matchType: "doi", confidence: 1 }
+    { status: "matched", matchType: "doi", confidence: 1, ...DIRECT },
+    { status: "matched", matchType: "title", confidence: 0.95, ...DIRECT },
+    { status: "matched", matchType: "doi", confidence: 1, ...DIRECT }
   ]);
   assert.equal(harness.requests.filter((url) => url.includes("/items?")).length, 2);
 });
@@ -186,7 +187,7 @@ test("standard batches publish minimized ordered progress before final completio
 
   assert.deepEqual(progressBeforeRelease, [{
     index: 0,
-    result: { status: "matched", matchType: "title", confidence: 0.95 }
+    result: { status: "matched", matchType: "title", confidence: 0.95, ...DIRECT }
   }]);
 });
 
@@ -204,7 +205,8 @@ test("personal and group libraries are searched, failed groups are isolated, and
   assert.deepEqual(await harness.backend.check({ DOI: "10.1000/group" }), {
     status: "matched",
     matchType: "doi",
-    confidence: 1
+    confidence: 1,
+    ...DIRECT
   });
   assert.equal(harness.requests.some((url) => url.includes("/users/0/items?")), true);
   assert.equal(harness.requests.some((url) => url.includes("/groups/1/items?")), true);
@@ -223,8 +225,8 @@ test("a failed library becomes an item error only when no other library matches"
     { title: "Also no match" }
   ]), {
     results: [
-      { status: "error", matchType: null, confidence: 0, error: "local_api_unavailable" },
-      { status: "error", matchType: null, confidence: 0, error: "local_api_unavailable" }
+      { status: "error", matchType: null, confidence: 0, error: "local_api_unavailable", ...DIRECT },
+      { status: "error", matchType: null, confidence: 0, error: "local_api_unavailable", ...DIRECT }
     ]
   });
 });
@@ -296,10 +298,10 @@ test("a new batch aborts or supersedes the previous batch", async () => {
   const newBatch = harness.backend.batchCheck([{ title: "New" }]);
 
   assert.deepEqual(await newBatch, {
-    results: [{ status: "matched", matchType: "title", confidence: 0.95 }]
+    results: [{ status: "matched", matchType: "title", confidence: 0.95, ...DIRECT }]
   });
   assert.deepEqual(await oldBatch, {
-    results: [{ status: "error", matchType: null, confidence: 0, error: "batch_superseded" }]
+    results: [{ status: "error", matchType: null, confidence: 0, error: "batch_superseded", ...DIRECT }]
   });
 });
 
@@ -318,7 +320,7 @@ test("repeated identical batches reuse the active work instead of superseding it
   releaseItems();
 
   assert.deepEqual(await first, {
-    results: [{ status: "matched", matchType: "title", confidence: 0.95 }]
+    results: [{ status: "matched", matchType: "title", confidence: 0.95, ...DIRECT }]
   });
   assert.deepEqual(await repeated, await first);
   assert.equal(harness.requests.filter((url) => url.includes("/items?")).length, 1);
@@ -342,11 +344,11 @@ test("batches from different tabs do not cancel each other", async () => {
   await new Promise((resolve) => setTimeout(resolve, 0));
   const otherTab = harness.backend.batchCheck([{ title: "New" }], { scope: "tab-2" });
   assert.deepEqual(await otherTab, {
-    results: [{ status: "matched", matchType: "title", confidence: 0.95 }]
+    results: [{ status: "matched", matchType: "title", confidence: 0.95, ...DIRECT }]
   });
   releaseOld();
   assert.deepEqual(await oldBatch, {
-    results: [{ status: "matched", matchType: "title", confidence: 0.95 }]
+    results: [{ status: "matched", matchType: "title", confidence: 0.95, ...DIRECT }]
   });
 });
 
@@ -368,11 +370,11 @@ test("detail and reference batches in the same tab do not cancel each other", as
   await new Promise((resolve) => setTimeout(resolve, 0));
   const references = harness.backend.batchCheck([{ title: "Reference" }], { scope: "tab:1:references" });
   assert.deepEqual(await references, {
-    results: [{ status: "matched", matchType: "title", confidence: 0.95 }]
+    results: [{ status: "matched", matchType: "title", confidence: 0.95, ...DIRECT }]
   });
   releaseDetail();
   assert.deepEqual(await detail, {
-    results: [{ status: "matched", matchType: "title", confidence: 0.95 }]
+    results: [{ status: "matched", matchType: "title", confidence: 0.95, ...DIRECT }]
   });
 });
 
