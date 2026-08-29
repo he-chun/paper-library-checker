@@ -14,8 +14,8 @@
       beginGeneration(scopeKey, details) {
         return repository.beginGeneration(scopeKey, details);
       },
-      async commitGeneration(scopeKey, generation) {
-        const meta = await repository.commitGeneration(scopeKey, generation);
+      async commitGeneration(scopeKey, generation, details) {
+        const meta = await repository.commitGeneration(scopeKey, generation, details);
         try {
           await repository.pruneOldGenerations(scopeKey);
         } catch (_error) {

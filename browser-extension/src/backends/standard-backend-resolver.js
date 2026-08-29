@@ -37,7 +37,8 @@
       } catch (error) {
         status = { state: "error", activeGeneration: null, errorCode: error?.code || "indexeddb_unavailable" };
       }
-      if (status?.state === "ready" && status.scopeKey && status.activeGeneration != null) {
+      if (["ready", "stale", "refreshing", "error"].includes(status?.state) &&
+          status.scopeKey && status.activeGeneration != null) {
         const backend = getIndexedBackend();
         capabilities = backend.getCapabilities();
         return { backend, status, engine: "indexed" };
@@ -47,7 +48,7 @@
     }
 
     function suggestBuild(status) {
-      if (status?.state === "building" || typeof startIndexBuild !== "function") return;
+      if (["building", "refreshing"].includes(status?.state) || typeof startIndexBuild !== "function") return;
       try {
         startIndexBuild();
       } catch (_error) {
@@ -58,10 +59,18 @@
     return Object.freeze({
       async probe() {
         const resolved = await selection();
-        return resolved.backend.probe();
+        const value = await resolved.backend.probe();
+        if (resolved.engine === "direct" && ["not_built", "error"].includes(resolved.status?.state)) {
+          suggestBuild(resolved.status);
+        }
+        capabilities = resolved.backend.getCapabilities();
+        return value;
       },
       async check(candidate, options) {
         const resolved = await selection();
+        if (resolved.engine === "direct" && ["not_built", "error"].includes(resolved.status?.state)) {
+          suggestBuild(resolved.status);
+        }
         return resolved.backend.check(candidate, options);
       },
       async batchCheck(candidates, options = {}) {

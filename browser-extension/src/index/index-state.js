@@ -10,6 +10,7 @@
     BUILDING: "building",
     READY: "ready",
     STALE: "stale",
+    REFRESHING: "refreshing",
     ERROR: "error"
   });
 
@@ -27,6 +28,8 @@
       state: INDEX_STATES.NOT_BUILT,
       lastSuccessfulBuildAt: null,
       lastAttemptAt: null,
+      itemCount: 0,
+      libraryCount: 0,
       errorCode: ""
     };
   }

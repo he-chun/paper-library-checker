@@ -24,7 +24,11 @@ function standardHarness(state, options = {}) {
   const standard = standardApi.createStandardBackendResolver({
     directBackend: direct,
     getIndexedBackend: () => indexed,
-    getIndexStatus: async () => ({ state, scopeKey: "scope", activeGeneration: state === "ready" ? 1 : null }),
+    getIndexStatus: async () => ({
+      state,
+      scopeKey: "scope",
+      activeGeneration: ["ready", "stale", "refreshing", "error"].includes(state) ? 1 : null
+    }),
     startIndexBuild: () => { starts += 1; }
   });
   return { direct, indexed, standard, get starts() { return starts; }, ...options };
@@ -40,13 +44,29 @@ test("ready indexes handle probe, detail, and batch without Direct quicksearch",
 });
 
 test("missing indexes allow detail and small-batch Direct fallback", async () => {
-  for (const state of ["not_built", "building", "error", "stale"]) {
+  for (const state of ["not_built", "building"]) {
     const h = standardHarness(state);
     assert.equal((await h.standard.check({ title: "Detail" })).engine, "direct");
     assert.equal((await h.standard.batchCheck(Array.from({ length: 10 }, () => ({})))).results[0].engine, "direct");
     assert.equal(h.direct.calls.some((entry) => Array.isArray(entry) && entry[0] === "check"), true);
     assert.equal(h.direct.calls.some((entry) => Array.isArray(entry) && entry[0] === "batch"), true);
     assert.deepEqual(h.indexed.calls, []);
+  }
+});
+
+test("a successful first Direct probe suggests the initial full index build", async () => {
+  const h = standardHarness("not_built");
+  await h.standard.probe();
+  assert.equal(h.starts, 1);
+  assert.deepEqual(h.indexed.calls, []);
+});
+
+test("stale, refreshing, and failed refresh states keep the old indexed generation active", async () => {
+  for (const state of ["stale", "refreshing", "error"]) {
+    const h = standardHarness(state);
+    assert.equal((await h.standard.check({ title: "Detail" })).engine, "indexed");
+    assert.equal((await h.standard.batchCheck(Array.from({ length: 80 }, () => ({})))).results[0].engine, "indexed");
+    assert.deepEqual(h.direct.calls, []);
   }
 });
 

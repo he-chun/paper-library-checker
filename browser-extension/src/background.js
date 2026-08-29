@@ -12,6 +12,7 @@ if (typeof importScripts === "function") {
     "backends/standard-backend-resolver.js",
     "backends/backend-resolver.js",
     "index/index-state.js",
+    "index/index-freshness.js",
     "index/index-schema.js",
     "index/index-record-normalizer.js",
     "index/indexeddb-index-repository.js",
@@ -40,6 +41,8 @@ const PLCIndexedDBIndexRepository = globalThis.PLCIndexedDBIndexRepository ||
   (typeof require === "function" ? require("./index/indexeddb-index-repository.js") : null);
 const PLCIndexGenerationManager = globalThis.PLCIndexGenerationManager ||
   (typeof require === "function" ? require("./index/index-generation-manager.js") : null);
+const PLCIndexFreshness = globalThis.PLCIndexFreshness ||
+  (typeof require === "function" ? require("./index/index-freshness.js") : null);
 const PLCLocalApiLibraryDiscovery = globalThis.PLCLocalApiLibraryDiscovery ||
   (typeof require === "function" ? require("./index/local-api-library-discovery.js") : null);
 const PLCIndexBuildProgress = globalThis.PLCIndexBuildProgress ||
@@ -71,6 +74,17 @@ const standardBackend = PLCStandardBackendResolver.createStandardBackendResolver
 });
 const backendResolver = PLCBackendResolver.createBackendResolver({ enhancedBackend, standardBackend });
 let indexInfrastructure = null;
+const indexedPageTabs = new Set();
+
+async function notifyIndexedPages() {
+  for (const tabId of [...indexedPageTabs]) {
+    try {
+      await chrome.tabs?.sendMessage(tabId, { type: "zotero-check:index-refreshed" });
+    } catch (_error) {
+      indexedPageTabs.delete(tabId);
+    }
+  }
+}
 
 function getIndexInfrastructure() {
   if (indexInfrastructure) return indexInfrastructure;
@@ -86,7 +100,13 @@ function getIndexInfrastructure() {
     generationManager,
     progress
   });
-  const controller = PLCIndexBuildController.createIndexBuildController({ builder, progress, repository });
+  const controller = PLCIndexBuildController.createIndexBuildController({
+    builder,
+    progress,
+    repository,
+    freshness: PLCIndexFreshness,
+    onBuildComplete: notifyIndexedPages
+  });
   const indexedBackend = PLCIndexedLocalApiBackend.createIndexedLocalApiBackend({
     repository,
     getIndexContext: () => controller.getStatus()
@@ -241,12 +261,10 @@ async function callZotero(path, body, method = "POST", context = {}) {
 function handleRuntimeMessage(message, sender, sendResponse) {
   if (message?.type === "start-index-build") {
     if (!isTrustedExtensionMessage(message, sender)) return false;
-    try {
-      sendResponse({ ok: true, ...getIndexBuildController().start() });
-    } catch (error) {
-      sendResponse({ ok: false, error: error?.code || error?.message || "index_build_unavailable" });
-    }
-    return false;
+    getIndexBuildController().refresh()
+      .then((result) => sendResponse({ ok: true, ...result }))
+      .catch((error) => sendResponse({ ok: false, error: error?.code || error?.message || "index_build_unavailable" }));
+    return true;
   }
 
   if (message?.type === "cancel-index-build") {
@@ -261,6 +279,15 @@ function handleRuntimeMessage(message, sender, sendResponse) {
     if (!isTrustedExtensionMessage(message, sender)) return false;
     getIndexBuildController().getStatus()
       .then((status) => sendResponse({ ok: true, status }))
+      .catch((error) => sendResponse({ ok: false, error: error?.code || "index_build_unavailable" }));
+    return true;
+  }
+
+  if (message?.type === "clear-index" || message?.type === "clear-and-rebuild-index") {
+    if (!isTrustedExtensionMessage(message, sender)) return false;
+    const action = message.type === "clear-index" ? "clear" : "clearAndRebuild";
+    getIndexBuildController()[action]()
+      .then((result) => sendResponse({ ok: true, ...result }))
       .catch((error) => sendResponse({ ok: false, error: error?.code || "index_build_unavailable" }));
     return true;
   }
@@ -292,6 +319,7 @@ function handleRuntimeMessage(message, sender, sendResponse) {
   }
 
   if (message.type === "zotero-check:match") {
+    if (Number.isInteger(sender?.tab?.id)) indexedPageTabs.add(sender.tab.id);
     const isBatch = Array.isArray(message.candidates);
     if (isBatch && message.candidates.length > 200) {
       sendResponse({ ok: false, error: "Batch exceeds 200 candidates" });
@@ -331,6 +359,14 @@ function handleRuntimeMessage(message, sender, sendResponse) {
 }
 
 chrome.runtime.onMessage.addListener(handleRuntimeMessage);
+
+if (typeof indexedDB !== "undefined") {
+  chrome.storage.sync.get({ connectionMode: "auto" })
+    .then((stored) => getIndexBuildController().initialize({ autoRefresh: stored.connectionMode !== "enhanced" }))
+    .catch(() => {
+      // IndexedDB failure remains observable through index status and Direct fallback.
+    });
+}
 
 function batchScopeForMessage(message, sender) {
   const tabId = Number.isInteger(sender?.tab?.id) ? sender.tab.id : "unknown";
@@ -387,7 +423,9 @@ function isTrustedExtensionMessage(message, sender) {
     "zotero-check:clear-developer-log",
     "start-index-build",
     "cancel-index-build",
-    "get-index-status"
+    "get-index-status",
+    "clear-index",
+    "clear-and-rebuild-index"
   ].includes(message?.type) &&
     PLCSenderSecurity.isTrustedExtensionPageSender(sender, chrome.runtime);
 }
@@ -399,8 +437,19 @@ async function getPopupHealth() {
       connected: true,
       indexReady: result.indexReady === true,
       mode: result.mode,
+      engine: result.engine || result.capabilities?.engine,
+      indexState: result.indexState || result.capabilities?.indexState,
+      freshness: result.freshness || result.capabilities?.freshness,
+      complete: result.complete ?? result.capabilities?.complete,
       capabilities: result.capabilities
     };
+    if (result.mode === "standard") {
+      try {
+        health.index = await getIndexBuildController().getStatus();
+      } catch (_error) {
+        health.index = null;
+      }
+    }
     if (result.degradedReason) health.degradedReason = result.degradedReason;
     return health;
   } catch (error) {

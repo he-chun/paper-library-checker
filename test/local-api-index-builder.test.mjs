@@ -188,6 +188,10 @@ test("a complete refresh atomically replaces and prunes the old generation", asy
   assert.equal(await harness.repository.getActiveGeneration(LEGACY_SCOPE_KEY), 2);
   assert.equal((await harness.repository.queryByIdentifier(LEGACY_SCOPE_KEY, "doi:10.1000/new")).length, 1);
   assert.equal((await harness.repository.queryByIdentifier(LEGACY_SCOPE_KEY, "doi:10.1000/old")).length, 0);
+  const meta = await harness.repository.getMeta(LEGACY_SCOPE_KEY);
+  assert.equal(meta.itemCount, 1);
+  assert.equal(meta.libraryCount, 1);
+  assert.equal(Number.isSafeInteger(meta.lastSuccessfulBuildAt), true);
   harness.repository.close();
 });
 
@@ -280,7 +284,7 @@ test("a new controller hydrates safe status from persisted metadata", async () =
     repository: harness.repository
   });
   const status = await controller.getStatus();
-  assert.equal(status.state, "stale");
+  assert.equal(status.state, "ready");
   assert.equal(status.scopeKey, LEGACY_SCOPE_KEY);
   assert.equal(status.scopeConfidence, "legacy");
   assert.equal(status.activeGeneration, 1);

@@ -172,7 +172,7 @@
       try {
         const metaStore = transaction.objectStore(schema.STORES.META);
         const meta = await requestResult(metaStore.get(scopeKey));
-        if (!meta || (meta.state !== indexState.INDEX_STATES.BUILDING && meta.pendingGeneration == null)) {
+        if (!meta || (![indexState.INDEX_STATES.BUILDING, indexState.INDEX_STATES.REFRESHING].includes(meta.state) && meta.pendingGeneration == null)) {
           await completed;
           return false;
         }
@@ -180,7 +180,7 @@
         meta.pendingGeneration = null;
         meta.state = meta.activeGeneration == null
           ? indexState.INDEX_STATES.NOT_BUILT
-          : indexState.INDEX_STATES.READY;
+          : indexState.INDEX_STATES.STALE;
         meta.errorCode = "index_build_interrupted";
         meta.schemaVersion = schema.SCHEMA_VERSION;
         metaStore.put(meta);
@@ -199,7 +199,7 @@
       const allMeta = await requestResult(transaction.objectStore(schema.STORES.META).getAll());
       await completed;
       for (const meta of allMeta) {
-        if (meta.state === indexState.INDEX_STATES.BUILDING || meta.pendingGeneration != null) {
+        if ([indexState.INDEX_STATES.BUILDING, indexState.INDEX_STATES.REFRESHING].includes(meta.state) || meta.pendingGeneration != null) {
           await recoverScopeInDatabase(opened, meta.scopeKey);
         }
       }
@@ -263,7 +263,7 @@
         const key = String(scopeKey);
         const store = transaction.objectStore(schema.STORES.META);
         const meta = await requestResult(store.get(key)) || defaultMeta(key);
-        if (meta.state === indexState.INDEX_STATES.BUILDING || meta.pendingGeneration != null) {
+        if ([indexState.INDEX_STATES.BUILDING, indexState.INDEX_STATES.REFRESHING].includes(meta.state) || meta.pendingGeneration != null) {
           throw makeRepositoryError("index_generation_already_building");
         }
         const generation = Math.max(meta.activeGeneration || 0, meta.pendingGeneration || 0) + 1;
@@ -272,7 +272,9 @@
         if (details.scopeConfidence !== undefined) {
           meta.scopeConfidence = details.scopeConfidence === "stable" ? "stable" : "legacy";
         }
-        meta.state = indexState.INDEX_STATES.BUILDING;
+        meta.state = meta.activeGeneration == null
+          ? indexState.INDEX_STATES.BUILDING
+          : indexState.INDEX_STATES.REFRESHING;
         meta.lastAttemptAt = now();
         meta.errorCode = "";
         store.put(meta);
@@ -282,7 +284,8 @@
 
     async function requirePendingGeneration(transaction, scopeKey, generation) {
       const meta = await requestResult(transaction.objectStore(schema.STORES.META).get(String(scopeKey)));
-      if (!meta || meta.state !== indexState.INDEX_STATES.BUILDING || meta.pendingGeneration !== generation) {
+      if (!meta || ![indexState.INDEX_STATES.BUILDING, indexState.INDEX_STATES.REFRESHING].includes(meta.state) ||
+          meta.pendingGeneration !== generation) {
         throw makeRepositoryError("index_generation_not_building");
       }
       return meta;
@@ -310,7 +313,7 @@
       return normalized.length;
     }
 
-    async function commitGeneration(scopeKey, generation) {
+    async function commitGeneration(scopeKey, generation, details = {}) {
       return withTransaction(schema.STORES.META, "readwrite", async (transaction) => {
         const store = transaction.objectStore(schema.STORES.META);
         const meta = await requirePendingGeneration(transaction, scopeKey, generation);
@@ -318,6 +321,8 @@
         meta.pendingGeneration = null;
         meta.state = indexState.INDEX_STATES.READY;
         meta.lastSuccessfulBuildAt = now();
+        meta.itemCount = Number(details.itemCount || 0);
+        meta.libraryCount = Number(details.libraryCount || 0);
         meta.errorCode = "";
         meta.schemaVersion = schema.SCHEMA_VERSION;
         store.put(meta);
@@ -336,7 +341,7 @@
           ? indexState.INDEX_STATES.ERROR
           : meta.activeGeneration == null
             ? indexState.INDEX_STATES.NOT_BUILT
-            : indexState.INDEX_STATES.READY;
+            : indexState.INDEX_STATES.ERROR;
         meta.errorCode = String(errorCode || "");
         meta.schemaVersion = schema.SCHEMA_VERSION;
         store.put(meta);
@@ -376,7 +381,7 @@
         const normalizedScope = String(scopeKey);
         const meta = await requestResult(transaction.objectStore(schema.STORES.META).get(normalizedScope));
         const activeGeneration = meta?.activeGeneration;
-        if (meta?.state !== indexState.INDEX_STATES.READY || activeGeneration == null) {
+        if (activeGeneration == null) {
           throw makeRepositoryError("index_not_ready");
         }
         const store = transaction.objectStore(schema.STORES.RECORDS);

@@ -47,8 +47,10 @@ function sendAsync(message, sender) {
   });
 }
 
-test("only extension pages can start, cancel, or inspect an index build", async () => {
-  for (const type of ["start-index-build", "cancel-index-build", "get-index-status"]) {
+test("only extension pages can manage or inspect an index build", async () => {
+  for (const type of [
+    "start-index-build", "cancel-index-build", "get-index-status", "clear-index", "clear-and-rebuild-index"
+  ]) {
     assert.equal(background.isTrustedExtensionMessage({ type }, popupSender), true);
     assert.equal(background.isTrustedExtensionMessage({ type }, contentSender), false);
     let response;
@@ -56,10 +58,10 @@ test("only extension pages can start, cancel, or inspect an index build", async 
     assert.equal(response, undefined);
   }
 
-  let startResponse;
-  assert.equal(background.handleRuntimeMessage({ type: "start-index-build" }, popupSender, (value) => {
-    startResponse = value;
-  }), false);
+  const startResponsePromise = new Promise((resolve) => {
+    assert.equal(background.handleRuntimeMessage({ type: "start-index-build" }, popupSender, resolve), true);
+  });
+  const startResponse = await startResponsePromise;
   assert.equal(startResponse.ok, true);
   assert.equal(startResponse.accepted, true);
   await background.getIndexBuildController().waitForIdle();

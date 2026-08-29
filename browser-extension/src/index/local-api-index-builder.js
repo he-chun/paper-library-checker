@@ -65,12 +65,20 @@
       let indexedItems = 0;
       let totalItems = 0;
       let allTotalsKnown = true;
-      progress.begin();
+      const previousMeta = await repository.getLatestMeta().catch(() => null);
+      progress.begin({
+        refreshing: options.refreshing === true,
+        activeGeneration: previousMeta?.activeGeneration ?? null
+      });
       try {
         if (signal?.aborted) throw makeIndexBuildError("index_build_cancelled");
         const discovered = await discovery.discover({ signal });
         scopeKey = discovered.scopeKey;
         const oldActiveGeneration = await repository.getActiveGeneration(scopeKey);
+        progress.begin({
+          refreshing: oldActiveGeneration != null,
+          activeGeneration: oldActiveGeneration
+        });
         progress.update({
           scopeKey,
           scopeConfidence: discovered.scopeConfidence,
@@ -119,10 +127,16 @@
         }
 
         if (signal?.aborted) throw makeIndexBuildError("index_build_cancelled");
-        const meta = await generationManager.commitGeneration(scopeKey, generation);
+        const meta = await generationManager.commitGeneration(scopeKey, generation, {
+          itemCount: indexedItems,
+          libraryCount: discovered.libraries.length
+        });
         progress.ready({
           activeGeneration: meta.activeGeneration,
-          totalItems: allTotalsKnown ? totalItems : processedItems
+          totalItems: allTotalsKnown ? totalItems : processedItems,
+          itemCount: indexedItems,
+          libraryCount: discovered.libraries.length,
+          lastSuccessfulBuildAt: meta.lastSuccessfulBuildAt
         });
         return {
           ok: true,

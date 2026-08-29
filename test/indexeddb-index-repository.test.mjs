@@ -85,6 +85,8 @@ test("first and repeated opens create and validate the complete schema", async (
     state: "not_built",
     lastSuccessfulBuildAt: null,
     lastAttemptAt: null,
+    itemCount: 0,
+    libraryCount: 0,
     errorCode: ""
   });
   second.close();
@@ -140,7 +142,7 @@ test("an incomplete generation never replaces the old generation and is recovere
   const meta = await reopened.getMeta("scope");
   assert.equal(meta.activeGeneration, 1);
   assert.equal(meta.pendingGeneration, null);
-  assert.equal(meta.state, indexState.INDEX_STATES.READY);
+  assert.equal(meta.state, indexState.INDEX_STATES.STALE);
   assert.equal(meta.errorCode, "index_build_interrupted");
   assert.equal((await reopened.queryByIdentifier("scope", "doi:10.1000/old")).length, 1);
   assert.equal((await reopened.queryByIdentifier("scope", "doi:10.1000/new")).length, 0);

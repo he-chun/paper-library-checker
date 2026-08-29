@@ -33,16 +33,19 @@
     return error;
   }
 
-  function result(status, matchType = null, confidence = 0) {
-    return {
+  function result(status, matchType = null, confidence = 0, context = {}) {
+    const stale = context.freshness === "stale" || Boolean(context.state && context.state !== "ready");
+    const value = {
       status,
       matchType,
       confidence,
-      complete: true,
+      complete: !stale,
       mode: "standard",
       engine: "indexed",
-      indexState: "ready"
+      indexState: stale ? "stale" : "ready"
     };
+    if (stale) value.freshness = "stale";
+    return value;
   }
 
   function hintsMatch(record, candidate) {
@@ -54,18 +57,21 @@
   }
 
   function matchPreparedCandidate(candidate, queryResult) {
+    const context = queryResult.context || { state: "ready", freshness: "fresh" };
     for (const type of matcher.IDENTIFIER_PRIORITY) {
       const value = candidate.identifiers[type];
       if (!value) continue;
       const key = `${type}:${value}`;
       if ((queryResult.identifiers[key] || []).some((record) => record.identifierKeys.includes(key))) {
-        return result("matched", type, 1);
+        return result("matched", type, 1, context);
       }
     }
     if (candidate.title && (queryResult.titles[candidate.title] || []).some((record) => hintsMatch(record, candidate))) {
-      return result("matched", "title", 0.95);
+      return result("matched", "title", 0.95, context);
     }
-    return result("not_found");
+    const value = result("not_found", null, 0, context);
+    if (!value.complete) value.reason = "stale_index_no_match";
+    return value;
   }
 
   function queryKeys(preparedCandidates) {
@@ -95,19 +101,31 @@
     if (!repository?.queryMany || typeof getIndexContext !== "function") {
       throw makeIndexedError("indexed_backend_dependencies_required");
     }
+    let capabilities = CAPABILITIES;
 
     async function readyContext() {
       const context = await getIndexContext();
-      if (context?.state !== "ready" || !context.scopeKey || context.activeGeneration == null) {
+      if (!context?.scopeKey || context.activeGeneration == null ||
+          !["ready", "stale", "refreshing", "error"].includes(context.state)) {
         throw makeIndexedError("index_not_ready");
       }
+      const stale = context.state !== "ready" || context.freshness === "stale";
+      capabilities = stale ? Object.freeze({
+        ...CAPABILITIES,
+        indexState: "stale",
+        completeIdentifierRecall: false,
+        completeTitleRecall: false,
+        completeNegativeResults: false,
+        complete: false,
+        freshness: "stale"
+      }) : CAPABILITIES;
       return context;
     }
 
     async function query(preparedCandidates) {
       const context = await readyContext();
       try {
-        return await repository.queryMany(context.scopeKey, queryKeys(preparedCandidates));
+        return { ...(await repository.queryMany(context.scopeKey, queryKeys(preparedCandidates))), context };
       } catch (error) {
         throw makeIndexedError(error?.code || "indexeddb_query_failed", error);
       }
@@ -115,8 +133,13 @@
 
     return Object.freeze({
       async probe() {
-        await readyContext();
-        return { ok: true, version: "3", indexReady: true, mode: "standard", engine: "indexed", indexState: "ready" };
+        const context = await readyContext();
+        const stale = context.state !== "ready" || context.freshness === "stale";
+        return {
+          ok: true, version: "3", indexReady: true, mode: "standard", engine: "indexed",
+          indexState: stale ? "stale" : "ready", lifecycleState: context.state,
+          freshness: stale ? "stale" : "fresh", complete: !stale
+        };
       },
       async check(candidate) {
         const prepared = matcher.prepareCandidate(candidate);
@@ -139,7 +162,7 @@
               return matchPreparedCandidate(entry.prepared, queryResult);
             } catch (error) {
               return {
-                ...result("error"),
+                ...result("error", null, 0, queryResult.context),
                 complete: false,
                 error: error?.code || "indexed_record_invalid"
               };
@@ -163,7 +186,7 @@
         }
         return { results };
       },
-      getCapabilities: () => CAPABILITIES
+      getCapabilities: () => capabilities
     });
   }
 
