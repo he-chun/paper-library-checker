@@ -1,5 +1,11 @@
 # 0.5.0 release-candidate qualification
 
+> **Superseded qualification status (2026-08-29): BLOCKED.** The authoritative
+> dual-mode gate record is
+> [`dual-mode-0.5.0-qualification.md`](dual-mode-0.5.0-qualification.md). Earlier
+> Direct-only observations below predate the Indexed standard main path and must
+> not be used to approve 0.5.0.
+
 This file records release preparation without claiming that 0.5.0 has been
 published or fully qualified. Version metadata must remain at the current
 release until every automated and exact-artifact runtime gate passes.
