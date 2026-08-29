@@ -81,6 +81,7 @@ test("first and repeated opens create and validate the complete schema", async (
     schemaVersion: schema.SCHEMA_VERSION,
     activeGeneration: null,
     pendingGeneration: null,
+    scopeConfidence: null,
     state: "not_built",
     lastSuccessfulBuildAt: null,
     lastAttemptAt: null,
@@ -195,6 +196,17 @@ test("generation manager switches then prunes old records", async () => {
   assert.equal((await repo.queryByIdentifier("scope", "doi:10.1000/old")).length, 0);
   assert.equal((await repo.queryByIdentifier("scope", "doi:10.1000/new")).length, 1);
   repo.close();
+});
+
+test("generation commit remains successful when best-effort pruning fails afterward", async () => {
+  const manager = createIndexGenerationManager({
+    async commitGeneration() { return { activeGeneration: 8, state: "ready" }; },
+    async pruneOldGenerations() { throw new Error("synthetic_prune_failure"); }
+  });
+  assert.deepEqual(await manager.commitGeneration("scope", 8), {
+    activeGeneration: 8,
+    state: "ready"
+  });
 });
 
 test("large record sets can be written in chunks and duplicate keys upsert", async () => {

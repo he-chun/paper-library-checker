@@ -27,7 +27,10 @@ test("popup health, options probe, and developer logs require the extension orig
     "zotero-check:popup-health",
     "zotero-check:probe",
     "zotero-check:developer-log",
-    "zotero-check:clear-developer-log"
+    "zotero-check:clear-developer-log",
+    "start-index-build",
+    "cancel-index-build",
+    "get-index-status"
   ]) {
     const message = { type };
     assert.equal(background.isTrustedExtensionMessage(message, {

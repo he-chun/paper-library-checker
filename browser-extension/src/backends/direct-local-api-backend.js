@@ -15,6 +15,8 @@
   const MAX_CONCURRENCY = 4;
   const FOREGROUND_PRIORITY = 1;
   const REFERENCE_PRIORITY = 0;
+  const INDEX_PRIORITY = -1;
+  const INDEX_PAGE_SIZE = 250;
   const TIMEOUT_COOLDOWN_MS = 60000;
   const QUERY_CACHE_TTL_MS = 5000;
   const QUERY_CACHE_MAX_ENTRIES = 256;
@@ -144,7 +146,7 @@
       MAX_CONCURRENCY,
       Math.floor(dependencies.concurrency || DEFAULT_CONCURRENCY)
     ));
-    const schedule = createLimiter(concurrency, { identifier: IDENTIFIER_CONCURRENCY });
+    const schedule = createLimiter(concurrency, { identifier: IDENTIFIER_CONCURRENCY, index: 1 });
     const queryCache = new Map();
     const queryInFlight = new Map();
     let groupCache = { expiresAt: 0, value: null, promise: null };
@@ -241,11 +243,13 @@
     }
 
     function request(url, signal, phase, details, priority) {
-      const lane = phase === "item_query" && details?.queryType !== "title" ? "identifier" : "default";
+      const lane = details?.workload === "index"
+        ? "index"
+        : phase === "item_query" && details?.queryType !== "title" ? "identifier" : "default";
       return schedule(() => requestDirect(url, signal, phase, details), signal, priority, lane);
     }
 
-    async function readJsonArray(url, signal, phase, details, priority) {
+    async function readJsonArrayResponse(url, signal, phase, details, priority) {
       const response = await request(url, signal, phase, details, priority);
       let payload;
       try {
@@ -258,14 +262,48 @@
         report("backend_response_failed", { phase, ...details, error: "local_api_malformed_response" });
         throw makeLocalApiError("local_api_malformed_response");
       }
-      return payload;
+      return { payload, response };
+    }
+
+    async function readJsonArray(url, signal, phase, details, priority) {
+      return (await readJsonArrayResponse(url, signal, phase, details, priority)).payload;
+    }
+
+    function headerValue(headers, name) {
+      const value = headers?.get?.(name);
+      return typeof value === "string" ? value.trim() : "";
+    }
+
+    function safeIntegerHeader(headers, name) {
+      const text = headerValue(headers, name);
+      if (!/^\d+$/.test(text)) return null;
+      const value = Number(text);
+      return Number.isSafeInteger(value) && value >= 0 ? value : null;
+    }
+
+    function probeInformation(response) {
+      const apiVersion = headerValue(response.headers, "Zotero-API-Version");
+      if (apiVersion !== "3") throw makeLocalApiError("local_api_incompatible");
+      const stableInstanceHeaders = ["Zotero-Instance-ID", "Zotero-Profile-ID", "Zotero-Server-ID"];
+      let instanceIdentifier = "";
+      for (const name of stableInstanceHeaders) {
+        const value = headerValue(response.headers, name);
+        if (/^[A-Za-z0-9._:-]{8,200}$/.test(value)) {
+          instanceIdentifier = value;
+          break;
+        }
+      }
+      return {
+        apiVersion,
+        schemaVersion: headerValue(response.headers, "Zotero-Schema-Version"),
+        instanceIdentifier
+      };
     }
 
     async function probe() {
       const response = await requestDirect(endpoint, null, "probe");
-      const apiVersion = response.headers?.get?.("Zotero-API-Version") || "";
-      if (apiVersion !== "3") throw makeLocalApiError("local_api_incompatible");
-      return { ok: true, version: apiVersion, indexReady: true, engine: "direct", indexState: "unavailable" };
+      const information = probeInformation(response);
+      return { ok: true, version: information.apiVersion, indexReady: true, engine: "direct", indexState: "unavailable" };
     }
 
     function parseGroupIDs(payload) {
@@ -510,9 +548,65 @@
       return active.promise;
     }
 
+    function validateLibraryPath(value) {
+      const path = String(value || "");
+      if (path !== "users/0" && !/^groups\/\d+$/.test(path)) {
+        throw makeLocalApiError("invalid_local_api_library");
+      }
+      return path;
+    }
+
+    function createIndexSource() {
+      return Object.freeze({
+        async probe(options = {}) {
+          const response = await requestDirect(endpoint, options.signal, "probe", { workload: "index" });
+          return probeInformation(response);
+        },
+        async discoverGroupIDs(options = {}) {
+          const url = new URL("users/0/groups", endpoint);
+          url.searchParams.set("format", "json");
+          const payload = await readJsonArray(
+            url.href,
+            options.signal,
+            "group_list",
+            { workload: "index" },
+            INDEX_PRIORITY
+          );
+          return parseGroupIDs(payload);
+        },
+        async readLibraryPage(libraryPath, options = {}) {
+          const path = validateLibraryPath(libraryPath);
+          const start = options.start == null ? 0 : Number(options.start);
+          const limit = options.limit == null ? INDEX_PAGE_SIZE : Number(options.limit);
+          if (!Number.isSafeInteger(start) || start < 0 || !Number.isSafeInteger(limit) || limit < 1 || limit > 1000) {
+            throw makeLocalApiError("invalid_local_api_page");
+          }
+          const url = new URL(`${path}/items/top`, endpoint);
+          url.searchParams.set("format", "json");
+          url.searchParams.set("include", "data");
+          url.searchParams.set("itemType", "-attachment");
+          url.searchParams.set("start", String(start));
+          url.searchParams.set("limit", String(limit));
+          const { payload, response } = await readJsonArrayResponse(
+            url.href,
+            options.signal,
+            "index_page",
+            { workload: "index", library: path === "users/0" ? "personal" : "group", start, limit },
+            INDEX_PRIORITY
+          );
+          return {
+            items: payload,
+            totalItems: safeIntegerHeader(response.headers, "Total-Results"),
+            sourceVersion: safeIntegerHeader(response.headers, "Last-Modified-Version")
+          };
+        }
+      });
+    }
+
     return Object.freeze({
       batchCheck,
       check,
+      createIndexSource,
       getCapabilities: () => CAPABILITIES,
       probe
     });
@@ -524,6 +618,8 @@
     DEFAULT_ENDPOINT,
     GROUP_CACHE_TTL_MS,
     IDENTIFIER_CONCURRENCY,
+    INDEX_PAGE_SIZE,
+    INDEX_PRIORITY,
     QUERY_CACHE_MAX_ENTRIES,
     QUERY_CACHE_TTL_MS,
     REQUEST_TIMEOUT_MS,

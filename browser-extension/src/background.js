@@ -8,7 +8,16 @@ if (typeof importScripts === "function") {
     "backends/local-api-matcher.js",
     "backends/direct-local-api-backend.js",
     "backends/local-api-backend.js",
-    "backends/backend-resolver.js"
+    "backends/backend-resolver.js",
+    "index/index-state.js",
+    "index/index-schema.js",
+    "index/index-record-normalizer.js",
+    "index/indexeddb-index-repository.js",
+    "index/index-generation-manager.js",
+    "index/local-api-library-discovery.js",
+    "index/index-build-progress.js",
+    "index/local-api-index-builder.js",
+    "index/index-build-controller.js"
   );
 }
 const PLCSenderSecurity = globalThis.PLCSenderSecurity ||
@@ -21,6 +30,18 @@ const PLCDirectLocalApiBackend = globalThis.PLCDirectLocalApiBackend ||
   (typeof require === "function" ? require("./backends/direct-local-api-backend.js") : null);
 const PLCBackendResolver = globalThis.PLCBackendResolver ||
   (typeof require === "function" ? require("./backends/backend-resolver.js") : null);
+const PLCIndexedDBIndexRepository = globalThis.PLCIndexedDBIndexRepository ||
+  (typeof require === "function" ? require("./index/indexeddb-index-repository.js") : null);
+const PLCIndexGenerationManager = globalThis.PLCIndexGenerationManager ||
+  (typeof require === "function" ? require("./index/index-generation-manager.js") : null);
+const PLCLocalApiLibraryDiscovery = globalThis.PLCLocalApiLibraryDiscovery ||
+  (typeof require === "function" ? require("./index/local-api-library-discovery.js") : null);
+const PLCIndexBuildProgress = globalThis.PLCIndexBuildProgress ||
+  (typeof require === "function" ? require("./index/index-build-progress.js") : null);
+const PLCLocalApiIndexBuilder = globalThis.PLCLocalApiIndexBuilder ||
+  (typeof require === "function" ? require("./index/local-api-index-builder.js") : null);
+const PLCIndexBuildController = globalThis.PLCIndexBuildController ||
+  (typeof require === "function" ? require("./index/index-build-controller.js") : null);
 
 const TRANSLATION_OPTIONS = {
   translationServerMode: "auto"
@@ -37,6 +58,25 @@ const reportDiagnostic = (event, details) => developerDiagnostics.record(event, 
 const enhancedBackend = PLCEnhancedBackend.createEnhancedBackend({ onDiagnostic: reportDiagnostic });
 const standardBackend = PLCDirectLocalApiBackend.createDirectLocalApiBackend({ onDiagnostic: reportDiagnostic });
 const backendResolver = PLCBackendResolver.createBackendResolver({ enhancedBackend, standardBackend });
+let indexBuildController = null;
+
+function getIndexBuildController() {
+  if (indexBuildController) return indexBuildController;
+  const repository = PLCIndexedDBIndexRepository.createIndexedDBIndexRepository();
+  const generationManager = PLCIndexGenerationManager.createIndexGenerationManager(repository);
+  const source = standardBackend.createIndexSource();
+  const discovery = PLCLocalApiLibraryDiscovery.createLocalApiLibraryDiscovery(source);
+  const progress = PLCIndexBuildProgress.createIndexBuildProgress();
+  const builder = PLCLocalApiIndexBuilder.createLocalApiIndexBuilder({
+    source,
+    discovery,
+    repository,
+    generationManager,
+    progress
+  });
+  indexBuildController = PLCIndexBuildController.createIndexBuildController({ builder, progress, repository });
+  return indexBuildController;
+}
 
 async function refreshDeveloperMode() {
   const stored = await chrome.storage.sync.get({ developerMode: false });
@@ -178,6 +218,32 @@ async function callZotero(path, body, method = "POST", context = {}) {
 }
 
 function handleRuntimeMessage(message, sender, sendResponse) {
+  if (message?.type === "start-index-build") {
+    if (!isTrustedExtensionMessage(message, sender)) return false;
+    try {
+      sendResponse({ ok: true, ...getIndexBuildController().start() });
+    } catch (error) {
+      sendResponse({ ok: false, error: error?.code || error?.message || "index_build_unavailable" });
+    }
+    return false;
+  }
+
+  if (message?.type === "cancel-index-build") {
+    if (!isTrustedExtensionMessage(message, sender)) return false;
+    getIndexBuildController().cancel()
+      .then((result) => sendResponse({ ok: true, ...result }))
+      .catch((error) => sendResponse({ ok: false, error: error?.code || "index_build_unavailable" }));
+    return true;
+  }
+
+  if (message?.type === "get-index-status") {
+    if (!isTrustedExtensionMessage(message, sender)) return false;
+    getIndexBuildController().getStatus()
+      .then((status) => sendResponse({ ok: true, status }))
+      .catch((error) => sendResponse({ ok: false, error: error?.code || "index_build_unavailable" }));
+    return true;
+  }
+
   if (["zotero-check:popup-health", "zotero-check:probe"].includes(message?.type)) {
     if (!isTrustedExtensionMessage(message, sender)) return false;
     getPopupHealth().then(sendResponse);
@@ -297,7 +363,10 @@ function isTrustedExtensionMessage(message, sender) {
     "zotero-check:popup-health",
     "zotero-check:probe",
     "zotero-check:developer-log",
-    "zotero-check:clear-developer-log"
+    "zotero-check:clear-developer-log",
+    "start-index-build",
+    "cancel-index-build",
+    "get-index-status"
   ].includes(message?.type) &&
     PLCSenderSecurity.isTrustedExtensionPageSender(sender, chrome.runtime);
 }
@@ -502,6 +571,7 @@ if (typeof module !== "undefined" && module.exports) {
     batchProgressReporter,
     callZotero,
     getPopupHealth,
+    getIndexBuildController,
     probeBackend,
     handleRuntimeMessage,
     isTrustedExtensionMessage,

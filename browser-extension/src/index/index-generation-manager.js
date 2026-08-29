@@ -11,12 +11,17 @@
       abortGeneration(scopeKey, generation, errorCode) {
         return repository.abortGeneration(scopeKey, generation, errorCode);
       },
-      beginGeneration(scopeKey) {
-        return repository.beginGeneration(scopeKey);
+      beginGeneration(scopeKey, details) {
+        return repository.beginGeneration(scopeKey, details);
       },
       async commitGeneration(scopeKey, generation) {
         const meta = await repository.commitGeneration(scopeKey, generation);
-        await repository.pruneOldGenerations(scopeKey);
+        try {
+          await repository.pruneOldGenerations(scopeKey);
+        } catch (_error) {
+          // The active-generation switch already committed; stale generations
+          // can be pruned safely by a later maintenance pass.
+        }
         return meta;
       },
       putLibraryMetadata(scopeKey, generation, metadata) {

@@ -233,6 +233,16 @@
       return value ? { ...value } : defaultMeta(scopeKey);
     }
 
+    async function getLatestMeta() {
+      const values = await withTransaction(schema.STORES.META, "readonly", (transaction) =>
+        requestResult(transaction.objectStore(schema.STORES.META).getAll()));
+      if (!values.length) return null;
+      values.sort((left, right) =>
+        Number(right.lastAttemptAt || right.lastSuccessfulBuildAt || 0) -
+        Number(left.lastAttemptAt || left.lastSuccessfulBuildAt || 0));
+      return { ...values[0] };
+    }
+
     async function setState(scopeKey, state, details = {}) {
       if (!indexState.isIndexState(state)) throw makeRepositoryError("invalid_index_state");
       return withTransaction(schema.STORES.META, "readwrite", async (transaction) => {
@@ -248,7 +258,7 @@
       });
     }
 
-    async function beginGeneration(scopeKey) {
+    async function beginGeneration(scopeKey, details = {}) {
       return withTransaction(schema.STORES.META, "readwrite", async (transaction) => {
         const key = String(scopeKey);
         const store = transaction.objectStore(schema.STORES.META);
@@ -259,6 +269,9 @@
         const generation = Math.max(meta.activeGeneration || 0, meta.pendingGeneration || 0) + 1;
         meta.schemaVersion = schema.SCHEMA_VERSION;
         meta.pendingGeneration = generation;
+        if (details.scopeConfidence !== undefined) {
+          meta.scopeConfidence = details.scopeConfidence === "stable" ? "stable" : "legacy";
+        }
         meta.state = indexState.INDEX_STATES.BUILDING;
         meta.lastAttemptAt = now();
         meta.errorCode = "";
@@ -319,9 +332,11 @@
         if (meta.pendingGeneration !== generation) return false;
         await deleteGenerationInTransaction(transaction, String(scopeKey), generation);
         meta.pendingGeneration = null;
-        meta.state = meta.activeGeneration == null
-          ? indexState.INDEX_STATES.NOT_BUILT
-          : indexState.INDEX_STATES.READY;
+        meta.state = errorCode
+          ? indexState.INDEX_STATES.ERROR
+          : meta.activeGeneration == null
+            ? indexState.INDEX_STATES.NOT_BUILT
+            : indexState.INDEX_STATES.READY;
         meta.errorCode = String(errorCode || "");
         meta.schemaVersion = schema.SCHEMA_VERSION;
         store.put(meta);
@@ -401,6 +416,7 @@
       close,
       commitGeneration,
       getActiveGeneration,
+      getLatestMeta,
       getMeta,
       open,
       pruneOldGenerations,

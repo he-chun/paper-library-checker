@@ -23,6 +23,7 @@
       schemaVersion,
       activeGeneration: null,
       pendingGeneration: null,
+      scopeConfidence: null,
       state: INDEX_STATES.NOT_BUILT,
       lastSuccessfulBuildAt: null,
       lastAttemptAt: null,
