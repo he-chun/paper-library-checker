@@ -71,7 +71,12 @@ test("builds and inspects release artifacts", () => {
     "src/backends/direct-local-api-backend.js",
     "src/backends/local-api-backend.js",
     "src/common/developer-diagnostics.js",
-    "src/backends/local-api-matcher.js"
+    "src/backends/local-api-matcher.js",
+    "src/index/index-schema.js",
+    "src/index/index-state.js",
+    "src/index/index-record-normalizer.js",
+    "src/index/indexeddb-index-repository.js",
+    "src/index/index-generation-manager.js"
   ]) assert(inventory.extension.entries.includes(name), name);
   assert(inventory.plugin.entries.includes("src/i18n.js"));
   assert.equal(inventory.plugin.dataDescriptorEntries, 0);
