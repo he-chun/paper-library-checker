@@ -2,11 +2,10 @@
 
 ## Status and scope
 
-This document defines the IndexedDB storage foundation and initial full-snapshot
-builder for the future indexed path of standard mode. The builder calls Zotero
-Local API only when an authorized extension page starts it. The indexed path is
-not selected by the backend resolver and does not handle page matches yet.
-`DirectLocalApiBackend` remains the standard-mode compatibility fallback.
+This document defines the active IndexedDB standard-mode path, its full-snapshot
+builder, and lifecycle. The service worker calls Zotero Local API for builds;
+Options only sends privileged management messages. `DirectLocalApiBackend`
+remains the cold-start and bounded compatibility fallback.
 
 The storage modules use the repository's IIFE/`globalThis`/CommonJS-compatible
 module form. They require no bundler or runtime dependency and can run in the
@@ -198,9 +197,9 @@ higher priority, while probe requests bypass the scheduler.
 `index-build-controller.js` permits one builder at a time. Starting another
 build cancels and finishes cleanup of the old task before the replacement
 starts. Progress is local, count-only metadata. The background exposes
-`start-index-build`, `cancel-index-build`, and `get-index-status` only to trusted
-extension pages. Content scripts cannot invoke these operations or inspect
-records.
+`start-index-build`, `cancel-index-build`, `get-index-status`, `clear-index`, and
+`clear-and-rebuild-index` only to trusted extension pages. Content scripts
+cannot invoke these operations or inspect records.
 
 ## Indexed matching and standard-mode selection
 
@@ -212,12 +211,12 @@ Standard Mode
 └── DirectLocalApiBackend
 ```
 
-`standard-backend-resolver.js` selects the indexed engine only when the current
-in-memory index context is `ready`, has a scope key, and has an active
-generation. `not_built`, `building`, `stale`, `error`, an unavailable IndexedDB,
-or a missing generation selects Direct. A legacy scope restored after a service
-worker restart is hydrated as `stale`, not `ready`, because Zotero 9.0.6 does
-not provide a reliable profile identity or freshness version.
+`standard-backend-resolver.js` selects the indexed engine when a scope has an
+active generation in `ready`, `stale`, `refreshing`, or refresh-error state.
+`not_built`, an initial `building` state, unavailable IndexedDB, or a missing
+generation selects Direct. A legacy scope can be fresh for the named local age
+window, but it never claims a stable Zotero profile identity or reliable source
+version.
 
 The outer resolver still exposes only `auto`, `standard`, and `enhanced`:
 
@@ -234,10 +233,12 @@ The backend then applies identifier priority and the existing title/year/author
 conflict rules in memory. Returned results contain no item key, library key,
 title, creator, or other stored record field.
 
-An indexed miss is complete because the active generation is a complete
-snapshot. Indexed capabilities therefore advertise complete identifier, exact
-title, and negative-result recall, while fuzzy title, possible match, and
-realtime indexing remain false.
+An indexed miss is complete only while the active full snapshot is fresh.
+Fresh capabilities advertise complete identifier, exact-title, and negative-
+result recall. Stale/refreshing/error contexts keep the old generation fast but
+return `complete: false`, `freshness: "stale"`, and `indexState: "stale"`;
+stale misses also use `reason: "stale_index_no_match"`. Fuzzy title, possible
+match, and realtime indexing remain false.
 
 Direct remains available for detail checks and batches of at most 10 candidates
 when no ready index exists. Larger batches return `index_required`, or
@@ -246,9 +247,26 @@ quicksearch requests. A missing index can trigger the existing background build
 controller. Direct misses retain `complete: false` and
 `reason: "direct_search_no_candidate"`.
 
-## Next-stage integration point
+## Lifecycle and freshness
 
-The indexed standard backend now handles page checks whenever a current ready
-generation exists. Later phases can add user-facing build/freshness controls
-and a refresh policy. Fuzzy title, possible match, and realtime indexing remain
-enhanced-mode-only capabilities.
+`INDEX_MAX_AGE_MS = 30 * 60 * 1000` is the single freshness threshold. Service-
+worker startup opens the repository, hydrates counts and timestamps, and permits
+direct IndexedDB queries immediately when an active generation exists. It does
+not materialize the full index as a JavaScript `Map`. Expired snapshots start a
+background full rebuild; Zotero 9.0.6 `since` and item-version values are not
+used as completeness guarantees.
+
+Lifecycle states are `not_built`, `building`, `ready`, `stale`, `refreshing`,
+and `error`. Refresh writes a new generation while the old generation serves,
+then atomically switches and prunes old records. Re-discovery means departed
+groups are absent from the new generation. Cancellation, timeout, Local API
+failure, service-worker interruption, or schema recovery never activates the
+partial generation. Clear removes only derived extension data; clear-and-
+rebuild starts a new full snapshot afterward.
+
+The Options page shows state, counts, last successful update, and count-only
+progress. Popup health retains `connected` and `indexReady` while adding mode,
+engine, index state, freshness, and completeness. A successful refresh notifies
+known content-script tabs to re-check; it never sends records. This completes
+the indexed standard-mode main path. Incremental sync, fuzzy matching, Possible
+match, and realtime indexing remain outside standard mode.

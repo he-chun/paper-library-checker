@@ -4,8 +4,9 @@
 
 This decision defines a browser-extension backend boundary for two connection
 modes. The enhanced backend uses the authenticated Paper Library Checker Zotero
-add-on. The standard backend uses Zotero's built-in read-only Local API for
-single-item exact matching without requiring the project XPI. This does not
+add-on. The standard backend uses Zotero's built-in read-only Local API to build
+a minimal local snapshot for single-item and reference-list exact matching
+without the project XPI. This does not
 change the enhanced protocol or modify the Zotero add-on.
 
 ## Backend responsibilities
@@ -19,8 +20,9 @@ batchCheck(candidates)
 getCapabilities()
 ```
 
-The current standard-mode engine is `DirectLocalApiBackend`. It is a compatibility
-and fallback engine, not a complete library index. It probes the fixed `/api/` loopback endpoint and queries the
+Standard mode internally resolves between `IndexedLocalApiBackend` and
+`DirectLocalApiBackend`. Direct is the compatibility and cold-start fallback,
+not a complete library index. It probes the fixed `/api/` loopback endpoint and queries the
 personal-library items resource with local user ID `0`. It sends only GET requests with
 Local API version 3 and `Zotero-Allowed-Request`. Search responses are candidate
 sets, not matches: identifier, title, year, and creator values are normalized
@@ -53,7 +55,15 @@ instead of adding work to Zotero's queue. Within both scheduler lanes, queued
 requests. The small root API probe is independent of that scheduler, preventing
 popup and Options health from waiting behind all queued item searches. Page-side automatic retries start at
 sixty seconds and back off to five minutes; a user-initiated recheck remains
-available. No persistent or full-library index is created.
+available. These constraints apply to Direct fallback; the primary indexed
+engine avoids per-candidate HTTP searches.
+
+The indexed engine queries an extension-owned minimal IndexedDB snapshot built
+from personal and accessible group libraries. Full snapshot builds use
+generation double buffering: the old generation serves until all rediscovered
+libraries commit, then the active generation switches atomically and old data,
+including departed groups, is pruned. The builder persists only normalized
+matching keys and count/version bookkeeping, never raw Zotero item JSON.
 
 Batch inputs use a stable normalized candidate key. Duplicate candidates share
 one result, concurrent identical query URLs share one request, and results are
@@ -141,7 +151,15 @@ The optional standard-mode progress projection uses the same minimized result
 shape and does not replace or alter these final envelopes. Enhanced callers and
 legacy content-script requests continue to rely only on the final response.
 
+Fresh indexed results add `engine: "indexed"`, `indexState: "ready"`, and
+`complete: true`. An active generation older than the named 30-minute maximum,
+being refreshed, or retained after refresh failure continues serving with
+`indexState: "stale"`, `freshness: "stale"`, and `complete: false`. A stale
+miss uses `stale_index_no_match`, so the page does not display an absolute
+absence while a full refresh is pending.
+
 Popup health preserves `{ connected, indexReady }` and may add actual `mode`,
+`engine`, `indexState`, `freshness`, `complete`, lifecycle summary,
 `capabilities`, `degradedReason`, and a stable repair `error`. Credentials,
 endpoint details, and raw backend responses do not cross into the popup or page.
 Page-check state remains owned by the content script. When the popup observes
@@ -156,15 +174,14 @@ unrelated records, must never be returned to a webpage. A future backend must
 reduce its source data to the same match-result contract before the service
 worker responds to a content script.
 
-## DirectLocalApiBackend extension point
+## Standard engine extension boundary
 
-`browser-extension/src/backends/direct-local-api-backend.js` is injected into the
-resolver as `standardBackend`; `local-api-backend.js` remains a thin compatibility
-entry point for old Node/CommonJS imports. Matching normalization and candidate
-reverification live in `local-api-matcher.js`. A later indexed standard backend
-can replace Direct as the primary standard engine behind the resolver while
-retaining Direct as the cold-start/error fallback, without changing content-script
-message names or legacy result fields.
+`standard-backend-resolver.js` owns the internal choice between indexed and
+Direct engines without exposing a fourth user mode. `local-api-backend.js`
+remains a thin compatibility entry point for old Node/CommonJS imports. Matching
+normalization and candidate reverification remain in `local-api-matcher.js`.
+Further standard lifecycle work must stay behind this resolver and retain the
+content-script message names and legacy result fields.
 
 No caller outside the resolver should branch on backend type. HMAC and pairing
 remain enhanced-backend concerns, while Local API credentials and permissions

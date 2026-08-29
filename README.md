@@ -94,7 +94,9 @@ The extension does not handle PDFs without usable page metadata, save records, m
 2. Open an article-detail page covered by [Supported sites and status](#supported-sites-and-status).
 3. Wait for a status badge near the page title or in the lower-right corner.
 
-The extension extracts page metadata and asks the selected backend to match it. The current standard engine is a Direct Local API compatibility path: it re-validates every returned search candidate in the service worker, so positive matches are exact, but a quicksearch miss is not a complete whole-library absence result. Its popup capability text therefore warns that unmatched results may be incomplete. Enhanced mode uses the add-on's local in-memory index. The floating `↻` button re-checks an article, manually starts a batch check on supported list pages, and can be dragged. After saving with Zotero Connector or editing an item in Zotero, click `↻` or refresh the page.
+The extension extracts page metadata and asks the selected backend to match it. Standard mode normally uses a minimal IndexedDB snapshot of the personal library and accessible group libraries. A ready snapshot gives complete exact identifier/title results without one Zotero HTTP search per candidate. While no index exists, detail checks and small batches use the Direct Local API compatibility path; its positive matches are exact, but quicksearch misses are incomplete. Enhanced mode uses the add-on's local in-memory index. The floating `↻` button re-checks an article, manually starts a batch check on supported list pages, and can be dragged.
+
+Options includes a **Standard mode index** section with status, item/library counts, last successful update, progress, **Refresh index**, **Clear index**, **Clear and rebuild**, and **Cancel build**. The extension refreshes snapshots older than 30 minutes in the background. The previous complete generation remains queryable during refresh and is replaced only after the new full snapshot succeeds.
 
 ### Toolbar popup
 
@@ -110,6 +112,8 @@ Select **Paper Library Checker** in the browser toolbar to see Zotero connection
 | `Library: saved` | A matching item was found in the local library. |
 | `Library: possible match` | Enhanced mode found a fuzzy match that requires manual confirmation. Standard mode does not produce this state. |
 | `Library: not saved` | No match was found using the metadata supplied by the current page. |
+| `Library: saved in previous index` | A match exists in the previous snapshot while a refresh is needed or running. |
+| `Library: index needs update` | The previous snapshot did not match; the extension will not claim an absolute absence until refresh completes. |
 | `Library: unrecognized` | No supported metadata was recognized. |
 | `Library: choose item` | translation-server returned multiple candidates. |
 | `Library: offline` | The extension could not connect using the selected mode. |
@@ -119,7 +123,7 @@ Badge and page-glow colors use red for saved/matched, orange for possible matche
 
 ### Re-check after saving and list checks
 
-The add-on listens for Zotero item additions, modifications, deletions, and trash events and updates its local index automatically. The open page does not always start a new request by itself, so click `↻` or refresh after a change.
+Enhanced mode listens for Zotero item additions, modifications, deletions, and trash events and updates its add-on index in real time. Standard mode uses full snapshot refreshes because Zotero 9.0.6 does not provide a reliable complete `since`-based change guarantee. A successful standard refresh notifies previously checked pages to re-check. Use **Refresh index** after a change when an immediate result matters.
 
 **Auto-check reference lists** is off by default. When enabled, supported pages are checked as they load and scroll; otherwise click `↻` to start a supported list check manually. A page processes at most 80 candidates. CNKI reference/list checks are experimental, ScienceDirect is best effort, and MDPI References are not supported.
 

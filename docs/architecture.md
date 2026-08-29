@@ -18,12 +18,13 @@
 
 The service worker selects a connection backend behind a shared
 `probe`/`check`/`batchCheck`/`getCapabilities` interface. The enhanced backend
-encapsulates the existing authenticated add-on protocol. The current standard
-engine, `DirectLocalApiBackend`, uses Zotero's built-in read-only Local API for
-single-item and reference-list candidate searches across personal and accessible
-group libraries, and revalidates returned candidates entirely within the service
-worker. Its positive matches are exact, but quicksearch misses are explicitly
-incomplete. See
+encapsulates the existing authenticated add-on protocol. Standard mode has an
+internal resolver: `IndexedLocalApiBackend` is primary when an active ready or
+stale generation exists, while `DirectLocalApiBackend` remains the cold-start
+and small-query fallback. The full-snapshot builder reads personal and accessible
+group libraries through Zotero's built-in read-only Local API, immediately
+reduces records to normalized matching fields, and atomically swaps generations.
+Direct positive matches are exact, but quicksearch misses remain incomplete. See
 `docs/dual-backend-architecture.md`.
 
 Standard-mode batch cancellation is scoped to the sender tab and to a fixed
@@ -85,7 +86,9 @@ bounds before matching. See `docs/threat-model.md`.
 
 Standard-mode Local API responses remain in service-worker memory and are
 reduced to status, match type, and confidence. Raw Zotero item JSON is never
-sent to content scripts, extension pages, storage, logs, or remote services.
+sent to content scripts, extension pages, logs, or remote services. IndexedDB
+stores only allowlisted normalized identifier/title/year/creator/type keys and
+generation/library bookkeeping, never raw item JSON.
 
 Content-script requests to the service worker require a same-extension sender,
 a trusted `sender.tab`, and an HTTP(S) tab URL. Popup health uses a separate
@@ -109,6 +112,16 @@ Standard mode hides enhanced credentials and saves without validating or
 rewriting them. Enhanced mode requires the existing 64-character token. Auto
 keeps enhanced settings available in a collapsed section. Missing or invalid
 stored modes normalize to auto without destructive storage migration.
+
+The same Options page manages the standard index only through trusted service-
+worker messages. Cold startup opens IndexedDB and makes an active generation
+available without loading it into a memory map. A named 30-minute maximum age
+marks an old generation stale and starts a background full-snapshot refresh.
+`ready`, `stale`, `refreshing`, and refresh-error states with an active generation
+continue to use IndexedDB; stale results are incomplete and page misses are not
+rendered as absolute absence. A successful refresh sends only a re-check signal
+to known content-script tabs. Content scripts cannot build, clear, or inspect
+the index.
 
 Developer mode is an opt-in diagnostic path owned by the service worker. Both
 backends emit structured phase and timing events into a 200-entry in-memory
