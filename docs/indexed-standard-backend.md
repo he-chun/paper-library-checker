@@ -2,11 +2,11 @@
 
 ## Status and scope
 
-This document defines the IndexedDB storage foundation for the future indexed
-path of standard mode. The current phase does not call Zotero Local API, build
-an index, select this repository from the backend resolver, or change page,
-popup, and options behavior. `DirectLocalApiBackend` remains the standard-mode
-compatibility fallback.
+This document defines the IndexedDB storage foundation and initial full-snapshot
+builder for the future indexed path of standard mode. The builder calls Zotero
+Local API only when an authorized extension page starts it. The indexed path is
+not selected by the backend resolver and does not handle page matches yet.
+`DirectLocalApiBackend` remains the standard-mode compatibility fallback.
 
 The storage modules use the repository's IIFE/`globalThis`/CommonJS-compatible
 module form. They require no bundler or runtime dependency and can run in the
@@ -35,6 +35,7 @@ Each entry contains:
   schemaVersion,
   activeGeneration,
   pendingGeneration,
+  scopeConfidence,
   state,
   lastSuccessfulBuildAt,
   lastAttemptAt,
@@ -44,6 +45,10 @@ Each entry contains:
 
 Supported states are `not_built`, `building`, `ready`, `stale`, and `error`.
 `pendingGeneration` is repository bookkeeping for safe interruption recovery.
+`scopeConfidence` is `stable` only when Local API supplies an explicit stable
+instance identifier. Zotero 9.0.6 does not currently have to supply one, so the
+builder uses `legacy:local-api:v3` with `scopeConfidence: "legacy"` rather than
+inventing a profile identity.
 
 ### `libraries`
 
@@ -168,13 +173,39 @@ same minimal fields and must remain inside the service worker; a later indexed
 backend must return only the existing minimized match result to content
 scripts. Nothing in this storage layer uploads data or adds telemetry.
 
+## Initial full-snapshot builder
+
+`local-api-library-discovery.js` probes the fixed loopback Local API and returns
+the personal library plus every accessible numeric group library. The Direct
+backend owns the shared transport: endpoint validation, browser-safe API v3
+headers, timeout and abort mapping, JSON-array validation, group parsing, and
+the global request scheduler are not duplicated in the index modules.
+
+`local-api-index-builder.js` reads `/items/top` sequentially in pages of 250.
+Each page is filtered and normalized immediately, then written to the pending
+generation before the next page is requested. Attachments, notes, annotations,
+deleted records, and child records are excluded defensively. The builder does
+not collect a whole library in memory and never treats `Last-Modified-Version`,
+`since`, or item versions as proof of freshness. Library `sourceVersion` is
+therefore stored as `null` for this full-snapshot path.
+
+All personal and group libraries must complete before the generation switches.
+A failed group, malformed response, timeout, or cancellation aborts the pending
+generation and leaves the old active generation readable. Index requests use a
+single independent low-priority workload lane; foreground Direct requests have
+higher priority, while probe requests bypass the scheduler.
+
+`index-build-controller.js` permits one builder at a time. Starting another
+build cancels and finishes cleanup of the old task before the replacement
+starts. Progress is local, count-only metadata. The background exposes
+`start-index-build`, `cancel-index-build`, and `get-index-status` only to trusted
+extension pages. Content scripts cannot invoke these operations or inspect
+records.
+
 ## Next-stage integration point
 
-The next phase can implement an index builder that discovers the current
-personal and accessible group libraries, creates a generation, streams and
-normalizes official bibliographic items in chunks, writes library metadata,
-then commits through `IndexGenerationManager`. An indexed standard backend can
-later call `queryByIdentifier()` and `queryByTitle()` and apply the existing
-year/creator conflict rules. Until the full build commits, page checks should
-remain non-blocking and use the Direct fallback. Resolver, capabilities, and UI
-changes belong to later phases.
+An indexed standard backend can later call `queryByIdentifier()` and
+`queryByTitle()` and apply the existing year/creator conflict rules. Until that
+backend is implemented and selected, page checks remain non-blocking and use
+the Direct fallback. Resolver, capabilities, freshness policy, and UI changes
+belong to later phases.
