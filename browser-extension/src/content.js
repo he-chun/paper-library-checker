@@ -91,6 +91,19 @@
       applyBatchProgress(message);
       return false;
     }
+    if (message?.type === "zotero-check:index-refreshed") {
+      if (!senderSecurity.isTrustedExtensionContextSender(sender, chrome.runtime)) return false;
+      const hadReferenceCheck = Boolean(lastSuccessfulBatchKey || lastFailedBatchKey || inFlightBatchKey);
+      lastSuccessfulCandidateKey = "";
+      lastSuccessfulBatchKey = "";
+      lastFailedBatchKey = "";
+      batchRetryNotBefore = 0;
+      detailRunSerial += 1;
+      batchRunSerial += 1;
+      scheduleDetailCheck({ force: true });
+      if (_options.autoCheckReferenceLists || hadReferenceCheck) scheduleBatchCheck({ force: true });
+      return false;
+    }
     if (!senderSecurity.isTrustedExtensionPageSender(sender, chrome.runtime)) return false;
     if (message?.type === "zotero-check:get-page-state") {
       sendResponse({ ok: true, pageState: pageController.getState() });
@@ -666,6 +679,16 @@
       scheduleDetailRetry();
       return;
     }
+    if (result?.complete === false && result?.freshness === "stale") {
+      const matched = isPositiveResult(result);
+      setBadge(
+        matched ? "possible" : "unknown",
+        i18n.t(matched ? "badgeSavedStale" : "badgeIndexStale"),
+        i18n.t("staleIndexResultDescription"),
+        matched ? uiState.PAGE_STATES.STALE_MATCH : uiState.PAGE_STATES.STALE_UNKNOWN
+      );
+      return;
+    }
     if (isPositiveResult(result)) {
       setBadge(
         result.status === "possible_match" ? "possible" : "matched",
@@ -963,6 +986,14 @@
   function applyTargetResult(target, result) {
     if (!result) {
       applyTargetState(target, "missing", i18n.t("noResultReturned"));
+      return;
+    }
+    if (result.complete === false && result.freshness === "stale") {
+      applyTargetState(
+        target,
+        result.status === "matched" ? "possible" : "unknown",
+        i18n.t(result.status === "matched" ? "savedInStaleIndex" : "staleIndexNoMatch")
+      );
       return;
     }
     if (result.status === "matched") {

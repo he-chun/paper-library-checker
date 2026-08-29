@@ -36,6 +36,50 @@ test("unknown and malformed DOM yields no candidate", async () => {
   dom.window.close();
 });
 
+test("stale index misses are not rendered as not saved and refresh completion rechecks", async () => {
+  const html = await readFile(new URL("./fixtures/mdpi-detail.html", import.meta.url), "utf8");
+  let listener;
+  let checks = 0;
+  const dom = new JSDOM(html, {
+    url: "https://www.mdpi.com/1/2/3",
+    runScripts: "outside-only",
+    pretendToBeVisual: true
+  });
+  dom.window.chrome = {
+    i18n: { getMessage: () => "", getUILanguage: () => "en" },
+    storage: { sync: { get: (_defaults, callback) => callback({ translationServerMode: "off" }) } },
+    runtime: {
+      id: "test-extension",
+      getURL: (value) => `chrome-extension://test-extension/${value}`,
+      onMessage: { addListener: (value) => { listener = value; } },
+      sendMessage: (message, callback) => {
+        if (message.type !== "zotero-check:match") return;
+        checks += 1;
+        callback({ ok: true, result: checks === 1
+          ? { status: "not_found", matchType: null, confidence: 0, complete: false, freshness: "stale" }
+          : { status: "not_found", matchType: null, confidence: 0, complete: true } });
+      }
+    }
+  };
+  for (const name of [
+    "common/i18n.js", "common/ui-state.js", "common/page-controller.js", "common/sender-security.js",
+    "common/normalization.js", "extractors/cnki.js", "extractors/generic.js", "extractors/runner.js",
+    "adapters/sciencedirect.js", "content.js"
+  ]) dom.window.eval(await source(name));
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    const label = dom.window.document.querySelector("#zotero-check-badge-host").shadowRoot
+      .querySelector(".zotero-check-label");
+    assert.equal(label.textContent, "Library: index needs update");
+    listener({ type: "zotero-check:index-refreshed" }, { id: "test-extension" }, () => {});
+    await new Promise((resolve) => setTimeout(resolve, 800));
+    assert.equal(checks, 2);
+    assert.equal(label.textContent, "Library: not saved");
+  } finally {
+    dom.window.close();
+  }
+});
+
 test("ScienceDirect adapter collects a minimal reference candidate", async () => {
   const html = await readFile(new URL("./fixtures/sciencedirect-references.html", import.meta.url), "utf8");
   const dom = new JSDOM(html, { url: "https://www.sciencedirect.com/science/article/pii/HOST", runScripts: "outside-only" });

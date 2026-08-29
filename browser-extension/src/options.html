@@ -75,6 +75,15 @@
         overflow-wrap: anywhere;
         font: 12px/1.5 ui-monospace, SFMono-Regular, Consolas, monospace;
       }
+      .index-status {
+        display: grid;
+        grid-template-columns: max-content 1fr;
+        gap: 6px 16px;
+      }
+      .index-status dt { color: GrayText; }
+      .index-status dd { margin: 0; }
+      .index-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+      .index-actions button { margin-top: 10px; }
     </style>
   </head>
   <body>
@@ -107,6 +116,24 @@
           <button id="toggleToken" type="button" aria-pressed="false" data-i18n="showToken">Show</button>
         </div>
       </details>
+    </fieldset>
+    <fieldset id="standardIndexPanel">
+      <legend data-i18n="standardIndexHeading">Standard mode index</legend>
+      <p data-i18n="standardIndexDescription">A local minimal index makes exact detail and reference checks fast. Refreshing keeps the previous index available until the replacement is complete.</p>
+      <dl class="index-status">
+        <dt data-i18n="indexStatusLabel">Status</dt><dd id="optionIndexState">…</dd>
+        <dt data-i18n="indexItemCountLabel">Items</dt><dd id="optionIndexItems">…</dd>
+        <dt data-i18n="indexLibraryCountLabel">Libraries</dt><dd id="optionIndexLibraries">…</dd>
+        <dt data-i18n="indexLastUpdatedLabel">Last successful update</dt><dd id="optionIndexUpdated">…</dd>
+        <dt data-i18n="indexProgressLabel">Progress</dt><dd id="optionIndexProgress">…</dd>
+      </dl>
+      <div class="index-actions">
+        <button id="refreshIndex" type="button" data-i18n="refreshIndex">Refresh index</button>
+        <button id="clearIndex" type="button" data-i18n="clearIndex">Clear index</button>
+        <button id="rebuildIndex" type="button" data-i18n="rebuildIndex">Clear and rebuild</button>
+        <button id="cancelIndex" type="button" data-i18n="cancelIndex">Cancel build</button>
+      </div>
+      <p id="indexActionStatus" role="status" aria-live="polite"></p>
     </fieldset>
     <label data-i18n="translationModeLabel">Translation-server mode</label>
     <label>

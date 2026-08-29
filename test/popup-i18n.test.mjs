@@ -47,6 +47,33 @@ test("popup renders standard capability, automatic fallback, and a repair action
   assert.equal(document.querySelector("#repairConnection").hidden, false);
 });
 
+test("popup distinguishes indexed, Direct, and stale standard lifecycle states", async () => {
+  const document = await popupDocument();
+  popup.renderHealth(document, {
+    connected: true, indexReady: true, mode: "standard", engine: "indexed",
+    indexState: "ready", freshness: "fresh", complete: true,
+    index: { state: "ready" }, capabilities: { engine: "indexed", complete: true }
+  });
+  assert.equal(document.querySelector("#engineState").textContent, "Local index");
+  assert.equal(document.querySelector("#standardIndexState").textContent, "Ready");
+  assert.equal(document.querySelector("#completenessState").textContent, "Complete exact check");
+
+  popup.renderHealth(document, {
+    connected: true, indexReady: true, mode: "standard", engine: "indexed",
+    indexState: "stale", freshness: "stale", complete: false,
+    index: { state: "refreshing" }, capabilities: { engine: "indexed", complete: false }
+  });
+  assert.equal(document.querySelector("#standardIndexState").textContent, "Refreshing");
+  assert.equal(document.querySelector("#completenessState").textContent, "Based on the previous index");
+
+  popup.renderHealth(document, {
+    connected: true, mode: "standard", engine: "direct", complete: false,
+    index: { state: "not_built" }, capabilities: { engine: "direct", complete: false }
+  });
+  assert.equal(document.querySelector("#engineState").textContent, "Direct-query fallback");
+  assert.equal(document.querySelector("#completenessState").textContent, "Unmatched results may be incomplete");
+});
+
 test("popup renders supported, unchecked, and unsupported page states", async () => {
   const document = await popupDocument();
   popup.renderPageState(document, uiState.PAGE_STATES.SAVED);
@@ -65,6 +92,8 @@ test("popup page-state colors preserve saved, possible-match, not-saved, and err
     [uiState.PAGE_STATES.SAVED, "good"],
     [uiState.PAGE_STATES.POSSIBLE_MATCH, "warning"],
     [uiState.PAGE_STATES.NOT_SAVED, "missing"],
+    [uiState.PAGE_STATES.STALE_MATCH, "warning"],
+    [uiState.PAGE_STATES.STALE_UNKNOWN, "warning"],
     [uiState.PAGE_STATES.UNRECOGNIZED, "error"],
     [uiState.PAGE_STATES.ERROR, "error"]
   ]) {

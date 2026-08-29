@@ -11,6 +11,7 @@ var DEFAULT_OPTIONS = {
   autoCheckReferenceLists: false,
   broadPageDetection: false
 };
+var indexStatusTimer = null;
 
 function validateEndpoint(value) {
   var url = new URL(value);
@@ -95,6 +96,65 @@ async function load() {
   document.querySelector("#developerMode").checked = !!options.developerMode;
   updateDeveloperPanel(!!options.developerMode);
   if (options.developerMode) await refreshDeveloperLog();
+  await refreshIndexStatus();
+}
+
+function indexStateKey(state) {
+  var keys = {
+    not_built: "indexStateNotBuilt",
+    building: "indexStateBuilding",
+    ready: "indexStateReady",
+    stale: "indexStateStale",
+    refreshing: "indexStateRefreshing",
+    error: "indexStateError"
+  };
+  return keys[state] || "indexStateNotBuilt";
+}
+
+function formatIndexDate(value) {
+  if (!value) return optionsI18n.t("unknownValue");
+  var date = new Date(value);
+  return Number.isNaN(date.getTime()) ? optionsI18n.t("unknownValue") : date.toLocaleString();
+}
+
+function renderIndexStatus(status) {
+  status = status || { state: "not_built" };
+  document.querySelector("#optionIndexState").textContent = optionsI18n.t(indexStateKey(status.state));
+  document.querySelector("#optionIndexItems").textContent = String(status.itemCount || 0);
+  document.querySelector("#optionIndexLibraries").textContent = String(status.libraryCount || 0);
+  document.querySelector("#optionIndexUpdated").textContent = formatIndexDate(status.lastSuccessfulBuildAt);
+  document.querySelector("#optionIndexProgress").textContent = optionsI18n.t(
+    "indexProgressValue",
+    [status.processedItems || 0, status.totalItems == null ? optionsI18n.t("unknownValue") : status.totalItems]
+  );
+  var busy = ["building", "refreshing"].includes(status.state);
+  document.querySelector("#refreshIndex").disabled = busy;
+  document.querySelector("#rebuildIndex").disabled = busy;
+  document.querySelector("#cancelIndex").disabled = !busy;
+  clearTimeout(indexStatusTimer);
+  if (busy) indexStatusTimer = setTimeout(() => refreshIndexStatus().catch(() => {}), 1000);
+}
+
+async function refreshIndexStatus() {
+  var response = await chrome.runtime.sendMessage({ type: "get-index-status" });
+  if (!response?.ok) throw new Error(optionsI18n.t("indexActionFailed"));
+  renderIndexStatus(response.status);
+  return response.status;
+}
+
+async function runIndexAction(type) {
+  var actionStatus = document.querySelector("#indexActionStatus");
+  actionStatus.textContent = optionsI18n.t("indexActionWorking");
+  try {
+    var response = await chrome.runtime.sendMessage({ type });
+    if (!response?.ok) throw new Error(response?.error || "index_action_failed");
+    actionStatus.textContent = optionsI18n.t("indexActionAccepted");
+    await refreshIndexStatus();
+    return response;
+  } catch (_error) {
+    actionStatus.textContent = optionsI18n.t("indexActionFailed");
+    return null;
+  }
 }
 
 async function save() {
@@ -201,6 +261,10 @@ if (typeof document !== "undefined") {
   document.querySelector("#developerMode").addEventListener("change", (event) => updateDeveloperPanel(event.target.checked));
   document.querySelector("#refreshDeveloperLog").addEventListener("click", () => refreshDeveloperLog().catch((error) => setStatus(error.message, true)));
   document.querySelector("#clearDeveloperLog").addEventListener("click", () => clearDeveloperLog().catch((error) => setStatus(error.message, true)));
+  document.querySelector("#refreshIndex").addEventListener("click", () => runIndexAction("start-index-build"));
+  document.querySelector("#clearIndex").addEventListener("click", () => runIndexAction("clear-index"));
+  document.querySelector("#rebuildIndex").addEventListener("click", () => runIndexAction("clear-and-rebuild-index"));
+  document.querySelector("#cancelIndex").addEventListener("click", () => runIndexAction("cancel-index-build"));
   for (var connectionRadio of document.querySelectorAll("input[name=\"connectionMode\"]")) {
     connectionRadio.addEventListener("change", () => updateConnectionFields(selectedMode()));
   }
@@ -213,8 +277,13 @@ if (typeof module !== "undefined" && module.exports) module.exports = {
   connectionMessage,
   errorMessageKey,
   formatDeveloperEntry,
+  formatIndexDate,
   isCompatibleAddonVersion,
   normalizeConnectionMode,
+  indexStateKey,
+  refreshIndexStatus,
+  renderIndexStatus,
+  runIndexAction,
   save,
   testConnection,
   updateDeveloperPanel,

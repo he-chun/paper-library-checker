@@ -198,7 +198,9 @@
           );
           if (!el) continue;
 
-          var status = result.status || "error";
+          var status = result.complete === false && result.freshness === "stale"
+            ? result.status === "matched" ? "stale_matched" : "stale"
+            : result.status || "error";
           el.dataset.zoteroCheckState = status;
 
           var parts = [

@@ -88,3 +88,11 @@
   padding-left: 8px !important;
   box-sizing: border-box !important;
 }
+
+.reference[data-zotero-check-state="stale_matched"],
+.reference[data-zotero-check-state="stale"] {
+  background: #fff5d6 !important;
+  border-left: 4px solid #efd582 !important;
+  padding-left: 8px !important;
+  box-sizing: border-box !important;
+}

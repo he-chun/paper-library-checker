@@ -23,6 +23,19 @@
       health?.mode === "standard" ? "activeModeStandard" : "activeModeUnavailable";
     setText(documentObject, "modeState", i18n.t(modeKey), connected ? "good" : "error");
 
+    const engine = health?.engine || health?.capabilities?.engine;
+    const engineKey = engine === "indexed" ? "engineIndexed" :
+      engine === "direct" ? "engineDirect" :
+        health?.mode === "enhanced" ? "engineEnhanced" : "engineUnavailable";
+    setText(documentObject, "engineState", i18n.t(engineKey),
+      !connected ? "error" : engine === "direct" ? "warning" : "good");
+
+    const lifecycleState = health?.index?.state || health?.indexState;
+    const lifecycleKey = indexStateMessageKey(lifecycleState, health?.mode);
+    const lifecycleGood = lifecycleState === "ready" || (health?.mode === "enhanced" && health?.indexReady === true);
+    setText(documentObject, "standardIndexState", i18n.t(lifecycleKey),
+      !connected ? "error" : lifecycleGood ? "good" : "warning");
+
     let capabilityKey = "matchingUnavailable";
     let capabilityState = "error";
     if (connected && health?.mode === "standard") {
@@ -35,6 +48,14 @@
       capabilityState = health?.indexReady === true ? "good" : "warning";
     }
     setText(documentObject, "indexState", i18n.t(capabilityKey), capabilityState);
+
+    const complete = health?.complete ?? health?.capabilities?.complete;
+    const completenessKey = !connected ? "resultUnavailable" :
+      engine === "direct" ? "resultDirectIncomplete" :
+        health?.freshness === "stale" || ["stale", "refreshing", "error"].includes(lifecycleState)
+          ? "resultStale" : complete === false ? "resultIncomplete" : "resultComplete";
+    setText(documentObject, "completenessState", i18n.t(completenessKey),
+      !connected ? "error" : completenessKey === "resultComplete" ? "good" : "warning");
 
     const fallback = documentObject.querySelector("#fallbackState");
     const fallbackLabel = documentObject.querySelector("#fallbackLabel");
@@ -55,6 +76,19 @@
         : "";
     }
     if (repairButton) repairButton.hidden = !needsRepair;
+  }
+
+  function indexStateMessageKey(state, mode) {
+    if (mode === "enhanced") return state === "ready" ? "indexStateReady" : "indexStateEnhanced";
+    const keys = {
+      not_built: "indexStateNotBuilt",
+      building: "indexStateBuilding",
+      ready: "indexStateReady",
+      stale: "indexStateStale",
+      refreshing: "indexStateRefreshing",
+      error: "indexStateError"
+    };
+    return keys[state] || "indexStateNotBuilt";
   }
 
   function degradedReasonKey(reason) {
@@ -82,7 +116,8 @@
     const good = state === uiState.PAGE_STATES.SAVED;
     const missing = state === uiState.PAGE_STATES.NOT_SAVED;
     const warning = [uiState.PAGE_STATES.POSSIBLE_MATCH, uiState.PAGE_STATES.NOT_CHECKED,
-      uiState.PAGE_STATES.CHECKING, uiState.PAGE_STATES.CHOOSE_ITEM].includes(state);
+      uiState.PAGE_STATES.CHECKING, uiState.PAGE_STATES.CHOOSE_ITEM,
+      uiState.PAGE_STATES.STALE_MATCH, uiState.PAGE_STATES.STALE_UNKNOWN].includes(state);
     setText(documentObject, "pageState", i18n.t(uiState.messageKeyForPageState(state)),
       good ? "good" : missing ? "missing" : warning ? "warning" : "error");
     const checkButton = documentObject.querySelector("#checkPage");
@@ -208,6 +243,7 @@
     errorHintKey,
     getActiveTab,
     initialize,
+    indexStateMessageKey,
     readPageState,
     readTabPageState,
     refresh,

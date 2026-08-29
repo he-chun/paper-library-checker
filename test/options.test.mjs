@@ -119,6 +119,43 @@ test("options page does not duplicate backend network or HMAC protocol code", as
   assert.match(source, /zotero-check:probe/);
 });
 
+test("standard index management is rendered from service-worker status only", async () => {
+  const html = await readFile(new URL("../browser-extension/src/options.html", import.meta.url), "utf8");
+  const oldDocument = globalThis.document;
+  const oldChrome = globalThis.chrome;
+  const messages = [];
+  globalThis.document = new JSDOM(html).window.document;
+  globalThis.chrome = {
+    runtime: {
+      sendMessage: async (message) => {
+        messages.push(message);
+        if (message.type === "get-index-status") {
+          return { ok: true, status: {
+            state: "refreshing", itemCount: 120, libraryCount: 3,
+            lastSuccessfulBuildAt: 1700000000000, processedItems: 25, totalItems: 100
+          } };
+        }
+        return { ok: true, accepted: true };
+      }
+    }
+  };
+  try {
+    await options.refreshIndexStatus();
+    assert.equal(document.querySelector("#optionIndexState").textContent, "Refreshing");
+    assert.equal(document.querySelector("#optionIndexItems").textContent, "120");
+    assert.equal(document.querySelector("#optionIndexLibraries").textContent, "3");
+    assert.equal(document.querySelector("#cancelIndex").disabled, false);
+    await options.runIndexAction("clear-index");
+    assert.deepEqual(messages[1], { type: "clear-index" });
+    const source = await readFile(new URL("../browser-extension/src/options.js", import.meta.url), "utf8");
+    assert.doesNotMatch(source, /indexedDB|127\.0\.0\.1:23119\/api/);
+  } finally {
+    options.renderIndexStatus({ state: "ready" });
+    globalThis.document = oldDocument;
+    globalThis.chrome = oldChrome;
+  }
+});
+
 test("options endpoint validation matches granted loopback permissions", () => {
   assert.equal(options.validateEndpoint("http://127.0.0.1:23119/zotero-checker"), "http://127.0.0.1:23119/zotero-checker");
   assert.equal(options.validateEndpoint("http://localhost:23119/zotero-checker/"), "http://localhost:23119/zotero-checker");
