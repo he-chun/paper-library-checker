@@ -58,6 +58,7 @@
       "css": ["src/content.css"],
       "js": [
         "src/common/i18n.js",
+        "src/common/backend-contract.js",
         "src/common/ui-state.js",
         "src/common/page-controller.js",
         "src/common/sender-security.js",

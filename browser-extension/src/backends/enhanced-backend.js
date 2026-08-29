@@ -3,22 +3,32 @@
     root,
     root.PLCRequestAuth || (typeof require === "function" ? require("../common/request-auth.js") : null),
     root.PLCCandidateNormalization ||
-      (typeof require === "function" ? require("../common/candidate-normalization.js") : null)
+      (typeof require === "function" ? require("../common/candidate-normalization.js") : null),
+    root.PLCBackendContract || (typeof require === "function" ? require("../common/backend-contract.js") : null)
   );
   root.PLCEnhancedBackend = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;
-})(typeof globalThis !== "undefined" ? globalThis : this, function (runtimeRoot, defaultRequestAuth, defaultCandidateNormalization) {
+})(typeof globalThis !== "undefined" ? globalThis : this, function (
+  runtimeRoot, defaultRequestAuth, defaultCandidateNormalization, backendContract
+) {
   "use strict";
 
   const DEFAULT_ENDPOINT = "http://127.0.0.1:23119/zotero-checker";
-  const CAPABILITIES = Object.freeze({
-    exactIdentifiers: true,
-    exactTitle: true,
+  const CAPABILITIES = backendContract.createCapabilities({
+    mode: "enhanced",
+    engine: "xpi",
+    indexState: "ready",
+    freshness: "realtime",
+    exactIdentifierVerification: true,
+    completeIdentifierRecall: true,
+    exactTitleVerification: true,
+    completeTitleRecall: true,
     fuzzyTitle: true,
     possibleMatch: true,
     batch: true,
     realtimeIndex: true,
-    authenticatedProtocol: true
+    authenticatedProtocol: true,
+    complete: true
   });
 
   function makeLocalApiError(status, code) {

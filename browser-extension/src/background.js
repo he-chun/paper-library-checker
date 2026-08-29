@@ -3,6 +3,7 @@ if (typeof importScripts === "function") {
     "common/developer-diagnostics.js",
     "common/request-auth.js",
     "common/candidate-normalization.js",
+    "common/backend-contract.js",
     "common/sender-security.js",
     "backends/enhanced-backend.js",
     "backends/local-api-matcher.js",

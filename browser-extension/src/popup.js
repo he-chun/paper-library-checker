@@ -39,8 +39,7 @@
     let capabilityKey = "matchingUnavailable";
     let capabilityState = "error";
     if (connected && health?.mode === "standard") {
-      const isDirect = health?.capabilities?.engine === "direct" ||
-        health?.capabilities?.completeNegativeResults === false;
+      const isDirect = health?.capabilities?.engine === "direct";
       capabilityKey = isDirect ? "directMatchingCapabilities" : "standardMatchingCapabilities";
       capabilityState = isDirect ? "warning" : "good";
     } else if (connected && health?.mode === "enhanced") {
@@ -117,7 +116,8 @@
     const missing = state === uiState.PAGE_STATES.NOT_SAVED;
     const warning = [uiState.PAGE_STATES.POSSIBLE_MATCH, uiState.PAGE_STATES.NOT_CHECKED,
       uiState.PAGE_STATES.CHECKING, uiState.PAGE_STATES.CHOOSE_ITEM,
-      uiState.PAGE_STATES.STALE_MATCH, uiState.PAGE_STATES.STALE_UNKNOWN].includes(state);
+      uiState.PAGE_STATES.STALE_MATCH, uiState.PAGE_STATES.STALE_UNKNOWN,
+      uiState.PAGE_STATES.INCOMPLETE_NOT_FOUND].includes(state);
     setText(documentObject, "pageState", i18n.t(uiState.messageKeyForPageState(state)),
       good ? "good" : missing ? "missing" : warning ? "warning" : "error");
     const checkButton = documentObject.querySelector("#checkPage");

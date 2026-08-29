@@ -358,18 +358,22 @@ test("an item-query timeout opens a cooldown without changing the stable error c
 test("Direct capabilities distinguish exact verification from complete recall", async () => {
   const { backend } = backendWithItems([]);
   assert.deepEqual(backend.getCapabilities(), {
+    mode: "standard",
     engine: "direct",
     indexState: "unavailable",
-    exactIdentifiers: true,
-    exactTitle: true,
-    fuzzyTitle: false,
-    possibleMatch: false,
-    batch: true,
-    realtimeIndex: false,
-    authenticatedProtocol: false,
+    freshness: "unavailable",
     exactIdentifierVerification: true,
     completeIdentifierRecall: false,
     exactTitleVerification: true,
+    completeTitleRecall: false,
+    fuzzyTitle: false,
+    possibleMatch: false,
+    realtimeIndex: false,
+    batch: true,
+    authenticatedProtocol: false,
+    complete: false,
+    exactIdentifiers: true,
+    exactTitle: true,
     completeNegativeResults: false
   });
   assert.deepEqual(await backend.batchCheck([]), { results: [] });

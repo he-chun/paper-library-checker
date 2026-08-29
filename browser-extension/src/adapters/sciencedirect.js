@@ -200,7 +200,9 @@
 
           var status = result.complete === false && result.freshness === "stale"
             ? result.status === "matched" ? "stale_matched" : "stale"
-            : result.status || "error";
+            : result.status === "not_found" && result.complete === false
+              ? "incomplete"
+              : result.status || "error";
           el.dataset.zoteroCheckState = status;
 
           var parts = [

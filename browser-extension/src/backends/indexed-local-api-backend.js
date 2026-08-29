@@ -1,23 +1,22 @@
 (function (root, factory) {
   const api = factory(
-    root.PLCLocalApiMatcher || (typeof require === "function" ? require("./local-api-matcher.js") : null)
+    root.PLCLocalApiMatcher || (typeof require === "function" ? require("./local-api-matcher.js") : null),
+    root.PLCBackendContract || (typeof require === "function" ? require("../common/backend-contract.js") : null)
   );
   root.PLCIndexedLocalApiBackend = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;
-})(typeof globalThis !== "undefined" ? globalThis : this, function (matcher) {
+})(typeof globalThis !== "undefined" ? globalThis : this, function (matcher, backendContract) {
   "use strict";
 
-  const CAPABILITIES = Object.freeze({
+  const CAPABILITIES = backendContract.createCapabilities({
     mode: "standard",
     engine: "indexed",
     indexState: "ready",
-    exactIdentifiers: true,
-    exactTitle: true,
+    freshness: "fresh",
     exactIdentifierVerification: true,
     completeIdentifierRecall: true,
     exactTitleVerification: true,
     completeTitleRecall: true,
-    completeNegativeResults: true,
     fuzzyTitle: false,
     possibleMatch: false,
     realtimeIndex: false,
@@ -110,12 +109,11 @@
         throw makeIndexedError("index_not_ready");
       }
       const stale = context.state !== "ready" || context.freshness === "stale";
-      capabilities = stale ? Object.freeze({
+      capabilities = stale ? backendContract.createCapabilities({
         ...CAPABILITIES,
         indexState: "stale",
         completeIdentifierRecall: false,
         completeTitleRecall: false,
-        completeNegativeResults: false,
         complete: false,
         freshness: "stale"
       }) : CAPABILITIES;

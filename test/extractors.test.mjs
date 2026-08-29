@@ -62,7 +62,7 @@ test("stale index misses are not rendered as not saved and refresh completion re
     }
   };
   for (const name of [
-    "common/i18n.js", "common/ui-state.js", "common/page-controller.js", "common/sender-security.js",
+    "common/i18n.js", "common/backend-contract.js", "common/ui-state.js", "common/page-controller.js", "common/sender-security.js",
     "common/normalization.js", "extractors/cnki.js", "extractors/generic.js", "extractors/runner.js",
     "adapters/sciencedirect.js", "content.js"
   ]) dom.window.eval(await source(name));
@@ -75,6 +75,49 @@ test("stale index misses are not rendered as not saved and refresh completion re
     await new Promise((resolve) => setTimeout(resolve, 800));
     assert.equal(checks, 2);
     assert.equal(label.textContent, "Library: not saved");
+  } finally {
+    dom.window.close();
+  }
+});
+
+test("Direct misses are rendered as incomplete rather than not saved", async () => {
+  const html = await readFile(new URL("./fixtures/mdpi-detail.html", import.meta.url), "utf8");
+  const dom = new JSDOM(html, {
+    url: "https://www.mdpi.com/1/2/3",
+    runScripts: "outside-only",
+    pretendToBeVisual: true
+  });
+  dom.window.chrome = {
+    i18n: { getMessage: () => "", getUILanguage: () => "en" },
+    storage: { sync: { get: (_defaults, callback) => callback({ translationServerMode: "off" }) } },
+    runtime: {
+      id: "test-extension",
+      getURL: (value) => `chrome-extension://test-extension/${value}`,
+      onMessage: { addListener: () => {} },
+      sendMessage: (message, callback) => {
+        if (message.type === "zotero-check:match") {
+          callback({
+            ok: true,
+            result: {
+              status: "not_found", matchType: null, confidence: 0,
+              complete: false, mode: "standard", engine: "direct", freshness: "unavailable"
+            }
+          });
+        }
+      }
+    }
+  };
+  for (const name of [
+    "common/i18n.js", "common/backend-contract.js", "common/ui-state.js", "common/page-controller.js",
+    "common/sender-security.js", "common/normalization.js", "extractors/cnki.js", "extractors/generic.js",
+    "extractors/runner.js", "adapters/sciencedirect.js", "content.js"
+  ]) dom.window.eval(await source(name));
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    const host = dom.window.document.querySelector("#zotero-check-badge-host");
+    assert.equal(host.shadowRoot.querySelector(".zotero-check-label").textContent,
+      "Library: no match; result may be incomplete");
+    assert.equal(host.shadowRoot.querySelector(".zotero-check-badge").dataset.state, "unknown");
   } finally {
     dom.window.close();
   }
@@ -107,6 +150,7 @@ test("CNKI reference and citation blocks produce a batch message", async () => {
   };
   for (const name of [
     "common/i18n.js",
+    "common/backend-contract.js",
     "common/ui-state.js",
     "common/page-controller.js",
     "common/sender-security.js",
@@ -150,6 +194,7 @@ test("repeated forced scheduling does not send the same reference batch while it
   };
   for (const name of [
     "common/i18n.js",
+    "common/backend-contract.js",
     "common/ui-state.js",
     "common/page-controller.js",
     "common/sender-security.js",
@@ -204,6 +249,7 @@ test("reference results render incrementally while the final batch response is p
   };
   for (const name of [
     "common/i18n.js",
+    "common/backend-contract.js",
     "common/ui-state.js",
     "common/page-controller.js",
     "common/sender-security.js",
@@ -289,6 +335,7 @@ test("automatic foreground and DOM triggers do not resend a completed reference 
   };
   for (const name of [
     "common/i18n.js",
+    "common/backend-contract.js",
     "common/ui-state.js",
     "common/page-controller.js",
     "common/sender-security.js",
@@ -360,6 +407,7 @@ test("an all-error reference batch is not force-retried during its cooldown", as
   };
   for (const name of [
     "common/i18n.js",
+    "common/backend-contract.js",
     "common/ui-state.js",
     "common/page-controller.js",
     "common/sender-security.js",
@@ -404,6 +452,7 @@ test("manual recheck returns an unrecognized page to its final state", async () 
   };
   for (const name of [
     "common/i18n.js",
+    "common/backend-contract.js",
     "common/ui-state.js",
     "common/page-controller.js",
     "common/sender-security.js",

@@ -2,6 +2,7 @@
   const api = window.ZoteroCheck;
   const i18n = window.PLCI18n;
   const uiState = window.PLCUIState;
+  const backendContract = window.PLCBackendContract;
   const senderSecurity = window.PLCSenderSecurity;
   const SKIPPED_HOSTS = new Set([
     "chatgpt.com",
@@ -689,6 +690,15 @@
       );
       return;
     }
+    if (backendContract.isIncompleteNotFound(result)) {
+      setBadge(
+        "unknown",
+        i18n.t("badgeIncompleteNotFound"),
+        i18n.t("incompleteNotFoundDescription"),
+        uiState.PAGE_STATES.INCOMPLETE_NOT_FOUND
+      );
+      return;
+    }
     if (isPositiveResult(result)) {
       setBadge(
         result.status === "possible_match" ? "possible" : "matched",
@@ -994,6 +1004,10 @@
         result.status === "matched" ? "possible" : "unknown",
         i18n.t(result.status === "matched" ? "savedInStaleIndex" : "staleIndexNoMatch")
       );
+      return;
+    }
+    if (backendContract.isIncompleteNotFound(result)) {
+      applyTargetState(target, "unknown", i18n.t("incompleteNotFoundInLibrary"));
       return;
     }
     if (result.status === "matched") {

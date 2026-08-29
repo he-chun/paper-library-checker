@@ -1,11 +1,12 @@
 (function (root, factory) {
   const api = factory(
     root,
-    root.PLCLocalApiMatcher || (typeof require === "function" ? require("./local-api-matcher.js") : null)
+    root.PLCLocalApiMatcher || (typeof require === "function" ? require("./local-api-matcher.js") : null),
+    root.PLCBackendContract || (typeof require === "function" ? require("../common/backend-contract.js") : null)
   );
   root.PLCDirectLocalApiBackend = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;
-})(typeof globalThis !== "undefined" ? globalThis : this, function (runtimeRoot, defaultMatcher) {
+})(typeof globalThis !== "undefined" ? globalThis : this, function (runtimeRoot, defaultMatcher, backendContract) {
   "use strict";
 
   const DEFAULT_ENDPOINT = "http://127.0.0.1:23119/api/";
@@ -21,11 +22,11 @@
   const QUERY_CACHE_TTL_MS = 5000;
   const QUERY_CACHE_MAX_ENTRIES = 256;
   const GROUP_CACHE_TTL_MS = 30000;
-  const CAPABILITIES = Object.freeze({
+  const CAPABILITIES = backendContract.createCapabilities({
+    mode: "standard",
     engine: "direct",
     indexState: "unavailable",
-    exactIdentifiers: true,
-    exactTitle: true,
+    freshness: "unavailable",
     fuzzyTitle: false,
     possibleMatch: false,
     batch: true,
@@ -34,7 +35,8 @@
     exactIdentifierVerification: true,
     completeIdentifierRecall: false,
     exactTitleVerification: true,
-    completeNegativeResults: false
+    completeTitleRecall: false,
+    complete: false
   });
 
   function withDirectResultMetadata(result) {

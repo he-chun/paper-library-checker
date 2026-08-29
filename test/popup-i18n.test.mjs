@@ -94,6 +94,7 @@ test("popup page-state colors preserve saved, possible-match, not-saved, and err
     [uiState.PAGE_STATES.NOT_SAVED, "missing"],
     [uiState.PAGE_STATES.STALE_MATCH, "warning"],
     [uiState.PAGE_STATES.STALE_UNKNOWN, "warning"],
+    [uiState.PAGE_STATES.INCOMPLETE_NOT_FOUND, "warning"],
     [uiState.PAGE_STATES.UNRECOGNIZED, "error"],
     [uiState.PAGE_STATES.ERROR, "error"]
   ]) {
