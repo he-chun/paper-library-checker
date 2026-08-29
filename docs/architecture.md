@@ -27,6 +27,13 @@ reduces records to normalized matching fields, and atomically swaps generations.
 Direct positive matches are exact, but quicksearch misses remain incomplete. See
 `docs/dual-backend-architecture.md`.
 
+`common/backend-contract.js` defines the canonical capability schema shared by
+XPI, Indexed, and Direct engines and projects legacy capability aliases for old
+callers. New UI reads `mode`, `engine`, `indexState`, `freshness`, the explicit
+verification/recall fields, and `complete`. Ready Indexed and XPI misses are
+complete; Direct and stale misses are qualified as incomplete. The stable
+product matrix is defined in `docs/mode-capability-contract.md`.
+
 Standard-mode batch cancellation is scoped to the sender tab and to a fixed
 `detail` or `references` workload. Identical in-flight candidate sets are
 reused, while a changed set supersedes only the older batch in that same scope.
@@ -62,6 +69,11 @@ Article detail detection uses site-specific and generic embedded metadata.
 Reference/list detection is a separate capability and runs only for CNKI or an
 explicit adapter such as ScienceDirect. Generic metadata never enables unknown
 site reference scanning.
+
+The same extractor runner, CNKI extractor, adapters, candidate deduplication,
+request IDs, incremental renderer, popup, Options, i18n, and page-state model
+serve every engine. Backend selection happens only in the service worker; no
+mode-specific page extractor or content-script network path exists.
 
 ## Compatibility identifiers
 

@@ -1,9 +1,11 @@
 # Matching rules
 
 Enhanced mode uses the Zotero plugin's in-memory index and refreshes it when
-Zotero emits item notifications. Standard mode searches personal and accessible
-group libraries through Zotero's built-in Local API, then independently
-re-validates every returned candidate in the extension service worker.
+Zotero emits item notifications. Standard Indexed mode queries a minimal full
+snapshot of personal and accessible group libraries. Standard Direct mode is a
+cold-start and small-batch fallback that searches Zotero's built-in Local API.
+All engines independently verify normalized identifiers, title, year, and
+creators before returning a match.
 
 ## Result structure
 
@@ -92,7 +94,12 @@ Thresholds:
 Fuzzy matches still use the same year and author hints when present.
 
 Fuzzy matching and `possible_match` are enhanced-mode capabilities only.
-The current Direct standard engine verifies exact identifiers and normalized
+Ready Standard Indexed and Enhanced/XPI engines have complete negative results;
+their `not_found` may be displayed as `Not saved`. Direct and stale Indexed
+misses have `complete=false` and must be displayed as `No match; result may be
+incomplete`.
+
+The Direct standard engine verifies exact identifiers and normalized
 exact titles in the quicksearch candidate set;
 it returns `matched`, `not_found`, or an isolated stable error and never upgrades
 a Local API search hit without rechecking identifiers, title, year, and authors.
@@ -120,7 +127,10 @@ cached for thirty seconds. The 30-second per-request timeout accommodates large
 real libraries. An item timeout opens a sixty-second fail-fast cooldown, and page
 automatic retries back off from sixty seconds to five minutes, preventing
 browser aborts or dynamic DOM events from continuously extending Zotero's own
-search queue. No persistent full-library index is created. Direct misses return
-`complete=false` with `reason=direct_search_no_candidate`; therefore the legacy
-`exactIdentifiers` and `exactTitle` capability flags describe exact verification,
-not complete recall or a complete negative result.
+search queue. These rules apply only to Direct fallback; the primary Indexed
+engine queries the persistent minimal full-library snapshot without per-item
+Zotero HTTP searches. Direct misses return `complete=false` with
+`reason=direct_search_no_candidate`; therefore the legacy `exactIdentifiers`
+and `exactTitle` aliases describe exact verification, not complete recall or a
+complete negative result. See `mode-capability-contract.md` for the canonical
+capability fields.

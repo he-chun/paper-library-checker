@@ -51,6 +51,20 @@ The browser extension and Zotero desktop are required. The companion Zotero add-
 
 Enhanced mode provides faster reference-list batches, full fuzzy-title matching, `Possible match`, and real-time index updates.
 
+### Mode capability matrix
+
+| Capability | Standard / Indexed | Standard / Direct fallback | Enhanced / XPI |
+| --- | --- | --- | --- |
+| XPI required | No | No | Yes |
+| Personal and group libraries | Complete snapshot | Best-effort search | Live add-on index |
+| Complete exact identifier/title recall | Yes, while ready | No | Yes |
+| Complete `Not saved` result | Yes, while ready | No | Yes |
+| Reference-list batch | Yes | Up to 10 fallback candidates | Yes |
+| Fuzzy title / `Possible match` | No | No | Yes |
+| Real-time Zotero updates | No | No | Yes |
+
+Direct and stale-index misses display **No match; result may be incomplete** rather than **Not saved**. See the [mode capability contract](docs/mode-capability-contract.md) for canonical capability fields and resolver rules.
+
 ### Manual/developer installation
 
 For development, auditing, or a manual-installation fallback, download the
@@ -112,6 +126,7 @@ Select **Paper Library Checker** in the browser toolbar to see Zotero connection
 | `Library: saved` | A matching item was found in the local library. |
 | `Library: possible match` | Enhanced mode found a fuzzy match that requires manual confirmation. Standard mode does not produce this state. |
 | `Library: not saved` | No match was found using the metadata supplied by the current page. |
+| `Library: no match; result may be incomplete` | Direct fallback found no candidate; build or refresh the standard index for a complete result. |
 | `Library: saved in previous index` | A match exists in the previous snapshot while a refresh is needed or running. |
 | `Library: index needs update` | The previous snapshot did not match; the extension will not claim an absolute absence until refresh completes. |
 | `Library: unrecognized` | No supported metadata was recognized. |
@@ -119,7 +134,7 @@ Select **Paper Library Checker** in the browser toolbar to see Zotero connection
 | `Library: offline` | The extension could not connect using the selected mode. |
 | `Library: indexing` | The enhanced-mode local index is not ready yet. |
 
-Badge and page-glow colors use red for saved/matched, orange for possible matches, blue for not saved, yellow for checking/unrecognized/choice, and purple for offline/indexing/error. `Library: not saved` is not absolute proof about the entire Zotero library; it describes the result for the metadata supplied by the current page.
+Badge and page-glow colors use red for saved/matched, orange for possible matches, blue for a complete not-saved result, yellow for checking/unrecognized/choice/incomplete results, and purple for offline/indexing/error. `Library: not saved` is shown only for a complete ready-Indexed or XPI result using the metadata supplied by the page; it is not absolute proof about the entire Zotero library. Direct and stale misses use the qualified incomplete message.
 
 ### Re-check after saving and list checks
 

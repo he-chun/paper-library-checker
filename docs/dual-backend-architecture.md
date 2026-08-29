@@ -20,6 +20,14 @@ batchCheck(candidates)
 getCapabilities()
 ```
 
+All implementations build capabilities through
+`common/backend-contract.js`. The canonical fields are `mode`, `engine`,
+`indexState`, `freshness`, `exactIdentifierVerification`,
+`completeIdentifierRecall`, `exactTitleVerification`, `completeTitleRecall`,
+`fuzzyTitle`, `possibleMatch`, `realtimeIndex`, `batch`,
+`authenticatedProtocol`, and `complete`. See
+`mode-capability-contract.md` for the normative engine matrix.
+
 Standard mode internally resolves between `IndexedLocalApiBackend` and
 `DirectLocalApiBackend`. Direct is the compatibility and cold-start fallback,
 not a complete library index. It probes the fixed `/api/` loopback endpoint and queries the
@@ -91,12 +99,15 @@ The enhanced backend owns the existing `/zotero-checker` integration: endpoint
 validation, local pairing-token access, candidate serialization, HMAC request
 headers, and the authenticated `/health`, `/check`, and `/batch-check`
 requests. Its check and batch results retain the existing matcher response
-structures.
+structures. XPI engine, real-time freshness, and completeness are declared by
+the capability contract without changing endpoint payloads or protocol v1.
 
 The service worker remains responsible for browser message routing, sender and
 tab URL validation, the 200-candidate extension limit, popup health projection,
-and the separately configured translation-server flow. Page-side extraction
-and its 80-candidate limit are unchanged.
+and the separately configured translation-server flow. Page extraction, CNKI
+extraction, adapters, reference discovery, deduplication, request IDs,
+incremental rendering, popup, Options, i18n, and unified page states are shared
+by every engine. The page-side 80-candidate limit is unchanged.
 
 ## Resolver rules
 
@@ -145,7 +156,8 @@ miss additionally returns `complete: false` and
 `exactIdentifiers` and `exactTitle` mean that returned candidates are exactly
 verified; they do not promise complete candidate recall. The explicit capability
 fields `exactIdentifierVerification`, `completeIdentifierRecall`,
-`exactTitleVerification`, and `completeNegativeResults` carry that distinction.
+`exactTitleVerification`, `completeTitleRecall`, and `complete` carry that
+distinction. `completeNegativeResults` remains a legacy alias of `complete`.
 
 The optional standard-mode progress projection uses the same minimized result
 shape and does not replace or alter these final envelopes. Enhanced callers and
@@ -157,6 +169,11 @@ being refreshed, or retained after refresh failure continues serving with
 `indexState: "stale"`, `freshness: "stale"`, and `complete: false`. A stale
 miss uses `stale_index_no_match`, so the page does not display an absolute
 absence while a full refresh is pending.
+
+Only a ready Indexed or XPI `not_found` with `complete: true` may display **Not
+saved**. Direct and stale Indexed misses display **No match; result may be
+incomplete**. Standard engines never produce `possible_match`; fuzzy and
+possible matching remain XPI capabilities.
 
 Popup health preserves `{ connected, indexReady }` and may add actual `mode`,
 `engine`, `indexState`, `freshness`, `complete`, lifecycle summary,
@@ -186,3 +203,8 @@ content-script message names and legacy result fields.
 No caller outside the resolver should branch on backend type. HMAC and pairing
 remain enhanced-backend concerns, while Local API credentials and permissions
 must remain standard-backend concerns.
+
+Within `auto`, the effective order is XPI, then an active Indexed generation,
+then Direct. Explicit `standard` remains inside Indexed/Direct, and explicit
+`enhanced` remains on XPI. Contract tests lock this ordering, the shared page
+pipeline, and protocol v1.
