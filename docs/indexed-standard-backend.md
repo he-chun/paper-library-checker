@@ -202,10 +202,53 @@ starts. Progress is local, count-only metadata. The background exposes
 extension pages. Content scripts cannot invoke these operations or inspect
 records.
 
+## Indexed matching and standard-mode selection
+
+Standard mode remains one user-visible mode with two internal engines:
+
+```text
+Standard Mode
+├── IndexedLocalApiBackend
+└── DirectLocalApiBackend
+```
+
+`standard-backend-resolver.js` selects the indexed engine only when the current
+in-memory index context is `ready`, has a scope key, and has an active
+generation. `not_built`, `building`, `stale`, `error`, an unavailable IndexedDB,
+or a missing generation selects Direct. A legacy scope restored after a service
+worker restart is hydrated as `stale`, not `ready`, because Zotero 9.0.6 does
+not provide a reliable profile identity or freshness version.
+
+The outer resolver still exposes only `auto`, `standard`, and `enhanced`:
+
+- explicit standard uses the internal standard resolver;
+- auto still probes compatible enhanced mode first, then uses the internal
+  standard resolver;
+- explicit enhanced never probes or falls back to standard.
+
+`indexed-local-api-backend.js` normalizes all candidates with the existing
+Local API matcher. A batch deduplicates stable candidate keys, gathers every
+DOI, PMID, ISBN, CNKI, and exact-title lookup key, and calls `queryMany()` once.
+The repository issues the index requests in one short read-only transaction.
+The backend then applies identifier priority and the existing title/year/author
+conflict rules in memory. Returned results contain no item key, library key,
+title, creator, or other stored record field.
+
+An indexed miss is complete because the active generation is a complete
+snapshot. Indexed capabilities therefore advertise complete identifier, exact
+title, and negative-result recall, while fuzzy title, possible match, and
+realtime indexing remain false.
+
+Direct remains available for detail checks and batches of at most 10 candidates
+when no ready index exists. Larger batches return `index_required`, or
+`index_building` if a build is already active, instead of launching dozens of
+quicksearch requests. A missing index can trigger the existing background build
+controller. Direct misses retain `complete: false` and
+`reason: "direct_search_no_candidate"`.
+
 ## Next-stage integration point
 
-An indexed standard backend can later call `queryByIdentifier()` and
-`queryByTitle()` and apply the existing year/creator conflict rules. Until that
-backend is implemented and selected, page checks remain non-blocking and use
-the Direct fallback. Resolver, capabilities, freshness policy, and UI changes
-belong to later phases.
+The indexed standard backend now handles page checks whenever a current ready
+generation exists. Later phases can add user-facing build/freshness controls
+and a refresh policy. Fuzzy title, possible match, and realtime indexing remain
+enhanced-mode-only capabilities.
