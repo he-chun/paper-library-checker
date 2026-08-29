@@ -369,6 +369,37 @@
       return values.map(copyRecord);
     }
 
+    async function queryMany(scopeKey, queries = {}) {
+      const identifierKeys = [...new Set((queries.identifierKeys || []).map(String).filter(Boolean))];
+      const titleKeys = [...new Set((queries.titleKeys || []).map(String).filter(Boolean))];
+      return withTransaction([schema.STORES.META, schema.STORES.RECORDS], "readonly", async (transaction) => {
+        const normalizedScope = String(scopeKey);
+        const meta = await requestResult(transaction.objectStore(schema.STORES.META).get(normalizedScope));
+        const activeGeneration = meta?.activeGeneration;
+        if (meta?.state !== indexState.INDEX_STATES.READY || activeGeneration == null) {
+          throw makeRepositoryError("index_not_ready");
+        }
+        const store = transaction.objectStore(schema.STORES.RECORDS);
+        const identifierIndex = store.index(schema.INDEXES.IDENTIFIER_KEYS);
+        const titleIndex = store.index(schema.INDEXES.SCOPE_GENERATION_TITLE);
+        const identifierEntries = await Promise.all(identifierKeys.map(async (key) => [
+          key,
+          (await requestResult(identifierIndex.getAll(key)))
+            .filter((record) => record.scopeKey === normalizedScope && record.generation === activeGeneration)
+            .map(copyRecord)
+        ]));
+        const titleEntries = await Promise.all(titleKeys.map(async (key) => [
+          key,
+          (await requestResult(titleIndex.getAll([normalizedScope, activeGeneration, key]))).map(copyRecord)
+        ]));
+        return {
+          activeGeneration,
+          identifiers: Object.fromEntries(identifierEntries),
+          titles: Object.fromEntries(titleEntries)
+        };
+      });
+    }
+
     async function clearLibrary(scopeKey, libraryKey) {
       await withTransaction([schema.STORES.LIBRARIES, schema.STORES.RECORDS], "readwrite", async (transaction) => {
         const query = keyRange.only([String(scopeKey), String(libraryKey)]);
@@ -423,6 +454,7 @@
       putLibraryMetadata,
       putRecords,
       queryByIdentifier,
+      queryMany,
       queryByTitle,
       recoverIncompleteGenerations,
       setState

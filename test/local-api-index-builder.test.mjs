@@ -280,7 +280,7 @@ test("a new controller hydrates safe status from persisted metadata", async () =
     repository: harness.repository
   });
   const status = await controller.getStatus();
-  assert.equal(status.state, "ready");
+  assert.equal(status.state, "stale");
   assert.equal(status.scopeKey, LEGACY_SCOPE_KEY);
   assert.equal(status.scopeConfidence, "legacy");
   assert.equal(status.activeGeneration, 1);

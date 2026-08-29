@@ -88,8 +88,13 @@
       },
       hydrate(meta) {
         if (!meta) return snapshot();
+        const hydratedState = meta.scopeConfidence === "legacy" && meta.state === "ready"
+          ? "stale"
+          : meta.state;
         return replace({
-          state: ["not_built", "building", "ready", "stale", "error"].includes(meta.state) ? meta.state : "not_built",
+          state: ["not_built", "building", "ready", "stale", "error"].includes(hydratedState)
+            ? hydratedState
+            : "not_built",
           scopeKey: String(meta.scopeKey || ""),
           scopeConfidence: meta.scopeConfidence === "stable" ? "stable" : meta.scopeConfidence === "legacy" ? "legacy" : null,
           activeGeneration: meta.activeGeneration ?? null,

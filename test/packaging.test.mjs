@@ -70,6 +70,8 @@ test("builds and inspects release artifacts", () => {
     "src/backends/enhanced-backend.js",
     "src/backends/direct-local-api-backend.js",
     "src/backends/local-api-backend.js",
+    "src/backends/indexed-local-api-backend.js",
+    "src/backends/standard-backend-resolver.js",
     "src/common/developer-diagnostics.js",
     "src/backends/local-api-matcher.js",
     "src/index/index-schema.js",

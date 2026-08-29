@@ -8,6 +8,8 @@ if (typeof importScripts === "function") {
     "backends/local-api-matcher.js",
     "backends/direct-local-api-backend.js",
     "backends/local-api-backend.js",
+    "backends/indexed-local-api-backend.js",
+    "backends/standard-backend-resolver.js",
     "backends/backend-resolver.js",
     "index/index-state.js",
     "index/index-schema.js",
@@ -28,6 +30,10 @@ const PLCEnhancedBackend = globalThis.PLCEnhancedBackend ||
   (typeof require === "function" ? require("./backends/enhanced-backend.js") : null);
 const PLCDirectLocalApiBackend = globalThis.PLCDirectLocalApiBackend ||
   (typeof require === "function" ? require("./backends/direct-local-api-backend.js") : null);
+const PLCIndexedLocalApiBackend = globalThis.PLCIndexedLocalApiBackend ||
+  (typeof require === "function" ? require("./backends/indexed-local-api-backend.js") : null);
+const PLCStandardBackendResolver = globalThis.PLCStandardBackendResolver ||
+  (typeof require === "function" ? require("./backends/standard-backend-resolver.js") : null);
 const PLCBackendResolver = globalThis.PLCBackendResolver ||
   (typeof require === "function" ? require("./backends/backend-resolver.js") : null);
 const PLCIndexedDBIndexRepository = globalThis.PLCIndexedDBIndexRepository ||
@@ -56,15 +62,21 @@ let diagnosticOperationSequence = 0;
 const developerDiagnostics = PLCDeveloperDiagnostics.createDeveloperDiagnostics();
 const reportDiagnostic = (event, details) => developerDiagnostics.record(event, details);
 const enhancedBackend = PLCEnhancedBackend.createEnhancedBackend({ onDiagnostic: reportDiagnostic });
-const standardBackend = PLCDirectLocalApiBackend.createDirectLocalApiBackend({ onDiagnostic: reportDiagnostic });
+const directStandardBackend = PLCDirectLocalApiBackend.createDirectLocalApiBackend({ onDiagnostic: reportDiagnostic });
+const standardBackend = PLCStandardBackendResolver.createStandardBackendResolver({
+  directBackend: directStandardBackend,
+  getIndexedBackend: () => getIndexInfrastructure().indexedBackend,
+  getIndexStatus: () => getIndexBuildController().getStatus(),
+  startIndexBuild: () => getIndexBuildController().start()
+});
 const backendResolver = PLCBackendResolver.createBackendResolver({ enhancedBackend, standardBackend });
-let indexBuildController = null;
+let indexInfrastructure = null;
 
-function getIndexBuildController() {
-  if (indexBuildController) return indexBuildController;
+function getIndexInfrastructure() {
+  if (indexInfrastructure) return indexInfrastructure;
   const repository = PLCIndexedDBIndexRepository.createIndexedDBIndexRepository();
   const generationManager = PLCIndexGenerationManager.createIndexGenerationManager(repository);
-  const source = standardBackend.createIndexSource();
+  const source = directStandardBackend.createIndexSource();
   const discovery = PLCLocalApiLibraryDiscovery.createLocalApiLibraryDiscovery(source);
   const progress = PLCIndexBuildProgress.createIndexBuildProgress();
   const builder = PLCLocalApiIndexBuilder.createLocalApiIndexBuilder({
@@ -74,8 +86,17 @@ function getIndexBuildController() {
     generationManager,
     progress
   });
-  indexBuildController = PLCIndexBuildController.createIndexBuildController({ builder, progress, repository });
-  return indexBuildController;
+  const controller = PLCIndexBuildController.createIndexBuildController({ builder, progress, repository });
+  const indexedBackend = PLCIndexedLocalApiBackend.createIndexedLocalApiBackend({
+    repository,
+    getIndexContext: () => controller.getStatus()
+  });
+  indexInfrastructure = { controller, indexedBackend, repository };
+  return indexInfrastructure;
+}
+
+function getIndexBuildController() {
+  return getIndexInfrastructure().controller;
 }
 
 async function refreshDeveloperMode() {

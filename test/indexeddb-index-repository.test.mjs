@@ -183,6 +183,31 @@ test("identifier multiEntry and title queries are limited to the active scope an
   repo.close();
 });
 
+test("queryMany reads all identifier and title keys in one active-generation snapshot", async () => {
+  const repo = repository(databaseName("query-many"));
+  await build(repo, "scope", [
+    rawRecord("A", { data: { title: "Exact A", DOI: "10.1000/a", PMID: "123" } }),
+    rawRecord("B", { data: { title: "精确标题", ISBN: "978-1" } })
+  ]);
+  const result = await repo.queryMany("scope", {
+    identifierKeys: ["doi:10.1000/a", "pmid:123", "isbn:9781"],
+    titleKeys: ["exacta", "精确标题"]
+  });
+  assert.equal(result.activeGeneration, 1);
+  assert.equal(result.identifiers["doi:10.1000/a"][0].itemKey, "A");
+  assert.equal(result.identifiers["pmid:123"][0].itemKey, "A");
+  assert.equal(result.identifiers["isbn:9781"][0].itemKey, "B");
+  assert.equal(result.titles.exacta[0].itemKey, "A");
+  assert.equal(result.titles["精确标题"][0].itemKey, "B");
+  repo.close();
+});
+
+test("queryMany rejects scopes without a ready active generation", async () => {
+  const repo = repository(databaseName("query-many-not-ready"));
+  await assert.rejects(() => repo.queryMany("scope", { identifierKeys: ["doi:10.1000/a"] }), /index_not_ready/);
+  repo.close();
+});
+
 test("generation manager switches then prunes old records", async () => {
   const repo = repository(databaseName("manager"));
   const manager = createIndexGenerationManager(repo);

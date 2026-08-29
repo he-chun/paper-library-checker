@@ -18,8 +18,10 @@ global.chrome = {
     local: { get: async () => ({}) }
   }
 };
+let quicksearchCount = 0;
 global.fetch = async (url) => {
   const pathname = new URL(url).pathname;
+  if (pathname.endsWith("/items")) quicksearchCount += 1;
   return {
     ok: true,
     status: 200,
@@ -69,4 +71,23 @@ test("only extension pages can start, cancel, or inspect an index build", async 
 
   const cancellation = await sendAsync({ type: "cancel-index-build" }, popupSender);
   assert.deepEqual(cancellation.cancelled, false);
+});
+
+test("ready indexed standard mode preserves popup fields and avoids quicksearch", async () => {
+  const match = await sendAsync({
+    type: "zotero-check:match",
+    candidate: { DOI: "10.1000/not-in-empty-index" }
+  }, contentSender);
+  assert.equal(match.ok, true);
+  assert.equal(match.result.status, "not_found");
+  assert.equal(match.result.complete, true);
+  assert.equal(match.result.engine, "indexed");
+  assert.equal(quicksearchCount, 0);
+
+  const health = await sendAsync({ type: "zotero-check:popup-health" }, popupSender);
+  assert.equal(health.connected, true);
+  assert.equal(health.indexReady, true);
+  assert.equal(health.mode, "standard");
+  assert.equal(health.capabilities.engine, "indexed");
+  assert.equal(health.capabilities.completeNegativeResults, true);
 });
