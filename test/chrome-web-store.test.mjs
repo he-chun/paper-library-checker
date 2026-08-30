@@ -33,9 +33,9 @@ function inspectPng(buffer) {
   };
 }
 
-test("0.4.1 manifest declares complete production and action icons", async () => {
+test("0.5.0 manifest declares complete production and action icons", async () => {
   const manifest = JSON.parse(await readFile(path.join(browserRoot, "manifest.json"), "utf8"));
-  assert.equal(manifest.version, "0.4.1");
+  assert.equal(manifest.version, "0.5.0");
   assert.deepEqual(manifest.icons, iconMap);
   assert.deepEqual(manifest.action.default_icon, iconMap);
   assert.equal(manifest.action.default_popup, "src/popup.html");

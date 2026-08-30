@@ -2,10 +2,10 @@
 
 ## Supported versions
 
-Version 0.4.1 is the supported public alpha. The 0.5.0 dual-mode candidate
-targets Zotero 9.0.x and requires fresh Chrome and Edge runtime qualification
-before its version metadata may be promoted. Security fixes are provided on
-the latest supported release line.
+Version 0.4.1 is the supported public alpha. Version 0.5.0 is the prepared
+dual-mode release candidate for Zotero 9.0.x; its accepted qualification scope
+is recorded in the 0.5.0 report. It is not a published release yet. Security
+fixes are provided on the latest supported release line.
 
 ## Reporting a vulnerability
 

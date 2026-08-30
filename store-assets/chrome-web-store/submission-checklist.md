@@ -16,9 +16,12 @@ Google account information, or internal review data.
 - [x] Reviewer instructions cover no-XPI standard mode, enhanced mode, automatic
   preference/fallback, popup capabilities, and repair actions.
 - [x] Permission justifications retain the existing permission set.
-- [ ] Exact final artifact passes Chrome and Edge dual-mode runtime validation.
-- [ ] Version metadata, update manifest, screenshots, hashes, and release links
-  are synchronized to 0.5.0 after that runtime gate.
+- [x] The maintainer accepted the recorded 0.5.0 dual-mode runtime scope for
+  release-candidate preparation.
+- [x] Source, package, extension, and XPI candidate metadata are synchronized to
+  0.5.0.
+- [ ] Published update metadata, screenshots, hashes, and release links are
+  synchronized after the formal v0.5.0 GitHub release is online.
 - [ ] Candidate is uploaded and submitted for review only after maintainer
   approval; this repository task does not perform publication.
 

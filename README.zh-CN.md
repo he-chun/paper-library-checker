@@ -16,6 +16,9 @@ Paper Library Checker 将知网（CNKI）等受支持学术页面的元数据与
 
 **[从 Chrome Web Store 安装](https://chromewebstore.google.com/detail/paper-library-checker/pmfobjnkoiiplambnbbkfdlfjcbdogon)** — 当前商店版本为 0.4.1。
 
+当前源码树正在准备 0.5.0 发布候选；在配套 0.5.0 产物正式发布前，
+公开商店条目和 GitHub 可下载 Release 仍保持 0.4.1。
+
 Zotero 是 Corporation for Digital Scholarship 的注册商标。本独立项目与 Zotero 项目没有关联，也未获得 Zotero 项目的认可或背书。
 
 ## 为什么使用？
@@ -238,9 +241,19 @@ Zotero Connector 用于把条目保存到 Zotero。Paper Library Checker 不会�
 <details>
 <summary>Release 验证与 SHA-256 校验和</summary>
 
-0.4.1 是当前公开 alpha 版本。规范构建和定向 Chrome/Zotero 冒烟测试均已通过，包括连接、索引就绪、已保存与未保存页面检查，以及 Options 连接测试。Chrome Web Store 0.4.1 还完成了商店安装、重新配对、popup 就绪和一个代表性页面检查。0.4.0 完整资格验证的精确运行时目标仍是受支持的 Zotero 9.0.x 范围内的 Zotero 9.0.6 和 Microsoft Edge 151.0.4129.78；商店发布不会扩大站点支持表。
+0.5.0 是已准备的双模式发布候选。已接受的资格证据覆盖规范自动测试套件，
+以及报告中记录的 Chrome、Zotero 9.0.6、标准 Indexed、Direct 回退、
+增强/XPI、生命周期和 CNKI 真实运行验证。在 0.5.0 产物正式发布前，
+Chrome Web Store 和 GitHub Release 仍保持 0.4.1；“发布候选”不表示已经发布。
+历史完整 Edge 资格验证的精确目标仍为 Microsoft Edge 151.0.4129.78。
 
-请从 [v0.4.1 GitHub Release](https://github.com/he-chun/paper-library-checker/releases/tag/v0.4.1) 下载规范构建产物及 [`SHA256SUMS.txt`](https://github.com/he-chun/paper-library-checker/releases/download/v0.4.1/SHA256SUMS.txt)。仓库根目录的 [`updates.json`](updates.json) 是 Zotero 更新清单。公开的 [0.3.0 发布资格报告](docs/verification/release-qualification-0.3.0.md)继续作为首个 alpha 的历史记录。由于发布者访问验证页面替代了正常文章 DOM，ScienceDirect 不被声明为已通过真实站点验证的功能。
+在 v0.5.0 正式发布前，请从
+[v0.4.1 GitHub Release](https://github.com/he-chun/paper-library-checker/releases/tag/v0.4.1)
+下载当前公开产物及
+[`SHA256SUMS.txt`](https://github.com/he-chun/paper-library-checker/releases/download/v0.4.1/SHA256SUMS.txt)。
+候选准备期间，仓库根目录 [`updates.json`](updates.json) 有意继续指向已发布的
+0.4.1 Zotero 更新。已接受的候选证据见
+[0.5.0 资格报告](docs/verification/dual-mode-0.5.0-qualification.md)。
 
 </details>
 

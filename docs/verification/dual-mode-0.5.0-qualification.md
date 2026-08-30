@@ -4,25 +4,27 @@
 
 **Overall status: accepted for 0.5.0 release preparation.**
 
-The exact 0.4.1 development candidate described below passed the automated
-gates in the canonical checkout and the maintainer-accepted real-runtime scope.
+The qualified implementation described below passed the automated gates in the
+canonical checkout and the maintainer-accepted real-runtime scope. Its final
+release-candidate packaging uses version 0.5.0.
 The maintainer accepts the residual risk outside that executed scope and will
 triage future user reports against reproducible cases. An unexecuted variant is
 not represented as a PASS, but this report does not enumerate every unexecuted
 combination.
 
-This decision permits release preparation. It does not by itself change the
-version, create a tag, publish an artifact, submit a store build, or merge the
-branch.
+This decision permits release preparation. It does not create a tag, publish an
+artifact, submit a store build, or merge the branch.
 
 ## Identification and provenance
 
 | Field | Value |
 | --- | --- |
-| Candidate commit | `ec245e0bc51dab4d860bc0d327cd7e4afd4ac891` |
+| Qualified implementation commit | `9b6b42eb665650f99637f3210e4c414d3751f29f` |
+| Release-preparation commit | Pending: this release-preparation commit |
 | Branch | `feature/dual-backend-foundation` |
-| Candidate version | `0.4.1` |
+| Release version | `0.5.0` |
 | Protocol | `v1` |
+| Final candidate build date | 2026-08-30 (Asia/Shanghai) |
 | Runtime evidence dates | 2026-08-29 to 2026-08-30 (Asia/Shanghai) |
 | Runtime OS | Windows 10 Pro 22H2, build 19045.6466, AMD64 |
 | Chrome | 152.0.7977.65 |
@@ -35,7 +37,7 @@ The tester used a dedicated computer and disposable Zotero/browser profiles.
 The returned report states that production source was not modified and that no
 pairing token or raw Zotero item JSON was retained.
 
-## Exact candidate artifacts
+## Qualified development artifacts
 
 | Artifact | SHA-256 |
 | --- | --- |
@@ -43,7 +45,22 @@ pairing token or raw Zotero item JSON was retained.
 | `paper-library-checker-extension-0.4.1.zip` | `1bef8f4afe435fdca8e2ba5fd1f1162c5b38b655ed977ee4e2450500cb929297` |
 
 The test bundle verified all 20 of its internal SHA-256 entries. A fresh build
-on the test computer reproduced both candidate artifacts byte for byte.
+on the test computer reproduced both development artifacts byte for byte. The
+final versioned 0.5.0 candidate artifacts are recorded separately below.
+
+## Final 0.5.0 candidate artifacts
+
+| Artifact | SHA-256 |
+| --- | --- |
+| `paper-library-checker-zotero-0.5.0.xpi` | `243e6e873f30537a7f6a8b7ec538b124f6484c67c6824c05e6edb587495253ea` |
+| `paper-library-checker-extension-0.5.0.zip` | `ff06ec9c7417729d4bc396fd40ca28375b9cb5465c6882244eefd5a8a4627f18` |
+| `SHA256SUMS.txt` | `672adf26931f1053736c7500213231e351b700db156757fc35ea6d5ddc785521` |
+| `candidate-updates.json` | `62229d79e83615b9600f9e1f7c996270f29c236fb1b5afa0a71d00e3ad2d60ec` |
+
+The final XPI and browser ZIP embed version 0.5.0. Candidate update metadata is
+untracked build output, points to the versioned XPI, and closes over the XPI
+hash above. The published root `updates.json` remains byte-for-byte unchanged
+with SHA-256 `cff17b678e450cdc067d526f48c2ee6045b4cccc9ce268b122cb19e1918590c6`.
 
 ## Automated gates
 
@@ -51,11 +68,15 @@ on the test computer reproduced both candidate artifacts byte for byte.
 | --- | --- | --- |
 | `npm ci` | PASS | 41 locked packages installed; no reported vulnerabilities |
 | `npm test` | PASS | Canonical checkout: 342 passed, 0 failed |
-| `npm run check` | PASS | Repository checks completed |
-| `npm run build` | PASS | Candidate XPI and browser ZIP reproduced |
+| `npm run check` | PASS | 197 repository files checked |
+| `npm run build` | PASS | Versioned 0.5.0 XPI, browser ZIP, and checksum file built |
+| `npm run generate:candidate-updates` | PASS | Generated only `dist/candidate-updates.json` |
+| `npm run validate:candidate-updates` | PASS | Version 0.5.0 and XPI hash closure verified |
 | `npm run inspect:artifacts` | PASS | XPI 14 entries; extension ZIP 47 entries; no descriptors or overlaps |
+| `npm run validate:archives:python` | PASS | XPI 14 entries; extension ZIP 47 entries |
+| `npm run validate:archives:windows` | PASS | XPI 14 entries; extension ZIP 47 entries |
 | `npm run verify:release` without tag | Expected rejection | Missing `RELEASE_TAG` is rejected by design |
-| `RELEASE_TAG=v0.4.1 npm run verify:release` | PASS | Current candidate metadata and archives are valid |
+| `RELEASE_TAG=v0.5.0 npm run verify:release` | PASS | All five version sources and candidate archives agree at 0.5.0 |
 | `git diff --check` | PASS | No whitespace errors in the canonical checkout |
 
 The archived source handoff did not contain `.git`, so two tracked-file tests
@@ -175,5 +196,6 @@ release risk rather than a release blocker. This is a scope decision, not a
 claim that unexecuted environments passed. User-reported defects after release
 will be reproduced and addressed against the affected environment.
 
-The product version remains `0.4.1` until the separate release-preparation
-change updates all versioned files, release material, manifests, and checksums.
+The release-preparation change synchronizes source and candidate package
+metadata at `0.5.0`. The repository-root `updates.json` intentionally remains
+the published `0.4.1` channel until the formal v0.5.0 release asset is online.

@@ -6,8 +6,8 @@ public source export but is deliberately excluded from the production browser
 extension ZIP.
 
 The text files also contain the prepared dual-mode copy and reviewer flow for
-the 0.5.0 candidate. The listing remains recorded as 0.4.1 until exact-artifact
-Chrome/Edge qualification passes and the update is submitted and published.
+the qualified 0.5.0 release candidate. The listing remains recorded as 0.4.1
+until the 0.5.0 package is submitted and published.
 
 - Listing status: **Published**
 - Version: **0.4.1**

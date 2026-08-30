@@ -16,6 +16,10 @@ Paper Library Checker compares metadata from supported scholarly pages, includin
 
 **[Install from Chrome Web Store](https://chromewebstore.google.com/detail/paper-library-checker/pmfobjnkoiiplambnbbkfdlfjcbdogon)** — the published store version is 0.4.1.
 
+The source tree is preparing version 0.5.0 as a release candidate. The public
+store listing and downloadable GitHub release remain 0.4.1 until the matching
+0.5.0 artifacts are published.
+
 Zotero is a registered trademark of the Corporation for Digital Scholarship. This independent project is not affiliated with or endorsed by the Zotero project.
 
 ## Why use it?
@@ -243,9 +247,21 @@ ScienceDirect and MDPI pages with `citation_doi` normally use the generic extrac
 <details>
 <summary>Release verification and SHA-256 checksums</summary>
 
-Version 0.4.1 is the current public alpha. Its canonical build and targeted Chrome/Zotero smoke passed, including connection, index readiness, saved and not-saved page checks, and the Options connection test. Chrome Web Store version 0.4.1 also passed store installation, re-pairing, popup readiness, and one representative page check. The exact broader runtime target from the 0.4.0 qualification remains Zotero 9.0.6 within the supported Zotero 9.0.x range and Microsoft Edge 151.0.4129.78; store publication does not extend the site-support matrix.
+Version 0.5.0 is the prepared dual-mode release candidate. Its accepted
+qualification covers the canonical automated suite and the recorded Chrome,
+Zotero 9.0.6, Standard Indexed, Direct fallback, Enhanced/XPI, lifecycle, and
+CNKI runtime evidence. The public Chrome Web Store and GitHub release remain at
+0.4.1 until the 0.5.0 artifacts are published; this candidate status does not
+claim that publication has occurred. The historical broader Edge qualification
+target remains Microsoft Edge 151.0.4129.78.
 
-Download the canonical artifacts and [`SHA256SUMS.txt`](https://github.com/he-chun/paper-library-checker/releases/download/v0.4.1/SHA256SUMS.txt) from the [v0.4.1 GitHub Release](https://github.com/he-chun/paper-library-checker/releases/tag/v0.4.1). The repository-root [`updates.json`](updates.json) is the Zotero update manifest. The public [0.3.0 release qualification](docs/verification/release-qualification-0.3.0.md) remains the historical record for the initial alpha. ScienceDirect is not claimed as a passed live-site capability because a publisher access challenge replaced the normal article DOM.
+Until v0.5.0 is published, download the current public artifacts and
+[`SHA256SUMS.txt`](https://github.com/he-chun/paper-library-checker/releases/download/v0.4.1/SHA256SUMS.txt)
+from the [v0.4.1 GitHub Release](https://github.com/he-chun/paper-library-checker/releases/tag/v0.4.1).
+The repository-root [`updates.json`](updates.json) intentionally remains the
+published 0.4.1 Zotero update manifest during candidate preparation. See the
+[0.5.0 qualification](docs/verification/dual-mode-0.5.0-qualification.md) for
+the accepted candidate evidence.
 
 </details>
 
