@@ -1,9 +1,160 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
+import { readFile } from "node:fs/promises";
+import { JSDOM } from "jsdom";
 
 const require = createRequire(import.meta.url);
 const options = require("../browser-extension/src/options.js");
+
+test("options default to automatic backend selection", () => {
+  assert.equal(options.DEFAULT_OPTIONS.connectionMode, "auto");
+  assert.equal(options.DEFAULT_OPTIONS.developerMode, false);
+});
+
+test("developer mode is opt-in and reveals a local log panel", async () => {
+  const html = await readFile(new URL("../browser-extension/src/options.html", import.meta.url), "utf8");
+  const oldDocument = globalThis.document;
+  globalThis.document = new JSDOM(html).window.document;
+  try {
+    assert.equal(document.querySelector("#developerMode").checked, false);
+    options.updateDeveloperPanel(true);
+    assert.equal(document.querySelector("#developerPanel").hidden, false);
+    options.updateDeveloperPanel(false);
+    assert.equal(document.querySelector("#developerPanel").hidden, true);
+  } finally {
+    globalThis.document = oldDocument;
+  }
+});
+
+test("developer log rendering is text-only structured data", () => {
+  assert.equal(options.formatDeveloperEntry({ event: "operation_completed", durationMs: 123 }),
+    '{"event":"operation_completed","durationMs":123}');
+});
+
+test("illegal stored connection modes fall back to automatic", () => {
+  assert.equal(options.normalizeConnectionMode("invalid"), "auto");
+  assert.equal(options.normalizeConnectionMode("standard"), "standard");
+});
+
+test("standard mode leaves enhanced credentials untouched so migration is reversible", () => {
+  const oldEndpoint = "http://localhost:23119/zotero-checker";
+  const oldToken = "a".repeat(64);
+  assert.deepEqual(options.connectionStorageUpdate({
+    connectionMode: "standard",
+    endpoint: "not-an-endpoint",
+    token: "short"
+  }), { sync: { connectionMode: "standard" }, local: {} });
+  assert.deepEqual(options.connectionStorageUpdate({
+    connectionMode: "enhanced",
+    endpoint: oldEndpoint,
+    token: oldToken
+  }), {
+    sync: { connectionMode: "enhanced", endpoint: oldEndpoint },
+    local: { token: oldToken }
+  });
+});
+
+test("enhanced mode still requires a 64-character pairing token", () => {
+  assert.throws(() => options.connectionStorageUpdate({
+    connectionMode: "enhanced",
+    endpoint: "http://127.0.0.1:23119/zotero-checker",
+    token: "short"
+  }), /64-character/);
+});
+
+test("standard mode hides enhanced settings and enhanced mode expands them", async () => {
+  const html = await readFile(new URL("../browser-extension/src/options.html", import.meta.url), "utf8");
+  const oldDocument = globalThis.document;
+  globalThis.document = new JSDOM(html).window.document;
+  try {
+    options.updateConnectionFields("standard");
+    assert.equal(document.querySelector("#enhancedSettings").hidden, true);
+    options.updateConnectionFields("enhanced");
+    assert.equal(document.querySelector("#enhancedSettings").hidden, false);
+    assert.equal(document.querySelector("#enhancedSettings").open, true);
+  } finally {
+    globalThis.document = oldDocument;
+  }
+});
+
+test("Test connection saves the selected mode and asks the service worker to probe", async () => {
+  const html = await readFile(new URL("../browser-extension/src/options.html", import.meta.url), "utf8");
+  const oldDocument = globalThis.document;
+  const oldChrome = globalThis.chrome;
+  const writes = [];
+  let message;
+  globalThis.document = new JSDOM(html).window.document;
+  document.querySelector('input[name="connectionMode"][value="standard"]').checked = true;
+  globalThis.chrome = {
+    storage: {
+      sync: {
+        set: async (value) => writes.push(value),
+        remove: async () => {}
+      },
+      local: { set: async () => { throw new Error("standard mode must not write the token"); } }
+    },
+    runtime: {
+      sendMessage: async (value) => {
+        message = value;
+        return { connected: true, indexReady: true, mode: "standard" };
+      }
+    }
+  };
+  try {
+    await options.testConnection();
+    assert.equal(writes[0].connectionMode, "standard");
+    assert.deepEqual(message, { type: "zotero-check:probe" });
+    assert.match(document.querySelector("#status").textContent, /Connected using Standard mode/);
+  } finally {
+    globalThis.document = oldDocument;
+    globalThis.chrome = oldChrome;
+  }
+});
+
+test("options page does not duplicate backend network or HMAC protocol code", async () => {
+  const source = await readFile(new URL("../browser-extension/src/options.js", import.meta.url), "utf8");
+  assert.doesNotMatch(source, /\bfetch\s*\(/);
+  assert.doesNotMatch(source, /createHeaders|X-PLC-Signature|\/health/);
+  assert.match(source, /zotero-check:probe/);
+});
+
+test("standard index management is rendered from service-worker status only", async () => {
+  const html = await readFile(new URL("../browser-extension/src/options.html", import.meta.url), "utf8");
+  const oldDocument = globalThis.document;
+  const oldChrome = globalThis.chrome;
+  const messages = [];
+  globalThis.document = new JSDOM(html).window.document;
+  globalThis.chrome = {
+    runtime: {
+      sendMessage: async (message) => {
+        messages.push(message);
+        if (message.type === "get-index-status") {
+          return { ok: true, status: {
+            state: "refreshing", itemCount: 120, libraryCount: 3,
+            lastSuccessfulBuildAt: 1700000000000, processedItems: 25, totalItems: 100
+          } };
+        }
+        return { ok: true, accepted: true };
+      }
+    }
+  };
+  try {
+    await options.refreshIndexStatus();
+    assert.equal(document.querySelector("#optionIndexState").textContent, "Refreshing");
+    assert.equal(document.querySelector("#optionIndexItems").textContent, "120");
+    assert.equal(document.querySelector("#optionIndexLibraries").textContent, "3");
+    assert.equal(document.querySelector("#cancelIndex").disabled, false);
+    await options.runIndexAction("clear-index");
+    assert.deepEqual(messages[1], { type: "clear-index" });
+    const source = await readFile(new URL("../browser-extension/src/options.js", import.meta.url), "utf8");
+    assert.doesNotMatch(source, /indexedDB|127\.0\.0\.1:23119\/api/);
+  } finally {
+    options.renderIndexStatus({ state: "ready" });
+    globalThis.document = oldDocument;
+    globalThis.chrome = oldChrome;
+  }
+});
 
 test("options endpoint validation matches granted loopback permissions", () => {
   assert.equal(options.validateEndpoint("http://127.0.0.1:23119/zotero-checker"), "http://127.0.0.1:23119/zotero-checker");

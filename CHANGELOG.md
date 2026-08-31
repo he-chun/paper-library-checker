@@ -5,7 +5,26 @@ Versioning while remaining pre-1.0.
 
 ## [Unreleased]
 
-No changes yet.
+- No changes yet.
+
+## [0.5.0] - 2026-08-30
+
+- Adds Automatic, Standard, and Enhanced connection modes while preserving the
+  protocol v1 enhanced-mode contract.
+- Adds a no-XPI Standard mode that uses Zotero's built-in read-only Local API.
+- Builds a minimal IndexedDB exact-match snapshot for personal and accessible
+  group libraries, supporting DOI, PMID, ISBN, CNKI, and normalized-title checks.
+- Supports single-page and ordered reference-list batch checks with stable
+  deduplication and minimized results.
+- Keeps Direct Local API lookup as a compatibility fallback; negative Direct
+  results remain explicitly incomplete instead of claiming that an item is not
+  saved.
+- Keeps Enhanced/XPI mode for fuzzy title matching, `possible_match`, real-time
+  Zotero updates, authenticated HMAC requests, and highest batch performance.
+- Adds atomic index generations, refresh, stale-state handling, cancellation,
+  recovery, clear, and rebuild controls without persisting raw Zotero items.
+- Adds localized dual-mode settings and popup status, capability, fallback, and
+  repair guidance, plus updated privacy boundaries for both local backends.
 
 ## [0.4.1] - 2026-08-24
 

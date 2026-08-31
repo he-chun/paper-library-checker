@@ -1,21 +1,136 @@
 if (typeof importScripts === "function") {
-  importScripts("common/request-auth.js", "common/candidate-normalization.js", "common/sender-security.js");
+  importScripts(
+    "common/developer-diagnostics.js",
+    "common/request-auth.js",
+    "common/candidate-normalization.js",
+    "common/backend-contract.js",
+    "common/sender-security.js",
+    "backends/enhanced-backend.js",
+    "backends/local-api-matcher.js",
+    "backends/direct-local-api-backend.js",
+    "backends/local-api-backend.js",
+    "backends/indexed-local-api-backend.js",
+    "backends/standard-backend-resolver.js",
+    "backends/backend-resolver.js",
+    "index/index-state.js",
+    "index/index-freshness.js",
+    "index/index-schema.js",
+    "index/index-record-normalizer.js",
+    "index/indexeddb-index-repository.js",
+    "index/index-generation-manager.js",
+    "index/local-api-library-discovery.js",
+    "index/index-build-progress.js",
+    "index/local-api-index-builder.js",
+    "index/index-build-controller.js"
+  );
 }
-const PLCRequestAuth = globalThis.PLCRequestAuth || (typeof require === "function" ? require("./common/request-auth.js") : null);
-const PLCCandidateNormalization = globalThis.PLCCandidateNormalization ||
-  (typeof require === "function" ? require("./common/candidate-normalization.js") : null);
 const PLCSenderSecurity = globalThis.PLCSenderSecurity ||
   (typeof require === "function" ? require("./common/sender-security.js") : null);
+const PLCDeveloperDiagnostics = globalThis.PLCDeveloperDiagnostics ||
+  (typeof require === "function" ? require("./common/developer-diagnostics.js") : null);
+const PLCEnhancedBackend = globalThis.PLCEnhancedBackend ||
+  (typeof require === "function" ? require("./backends/enhanced-backend.js") : null);
+const PLCDirectLocalApiBackend = globalThis.PLCDirectLocalApiBackend ||
+  (typeof require === "function" ? require("./backends/direct-local-api-backend.js") : null);
+const PLCIndexedLocalApiBackend = globalThis.PLCIndexedLocalApiBackend ||
+  (typeof require === "function" ? require("./backends/indexed-local-api-backend.js") : null);
+const PLCStandardBackendResolver = globalThis.PLCStandardBackendResolver ||
+  (typeof require === "function" ? require("./backends/standard-backend-resolver.js") : null);
+const PLCBackendResolver = globalThis.PLCBackendResolver ||
+  (typeof require === "function" ? require("./backends/backend-resolver.js") : null);
+const PLCIndexedDBIndexRepository = globalThis.PLCIndexedDBIndexRepository ||
+  (typeof require === "function" ? require("./index/indexeddb-index-repository.js") : null);
+const PLCIndexGenerationManager = globalThis.PLCIndexGenerationManager ||
+  (typeof require === "function" ? require("./index/index-generation-manager.js") : null);
+const PLCIndexFreshness = globalThis.PLCIndexFreshness ||
+  (typeof require === "function" ? require("./index/index-freshness.js") : null);
+const PLCLocalApiLibraryDiscovery = globalThis.PLCLocalApiLibraryDiscovery ||
+  (typeof require === "function" ? require("./index/local-api-library-discovery.js") : null);
+const PLCIndexBuildProgress = globalThis.PLCIndexBuildProgress ||
+  (typeof require === "function" ? require("./index/index-build-progress.js") : null);
+const PLCLocalApiIndexBuilder = globalThis.PLCLocalApiIndexBuilder ||
+  (typeof require === "function" ? require("./index/local-api-index-builder.js") : null);
+const PLCIndexBuildController = globalThis.PLCIndexBuildController ||
+  (typeof require === "function" ? require("./index/index-build-controller.js") : null);
 
-const DEFAULT_OPTIONS = {
-  endpoint: "http://127.0.0.1:23119/zotero-checker",
+const TRANSLATION_OPTIONS = {
   translationServerMode: "auto"
 };
 const TRANSLATION_SERVER_ENDPOINT = "http://127.0.0.1:1969/web";
 const TRANSLATION_SERVER_TIMEOUT_MS = 5000;
 const TRANSLATION_SERVER_PROBE_TIMEOUT_MS = 500;
 const TRANSLATION_SERVER_REACHABLE_TTL = 30000;
+const MATCH_WORKLOADS = new Set(["detail", "references"]);
 let _tsReachable = null;
+let diagnosticOperationSequence = 0;
+const developerDiagnostics = PLCDeveloperDiagnostics.createDeveloperDiagnostics();
+const reportDiagnostic = (event, details) => developerDiagnostics.record(event, details);
+const enhancedBackend = PLCEnhancedBackend.createEnhancedBackend({ onDiagnostic: reportDiagnostic });
+const directStandardBackend = PLCDirectLocalApiBackend.createDirectLocalApiBackend({ onDiagnostic: reportDiagnostic });
+const standardBackend = PLCStandardBackendResolver.createStandardBackendResolver({
+  directBackend: directStandardBackend,
+  getIndexedBackend: () => getIndexInfrastructure().indexedBackend,
+  getIndexStatus: () => getIndexBuildController().getStatus(),
+  startIndexBuild: () => getIndexBuildController().start()
+});
+const backendResolver = PLCBackendResolver.createBackendResolver({ enhancedBackend, standardBackend });
+let indexInfrastructure = null;
+const indexedPageTabs = new Set();
+
+async function notifyIndexedPages() {
+  for (const tabId of [...indexedPageTabs]) {
+    try {
+      await chrome.tabs?.sendMessage(tabId, { type: "zotero-check:index-refreshed" });
+    } catch (_error) {
+      indexedPageTabs.delete(tabId);
+    }
+  }
+}
+
+function getIndexInfrastructure() {
+  if (indexInfrastructure) return indexInfrastructure;
+  const repository = PLCIndexedDBIndexRepository.createIndexedDBIndexRepository();
+  const generationManager = PLCIndexGenerationManager.createIndexGenerationManager(repository);
+  const source = directStandardBackend.createIndexSource();
+  const discovery = PLCLocalApiLibraryDiscovery.createLocalApiLibraryDiscovery(source);
+  const progress = PLCIndexBuildProgress.createIndexBuildProgress();
+  const builder = PLCLocalApiIndexBuilder.createLocalApiIndexBuilder({
+    source,
+    discovery,
+    repository,
+    generationManager,
+    progress
+  });
+  const controller = PLCIndexBuildController.createIndexBuildController({
+    builder,
+    progress,
+    repository,
+    freshness: PLCIndexFreshness,
+    onBuildComplete: notifyIndexedPages
+  });
+  const indexedBackend = PLCIndexedLocalApiBackend.createIndexedLocalApiBackend({
+    repository,
+    getIndexContext: () => controller.getStatus()
+  });
+  indexInfrastructure = { controller, indexedBackend, repository };
+  return indexInfrastructure;
+}
+
+function getIndexBuildController() {
+  return getIndexInfrastructure().controller;
+}
+
+async function refreshDeveloperMode() {
+  const stored = await chrome.storage.sync.get({ developerMode: false });
+  developerDiagnostics.setEnabled(stored.developerMode === true);
+  return developerDiagnostics.isEnabled();
+}
+
+chrome.storage.onChanged?.addListener((changes, areaName) => {
+  if (areaName === "sync" && changes.developerMode) {
+    developerDiagnostics.setEnabled(changes.developerMode.newValue === true);
+  }
+});
 
 async function isTranslationServerReachable() {
   if (_tsReachable !== null && Date.now() - _tsReachable.at < TRANSLATION_SERVER_REACHABLE_TTL) {
@@ -51,53 +166,153 @@ const PRIORITY_TRANSLATION_SERVER_DOMAINS = [
 ];
 
 async function getOptions() {
-  const [stored, secrets] = await Promise.all([
-    chrome.storage.sync.get(DEFAULT_OPTIONS),
-    chrome.storage.local.get({ token: "" })
-  ]);
-  return { ...DEFAULT_OPTIONS, ...stored, token: secrets.token || "" };
+  const stored = await chrome.storage.sync.get(TRANSLATION_OPTIONS);
+  return { ...TRANSLATION_OPTIONS, ...stored };
 }
 
-async function callZotero(path, body, method = "POST") {
-  const options = await getOptions();
-  const endpoint = validateLoopbackEndpoint(options.endpoint);
-  if (!PLCRequestAuth.isUsableSecret(options.token)) {
-    throw new Error("Pairing token is not configured");
+async function resolveBackend() {
+  return backendResolver.resolve();
+}
+
+async function probeBackend(existingResolution) {
+  const resolution = existingResolution || await resolveBackend();
+  const result = resolution.probeResult || await resolution.backend.probe();
+  if (resolution.selectedMode === "enhanced") {
+    const reason = PLCBackendResolver.enhancedProbeFailure(
+      result,
+      chrome.runtime.getManifest?.().version || ""
+    );
+    if (reason) {
+      const error = new Error(reason);
+      error.code = reason;
+      throw error;
+    }
   }
-  const payload = method === "GET"
-    ? null
-    : path === "/batch-check"
-      ? { items: (body.items || []).map(PLCCandidateNormalization.normalizeCandidateForLocalAPI) }
-      : { item: PLCCandidateNormalization.normalizeCandidateForLocalAPI(body) };
-  const bodyText = payload ? JSON.stringify(payload) : "";
-  const headers = await PLCRequestAuth.createHeaders({
-    secret: options.token,
-    method,
-    path: `/zotero-checker${path}`,
-    body: bodyText
-  });
-  const response = await fetch(`${endpoint}${path}`, {
-    method,
-    headers,
-    body: payload ? bodyText : undefined
-  });
-  const result = await response.json().catch(() => ({}));
-  if (!response.ok) throw makeLocalApiError(response.status, result.error || "request_failed");
-  return result;
+  return {
+    ...result,
+    mode: resolution.selectedMode,
+    capabilities: resolution.backend.getCapabilities()
+  };
 }
 
-function makeLocalApiError(status, code) {
-  const error = new Error(code);
-  error.status = status;
-  error.code = code;
-  return error;
+async function callZotero(path, body, method = "POST", context = {}) {
+  await refreshDeveloperMode();
+  const startedAt = Date.now();
+  const operationId = ++diagnosticOperationSequence;
+  const operation = path === "/health" ? "probe" : path === "/batch-check" ? "batch" : "check";
+  developerDiagnostics.record("operation_started", {
+    operation,
+    operationId,
+    workload: context.workload,
+    inputCount: operation === "batch" ? body?.items?.length || 0 : undefined
+  });
+  try {
+    const resolution = await resolveBackend();
+    developerDiagnostics.record("backend_selected", {
+      operation,
+      operationId,
+      backend: resolution.selectedMode,
+      workload: context.workload,
+      degradedReason: resolution.degradedReason
+    });
+    let result;
+    if (path === "/health" && method === "GET") {
+      result = await probeBackend(resolution);
+    } else if (path === "/check" && method === "POST") {
+      result = await resolution.backend.check(body, { workload: context.workload });
+    } else if (path === "/batch-check" && method === "POST") {
+      result = await resolution.backend.batchCheck(body.items || [], {
+        scope: context.batchScope,
+        batchId: operationId,
+        workload: context.workload,
+        onProgress: context.onProgress
+      });
+    } else {
+      throw new Error("unsupported_backend_operation");
+    }
+    const batchResults = Array.isArray(result?.results) ? result.results : null;
+    const batchErrorCount = batchResults?.filter((entry) => entry.status === "error").length || 0;
+    const outcome = batchResults
+      ? batchErrorCount === 0 ? "ok" : batchErrorCount === batchResults.length ? "error" : "partial"
+      : result?.status || "ok";
+    developerDiagnostics.record("operation_completed", {
+      operation,
+      operationId,
+      backend: resolution.selectedMode,
+      workload: context.workload,
+      durationMs: Date.now() - startedAt,
+      outcome,
+      errorCount: batchErrorCount
+    });
+    return resolution.degradedReason && result && typeof result === "object"
+      ? { ...result, degradedReason: resolution.degradedReason }
+      : result;
+  } catch (error) {
+    developerDiagnostics.record("operation_failed", {
+      operation,
+      operationId,
+      workload: context.workload,
+      durationMs: Date.now() - startedAt,
+      error: error?.code || error?.message || "backend_unavailable"
+    });
+    throw error;
+  }
 }
 
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message?.type === "zotero-check:popup-health") {
+function handleRuntimeMessage(message, sender, sendResponse) {
+  if (message?.type === "start-index-build") {
+    if (!isTrustedExtensionMessage(message, sender)) return false;
+    getIndexBuildController().refresh()
+      .then((result) => sendResponse({ ok: true, ...result }))
+      .catch((error) => sendResponse({ ok: false, error: error?.code || error?.message || "index_build_unavailable" }));
+    return true;
+  }
+
+  if (message?.type === "cancel-index-build") {
+    if (!isTrustedExtensionMessage(message, sender)) return false;
+    getIndexBuildController().cancel()
+      .then((result) => sendResponse({ ok: true, ...result }))
+      .catch((error) => sendResponse({ ok: false, error: error?.code || "index_build_unavailable" }));
+    return true;
+  }
+
+  if (message?.type === "get-index-status") {
+    if (!isTrustedExtensionMessage(message, sender)) return false;
+    getIndexBuildController().getStatus()
+      .then((status) => sendResponse({ ok: true, status }))
+      .catch((error) => sendResponse({ ok: false, error: error?.code || "index_build_unavailable" }));
+    return true;
+  }
+
+  if (message?.type === "clear-index" || message?.type === "clear-and-rebuild-index") {
+    if (!isTrustedExtensionMessage(message, sender)) return false;
+    const action = message.type === "clear-index" ? "clear" : "clearAndRebuild";
+    getIndexBuildController()[action]()
+      .then((result) => sendResponse({ ok: true, ...result }))
+      .catch((error) => sendResponse({ ok: false, error: error?.code || "index_build_unavailable" }));
+    return true;
+  }
+
+  if (["zotero-check:popup-health", "zotero-check:probe"].includes(message?.type)) {
     if (!isTrustedExtensionMessage(message, sender)) return false;
     getPopupHealth().then(sendResponse);
     return true;
+  }
+
+  if (message?.type === "zotero-check:developer-log") {
+    if (!isTrustedExtensionMessage(message, sender)) return false;
+    refreshDeveloperMode().then((enabled) => sendResponse({
+      enabled,
+      entries: enabled ? developerDiagnostics.getEntries() : []
+    }));
+    return true;
+  }
+
+  if (message?.type === "zotero-check:clear-developer-log") {
+    if (!isTrustedExtensionMessage(message, sender)) return false;
+    developerDiagnostics.clear();
+    sendResponse({ ok: true });
+    return false;
   }
 
   if (!isTrustedMessage(message, sender)) {
@@ -105,6 +320,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.type === "zotero-check:match") {
+    if (Number.isInteger(sender?.tab?.id)) indexedPageTabs.add(sender.tab.id);
     const isBatch = Array.isArray(message.candidates);
     if (isBatch && message.candidates.length > 200) {
       sendResponse({ ok: false, error: "Batch exceeds 200 candidates" });
@@ -115,7 +331,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       : (message.candidate || message.candidates);
     const path = isBatch ? "/batch-check" : "/check";
 
-    callZotero(path, body)
+    callZotero(path, body, "POST", {
+      batchScope: batchScopeForMessage(message, sender),
+      workload: matchWorkloadForMessage(message),
+      onProgress: isBatch ? batchProgressReporter(message, sender) : undefined
+    })
       .then((result) => sendResponse({ ok: true, result }))
       .catch((error) => sendResponse({ ok: false, error: error.message }));
 
@@ -137,7 +357,46 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   return false;
-});
+}
+
+chrome.runtime.onMessage.addListener(handleRuntimeMessage);
+
+if (typeof indexedDB !== "undefined") {
+  chrome.storage.sync.get({ connectionMode: "auto" })
+    .then((stored) => getIndexBuildController().initialize({ autoRefresh: stored.connectionMode !== "enhanced" }))
+    .catch(() => {
+      // IndexedDB failure remains observable through index status and Direct fallback.
+    });
+}
+
+function batchScopeForMessage(message, sender) {
+  const tabId = Number.isInteger(sender?.tab?.id) ? sender.tab.id : "unknown";
+  return `tab:${tabId}:${matchWorkloadForMessage(message)}`;
+}
+
+function matchWorkloadForMessage(message) {
+  return MATCH_WORKLOADS.has(message?.workload) ? message.workload : "default";
+}
+
+function batchProgressReporter(message, sender) {
+  if (message?.workload !== "references" || !Number.isSafeInteger(message?.requestId) ||
+      message.requestId < 1 || !Number.isInteger(sender?.tab?.id)) {
+    return undefined;
+  }
+  const tabId = sender.tab.id;
+  const requestId = message.requestId;
+  return function reportBatchProgress(entry) {
+    if (!Number.isInteger(entry?.index) || entry.index < 0 || !entry?.result || typeof entry.result !== "object") {
+      return;
+    }
+    chrome.tabs?.sendMessage(tabId, {
+      type: "zotero-check:batch-progress",
+      requestId,
+      index: entry.index,
+      result: entry.result
+    }, () => { void chrome.runtime.lastError; });
+  };
+}
 
 function isTrustedMessage(message, sender) {
   if (!message || typeof message !== "object" || typeof message.type !== "string") return false;
@@ -146,22 +405,63 @@ function isTrustedMessage(message, sender) {
     return typeof message.url === "string" && urlsMatch(message.url, sender.tab.url);
   }
   if (message.type === "zotero-check:match") {
+    if (message.workload !== undefined && !MATCH_WORKLOADS.has(message.workload)) return false;
+    if (message.requestId !== undefined &&
+        (message.workload !== "references" || !Array.isArray(message.candidates) ||
+          !Number.isSafeInteger(message.requestId) || message.requestId < 1)) {
+      return false;
+    }
     return Boolean(message.candidate && typeof message.candidate === "object") || Array.isArray(message.candidates);
   }
   return false;
 }
 
 function isTrustedExtensionMessage(message, sender) {
-  return message?.type === "zotero-check:popup-health" &&
+  return [
+    "zotero-check:popup-health",
+    "zotero-check:probe",
+    "zotero-check:developer-log",
+    "zotero-check:clear-developer-log",
+    "start-index-build",
+    "cancel-index-build",
+    "get-index-status",
+    "clear-index",
+    "clear-and-rebuild-index"
+  ].includes(message?.type) &&
     PLCSenderSecurity.isTrustedExtensionPageSender(sender, chrome.runtime);
 }
 
 async function getPopupHealth() {
   try {
     const result = await callZotero("/health", null, "GET");
-    return { connected: true, indexReady: result.indexReady === true };
-  } catch (_error) {
-    return { connected: false, indexReady: false };
+    const health = {
+      connected: true,
+      indexReady: result.indexReady === true,
+      mode: result.mode,
+      engine: result.engine || result.capabilities?.engine,
+      indexState: result.indexState || result.capabilities?.indexState,
+      freshness: result.freshness || result.capabilities?.freshness,
+      complete: result.complete ?? result.capabilities?.complete,
+      capabilities: result.capabilities
+    };
+    if (result.mode === "standard") {
+      try {
+        health.index = await getIndexBuildController().getStatus();
+      } catch (_error) {
+        health.index = null;
+      }
+    }
+    if (result.degradedReason) health.degradedReason = result.degradedReason;
+    return health;
+  } catch (error) {
+    const publicError = error?.message === "Pairing token is not configured"
+      ? "authentication_missing"
+      : error?.code || error?.message || "backend_unavailable";
+    return {
+      connected: false,
+      indexReady: false,
+      error: publicError
+    };
   }
 }
 
@@ -173,16 +473,6 @@ function urlsMatch(left, right) {
   } catch (error) {
     return false;
   }
-}
-
-function validateLoopbackEndpoint(value) {
-  const url = new URL(value);
-  if (url.protocol !== "http:" || url.username || url.password || url.search || url.hash ||
-      !["127.0.0.1", "localhost"].includes(url.hostname) ||
-      url.pathname.replace(/\/$/, "") !== "/zotero-checker") {
-    throw new Error("Zotero endpoint must use HTTP on a loopback hostname");
-  }
-  return url.href.replace(/\/$/, "");
 }
 
 function validateTranslationTarget(value, tabUrl) {
@@ -348,13 +638,21 @@ function makeTranslationServerError(message, details = {}) {
 
 if (typeof module !== "undefined" && module.exports) {
   module.exports = {
+    batchScopeForMessage,
+    batchProgressReporter,
     callZotero,
     getPopupHealth,
+    getIndexBuildController,
+    probeBackend,
+    handleRuntimeMessage,
     isTrustedExtensionMessage,
     isTrustedMessage,
-    makeLocalApiError,
+    matchWorkloadForMessage,
+    resolveBackend,
     urlsMatch,
-    validateLoopbackEndpoint,
-    validateTranslationTarget
+    validateLoopbackEndpoint: PLCEnhancedBackend.validateLoopbackEndpoint,
+    validateTranslationTarget,
+    developerDiagnostics,
+    refreshDeveloperMode
   };
 }

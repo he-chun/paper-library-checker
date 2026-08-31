@@ -12,9 +12,16 @@
 1. An untrusted web page provides DOM and embedded metadata to an isolated
    content script.
 2. The content script sends typed messages to the extension service worker.
-3. The service worker sends authenticated requests to Zotero's loopback server.
+3. In enhanced mode, the service worker sends authenticated requests to the
+   add-on on Zotero's loopback server.
 4. Optionally, the service worker sends the current public URL to a separately
    installed translation-server on loopback.
+5. In standard mode, the service worker sends unauthenticated read-only requests
+   to the fixed Zotero Local API root, reads candidate records, and performs
+   exact-match verification in memory.
+6. The service worker persists only normalized, allowlisted matching keys and
+   generation metadata in extension-owned IndexedDB. Extension pages receive
+   lifecycle summaries; content scripts receive only minimized results.
 
 ## Threats and controls
 
@@ -26,7 +33,16 @@
 | Endpoint exfiltrates token | User or sync changes endpoint | Endpoint must be HTTP loopback, contain no credentials/query/fragment, and use the exact endpoint path; token stays in local storage | A compromised extension process can bypass its own checks. |
 | translation-server SSRF | Page or message supplies URL | URL must equal sender tab URL, use HTTP(S), and avoid loopback/private/link-local host literals | DNS resolution can change after validation; translation-server must enforce its own network policy. |
 | Resource exhaustion | Authenticated caller sends bursts or large data | Custom raw-body media type, add-on pre-read 64 KiB content-length check, 200-item hard batch cap, field/count limits, 120 requests/10 seconds, bounded replay/result caches and cache keys | Zotero core owns the socket and starts request processing before add-on code; a native platform pre-read limit would provide a stronger guarantee. |
-| Library metadata disclosure | Match result or logs are overbroad | Default response is status/matchType/confidence only; health is minimal and authenticated; logs redact and rotate | Status badge itself is a match oracle visible to the page DOM. |
+| Library metadata disclosure | Match result or logs are overbroad | Default response is status/matchType/confidence only; health is minimal; enhanced requests are authenticated; logs redact and rotate | Status badge itself is a match oracle visible to the page DOM. |
+| Raw Local API item disclosure | Standard-mode queries return editable Zotero item JSON | Only the service worker imports the Local API modules; candidate JSON is held in memory, filtered to bibliographic items, immediately reduced to allowlisted normalized index fields, and returned only as a minimal match result without raw-record logging or persistence | Any local process can read an enabled unauthenticated Local API; users must not expose port 23119 beyond loopback. |
+| Derived index disclosure | A webpage or extension page attempts to enumerate local bibliographic keys | IndexedDB access is service-worker-only; persisted records contain only normalized identifier/title/year/creator/type keys plus scope/generation/library/item bookkeeping; management messages require the exact extension origin and never return records | Anyone with filesystem access to the browser profile may inspect derived local metadata. |
+| Stale index creates a false absence claim | Zotero changes after the last successful snapshot | A named 30-minute age marks the index stale and triggers full refresh; stale hits and misses return `complete: false`; stale misses are rendered as awaiting refresh, not “not saved”; successful refresh triggers page re-check | A stale positive can refer to an item deleted since the snapshot and is visibly marked as based on the previous index. |
+| Interrupted or corrupt rebuild replaces good data | MV3 suspension, cancellation, disk failure, or schema corruption occurs mid-build | Generation double buffering, atomic active-generation switch, startup recovery, structural schema validation, and rebuild from Zotero; the old active generation serves during refresh/error | Rebuilding a very large library consumes local time, disk, and Local API capacity. |
+| Local API search false positive or false negative | Zotero quicksearch returns approximate candidates or omits a true record | Search responses are never treated as matches; DOI, PMID, ISBN, CNKI ID, normalized title, year, and creators are independently rechecked. Direct misses are marked incomplete. | Direct mode intentionally does not provide complete identifier recall, full-library fuzzy matching, or authoritative negative results. |
+| Local API batch exhaustion | Many candidates multiplied by many accessible groups | Stable candidate and item deduplication, four-request lightweight-title lane, serial identifier-only full-text lane, hard ceiling of four active item requests, bounded foreground priority, 30-second per-request timeout, sixty-second timeout circuit breaker, bounded exponential page retry, five-second bounded query cache, thirty-second group cache, existing 80-candidate page limit, and stale-batch abort/ignore behavior | Identifier-only misses can still require Zotero full-text search; enhanced mode is the faster option for large batches. |
+| Extension page probes privileged backends | A website imitates the popup or options message | Popup health and Options probe use the extension-page sender predicate with exact runtime origin; content-script sender checks remain separate | A compromised extension process remains in scope of browser compromise. |
+| Stale batch progress mutates a new page | A slow standard query completes after a newer batch or navigation | Progress messages require the same extension identity without a webpage tab and a positive page-scoped request ID; supplied sender URLs must have the exact extension origin, and the content script accepts only its currently active batch and a bounded input index | A compromised extension process remains in scope of browser compromise. |
+| Developer diagnostics expose local activity | Developer mode is explicitly enabled | The log is bounded to 200 structured entries in service-worker memory, is readable/clearable only by extension-origin pages, and excludes tokens, request bodies, query values, endpoints, and raw Zotero items | Anyone with access to the browser profile UI can see timing and aggregate activity until the worker restarts or the log is cleared. |
 | Secret or metadata leakage through sync/log/error | Normal use or failure | Secret in `storage.local`, migration removes sync copy, long-term key never transported, strict `{item}`/`{items}` envelopes, bounded deep rejection of credential keys or the secret value, custom media type avoids Zotero 9.0.6's known plain-JSON body logging branch, minimized stable errors | Zotero core logs short-lived signature headers; Zotero 9.0.6 debug-log integration remains a required real-runtime gate. Browser profile malware and clipboard managers remain out of scope. |
 
 ## Loopback assumptions

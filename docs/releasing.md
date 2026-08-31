@@ -25,6 +25,25 @@ release-gated browser; Chrome and live translation-server checks are optional.
    and rollback on a clean Edge profile with Zotero 9.0.6. Require same-run
    Zotero-core, project-log, and Edge-console debug scans. Chrome is optional.
 
+For the 0.5.0 dual-mode release, record the executed Standard Indexed, Direct,
+Enhanced/XPI, lifecycle, browser, and CNKI evidence in
+[`verification/release-qualification-0.5.0.md`](verification/release-qualification-0.5.0.md).
+The maintainer-approved report defines the accepted release scope; do not
+represent an unexecuted environment as a PASS or reintroduce it as an implicit
+gate after the scope decision.
+
+Run release metadata verification with an explicit candidate tag matching the
+current version, for example in PowerShell:
+
+```powershell
+$env:RELEASE_TAG = "v0.5.0"
+npm run verify:release
+```
+
+Raise version metadata only after the authoritative qualification report accepts
+release preparation. Then update every version-bearing file, generate the
+candidate update manifest, rebuild, and rerun every automated release gate.
+
 Before announcing a release, verify that the repository-root `updates.json` is
 available from the default branch, its `update_link` resolves to the tagged XPI
 asset, and its `update_hash` matches the downloaded XPI exactly.

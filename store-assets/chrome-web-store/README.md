@@ -5,6 +5,10 @@ Chrome Web Store listing of Paper Library Checker 0.4.1. It is part of the
 public source export but is deliberately excluded from the production browser
 extension ZIP.
 
+The text files also contain the prepared dual-mode copy and reviewer flow for
+the qualified 0.5.0 release candidate. The listing remains recorded as 0.4.1
+until the 0.5.0 package is submitted and published.
+
 - Listing status: **Published**
 - Version: **0.4.1**
 - Item ID: `pmfobjnkoiiplambnbbkfdlfjcbdogon`

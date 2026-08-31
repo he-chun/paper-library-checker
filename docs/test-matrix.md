@@ -1,8 +1,9 @@
 # Paper Library Checker Manual Test Matrix
 
-Use this matrix to verify the browser extension and Zotero plugin together.
-Before testing, install the Zotero plugin, reload the unpacked browser
-extension, and confirm the extension options point to the local plugin endpoint.
+Use this matrix to verify both extension backends. Begin with standard mode and
+Zotero's built-in Local API without the project XPI. Then install the XPI and
+repeat the enhanced and automatic-mode rows. Reload the exact unpacked browser
+candidate before every browser run.
 
 For pages where `translationServerMode=auto` applies, follow the source
 expectation in each row. Pages with embedded citation metadata can use local
@@ -36,10 +37,44 @@ optional for this alpha.
 The complete redacted result is recorded in
 [`verification/final-release-gates-v4.md`](verification/final-release-gates-v4.md).
 
+## 0.5.0 dual-mode release-candidate matrix
+
+These rows are release gates for the 0.5.0 candidate. Do not inherit a PASS
+from 0.4.x because the user-visible connection flow and privacy boundary changed.
+
+| Test item | Chrome | Edge | Expected result | Actual result |
+| --- | --- | --- | --- | --- |
+| Fresh install default | PENDING | PENDING | Options selects Automatic (recommended) | PENDING |
+| 0.4.1 storage migration | PENDING | PENDING | Endpoint/token retained; switch to standard and back is reversible | PENDING |
+| Standard connection, no XPI/token | PENDING | PENDING | Local API probe succeeds and popup shows Standard | PENDING |
+| Standard exact single match | PENDING | PENDING | DOI/title result is minimized; no Possible match | PENDING |
+| Standard personal/group batch | PENDING | PENDING | Up to 80 ordered results; duplicate reuse and isolated errors | PENDING |
+| Repeated dynamic-page batch trigger | PENDING | PENDING | Identical in-flight work is reused; foreground and unrelated DOM events do not resend completed work; changed references and manual recheck still run; other tabs continue | PENDING |
+| Same-tab workload isolation | PENDING | PENDING | A detail check and reference-list batch do not cancel one another; a newer batch still supersedes stale work in its own workload | PENDING |
+| Standard foreground responsiveness | PENDING | PENDING | Popup/Options probe completes during a reference batch; queued detail work runs before remaining reference queries without cancelling either result | PENDING |
+| Standard incremental reference results | PENDING | PENDING | Completed rows leave Checking before the final batch response; stale/wrong request IDs are ignored; final result order remains unchanged | PENDING |
+| Standard timeout recovery | PENDING | PENDING | First item timeout is isolated; later automatic attempts fail fast during the one-minute cooldown and retry with bounded backoff; manual recheck remains available | PENDING |
+| Enhanced connection | PENDING | PENDING | 64-character token required; popup shows Enhanced and real-time index | PENDING |
+| Automatic prefers enhanced | PENDING | PENDING | Compatible ready add-on selected | PENDING |
+| Automatic fallback | PENDING | PENDING | Standard selected with visible fallback reason and repair action | PENDING |
+| Explicit modes do not fall back | PENDING | PENDING | Only selected backend is probed | PENDING |
+| Add/delete refresh | PENDING | PENDING | Recheck changes after cache TTL / index notification | PENDING |
+| Raw item and token leakage | PENDING | PENDING | None in page, popup, storage sync, or console | PENDING |
+| Developer mode diagnostics | PENDING | PENDING | Options shows backend phases, timings, cache/count data, and stable errors; clear works; no token or raw item data appears | PENDING |
+| Popup/page state convergence | PENDING | PENDING | Popup follows Checking to the same terminal state shown by the page badge; repeated check is disabled while pending | PENDING |
+
+Real Local API timing collected before packaging is recorded in
+[`verification/release-qualification-0.5.0.md`](verification/release-qualification-0.5.0.md).
+Exact-artifact Chrome and Edge rows remain pending.
+
 ## Toolbar popup and localization smoke
 
 Run this targeted feature smoke with Zotero 9.0.6 and the dedicated Edge
 profile; it does not replace or expand the release support matrix.
+
+The no-XPI standard-mode personal/group library and ordered batch procedure is
+maintained separately in
+[`verification/standard-local-api-batch-manual-test.md`](verification/standard-local-api-batch-manual-test.md).
 
 | Test item | Expected result | Actual result |
 | --- | --- | --- |

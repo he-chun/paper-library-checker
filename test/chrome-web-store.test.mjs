@@ -33,9 +33,9 @@ function inspectPng(buffer) {
   };
 }
 
-test("0.4.1 manifest declares complete production and action icons", async () => {
+test("0.5.0 manifest declares complete production and action icons", async () => {
   const manifest = JSON.parse(await readFile(path.join(browserRoot, "manifest.json"), "utf8"));
-  assert.equal(manifest.version, "0.4.1");
+  assert.equal(manifest.version, "0.5.0");
   assert.deepEqual(manifest.icons, iconMap);
   assert.deepEqual(manifest.action.default_icon, iconMap);
   assert.equal(manifest.action.default_popup, "src/popup.html");
@@ -121,8 +121,9 @@ test("listing and reviewer materials preserve core product facts", async () => {
     assert(normalizedEn.includes(englishFact), englishFact);
     assert(normalizedZh.includes(chineseFact), chineseFact);
   }
-  assert(reviewer.includes("companion Paper Library Checker Zotero add-on"));
-  assert(reviewer.includes("releases/tag/v0.4.1"));
+  assert(reviewer.includes("does not require the companion add-on"));
+  assert(reviewer.includes("Standard mode"));
+  assert(reviewer.includes("Automatic mode"));
   const summary = en.match(/## Summary\s+([^\n]+)/)?.[1] ?? "";
   assert(summary.length > 0 && summary.length <= 132);
 });
@@ -195,7 +196,7 @@ test("privacy and permission documents state the Chrome Web Store boundaries", a
   assert.match(privacy.replace(/\s+/g, " "), /not sent to the maintainer/);
   assert.match(permissions, /`storage`/);
   assert.match(permissions, /does not request `<all_urls>`/);
-  assert.match(permissions, /permission set is unchanged from 0\.4\.0/);
+  assert.match(permissions, /permission set is unchanged from 0\.4\.1/);
 });
 
 test("production JavaScript contains no remote-code execution path", async () => {

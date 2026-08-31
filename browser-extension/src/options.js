@@ -1,12 +1,17 @@
 var optionsI18n = globalThis.PLCI18n || (typeof require === "function" ? require("./common/i18n.js") : null);
+var optionsRequestAuth = globalThis.PLCRequestAuth ||
+  (typeof require === "function" ? require("./common/request-auth.js") : null);
 
 var DEFAULT_OPTIONS = {
   endpoint: "http://127.0.0.1:23119/zotero-checker",
+  connectionMode: "auto",
   translationServerMode: "auto",
+  developerMode: false,
   enablePageGlow: false,
   autoCheckReferenceLists: false,
   broadPageDetection: false
 };
+var indexStatusTimer = null;
 
 function validateEndpoint(value) {
   var url = new URL(value);
@@ -20,10 +25,44 @@ function validateEndpoint(value) {
 
 function readPairingToken() {
   var token = document.querySelector("#token").value.trim();
-  if (!PLCRequestAuth.isUsableSecret(token)) {
+  if (!optionsRequestAuth.isUsableSecret(token)) {
     throw new Error(optionsI18n.t("pairingTokenError"));
   }
   return token;
+}
+
+function normalizeConnectionMode(value) {
+  return ["auto", "standard", "enhanced"].includes(value) ? value : "auto";
+}
+
+function connectionStorageUpdate(draft) {
+  var mode = normalizeConnectionMode(draft.connectionMode);
+  var sync = { connectionMode: mode };
+  var local = {};
+  if (mode === "enhanced") {
+    sync.endpoint = validateEndpoint(draft.endpoint);
+    if (!optionsRequestAuth.isUsableSecret(draft.token)) throw new Error(optionsI18n.t("pairingTokenError"));
+    local.token = draft.token;
+  } else if (mode === "auto") {
+    sync.endpoint = validateEndpoint(draft.endpoint);
+    if (draft.token) {
+      if (!optionsRequestAuth.isUsableSecret(draft.token)) throw new Error(optionsI18n.t("pairingTokenError"));
+      local.token = draft.token;
+    }
+  }
+  return { sync, local };
+}
+
+function selectedMode() {
+  var radio = document.querySelector("input[name=\"connectionMode\"]:checked");
+  return normalizeConnectionMode(radio?.value);
+}
+
+function updateConnectionFields(mode) {
+  var settings = document.querySelector("#enhancedSettings");
+  mode = normalizeConnectionMode(mode);
+  settings.hidden = mode === "standard";
+  settings.open = mode === "enhanced";
 }
 
 function setStatus(message, isError) {
@@ -44,32 +83,126 @@ async function load() {
   await chrome.storage.sync.remove("token");
   document.querySelector("#endpoint").value = options.endpoint;
   document.querySelector("#token").value = secrets.token;
+  var connectionMode = normalizeConnectionMode(options.connectionMode);
+  var connectionRadio = document.querySelector(`input[name="connectionMode"][value="${connectionMode}"]`);
+  if (connectionRadio) connectionRadio.checked = true;
+  updateConnectionFields(connectionMode);
   var mode = options.translationServerMode || "auto";
   var radio = document.querySelector(`input[name="translationServerMode"][value="${mode}"]`);
   if (radio) radio.checked = true;
   document.querySelector("#enablePageGlow").checked = !!options.enablePageGlow;
   document.querySelector("#autoCheckReferenceLists").checked = !!options.autoCheckReferenceLists;
   document.querySelector("#broadPageDetection").checked = !!options.broadPageDetection;
+  document.querySelector("#developerMode").checked = !!options.developerMode;
+  updateDeveloperPanel(!!options.developerMode);
+  if (options.developerMode) await refreshDeveloperLog();
+  await refreshIndexStatus();
+}
+
+function indexStateKey(state) {
+  var keys = {
+    not_built: "indexStateNotBuilt",
+    building: "indexStateBuilding",
+    ready: "indexStateReady",
+    stale: "indexStateStale",
+    refreshing: "indexStateRefreshing",
+    error: "indexStateError"
+  };
+  return keys[state] || "indexStateNotBuilt";
+}
+
+function formatIndexDate(value) {
+  if (!value) return optionsI18n.t("unknownValue");
+  var date = new Date(value);
+  return Number.isNaN(date.getTime()) ? optionsI18n.t("unknownValue") : date.toLocaleString();
+}
+
+function renderIndexStatus(status) {
+  status = status || { state: "not_built" };
+  document.querySelector("#optionIndexState").textContent = optionsI18n.t(indexStateKey(status.state));
+  document.querySelector("#optionIndexItems").textContent = String(status.itemCount || 0);
+  document.querySelector("#optionIndexLibraries").textContent = String(status.libraryCount || 0);
+  document.querySelector("#optionIndexUpdated").textContent = formatIndexDate(status.lastSuccessfulBuildAt);
+  document.querySelector("#optionIndexProgress").textContent = optionsI18n.t(
+    "indexProgressValue",
+    [status.processedItems || 0, status.totalItems == null ? optionsI18n.t("unknownValue") : status.totalItems]
+  );
+  var busy = ["building", "refreshing"].includes(status.state);
+  document.querySelector("#refreshIndex").disabled = busy;
+  document.querySelector("#rebuildIndex").disabled = busy;
+  document.querySelector("#cancelIndex").disabled = !busy;
+  clearTimeout(indexStatusTimer);
+  if (busy) indexStatusTimer = setTimeout(() => refreshIndexStatus().catch(() => {}), 1000);
+}
+
+async function refreshIndexStatus() {
+  var response = await chrome.runtime.sendMessage({ type: "get-index-status" });
+  if (!response?.ok) throw new Error(optionsI18n.t("indexActionFailed"));
+  renderIndexStatus(response.status);
+  return response.status;
+}
+
+async function runIndexAction(type) {
+  var actionStatus = document.querySelector("#indexActionStatus");
+  actionStatus.textContent = optionsI18n.t("indexActionWorking");
+  try {
+    var response = await chrome.runtime.sendMessage({ type });
+    if (!response?.ok) throw new Error(response?.error || "index_action_failed");
+    actionStatus.textContent = optionsI18n.t("indexActionAccepted");
+    await refreshIndexStatus();
+    return response;
+  } catch (_error) {
+    actionStatus.textContent = optionsI18n.t("indexActionFailed");
+    return null;
+  }
 }
 
 async function save() {
   try {
-    var endpoint = validateEndpoint(document.querySelector("#endpoint").value.trim());
-    var token = readPairingToken();
+    var connection = connectionStorageUpdate({
+      connectionMode: selectedMode(),
+      endpoint: document.querySelector("#endpoint").value.trim(),
+      token: document.querySelector("#token").value.trim()
+    });
     var modeRadio = document.querySelector("input[name=\"translationServerMode\"]:checked");
     await chrome.storage.sync.set({
-      endpoint,
+      ...connection.sync,
       translationServerMode: modeRadio ? modeRadio.value : "auto",
+      developerMode: document.querySelector("#developerMode").checked,
       enablePageGlow: document.querySelector("#enablePageGlow").checked,
       autoCheckReferenceLists: document.querySelector("#autoCheckReferenceLists").checked,
       broadPageDetection: document.querySelector("#broadPageDetection").checked
     });
-    await chrome.storage.local.set({ token });
+    if (Object.keys(connection.local).length) await chrome.storage.local.set(connection.local);
     await chrome.storage.sync.remove("token");
     setStatus(optionsI18n.t("saved"), false);
+    updateDeveloperPanel(document.querySelector("#developerMode").checked);
+    if (document.querySelector("#developerMode").checked) await refreshDeveloperLog();
   } catch (error) {
     setStatus(error.message, true);
   }
+}
+
+function updateDeveloperPanel(enabled) {
+  document.querySelector("#developerPanel").hidden = !enabled;
+}
+
+function formatDeveloperEntry(entry) {
+  return JSON.stringify(entry);
+}
+
+async function refreshDeveloperLog() {
+  var output = document.querySelector("#developerLog");
+  var response = await chrome.runtime.sendMessage({ type: "zotero-check:developer-log" });
+  var entries = Array.isArray(response?.entries) ? response.entries : [];
+  output.textContent = entries.length
+    ? entries.map(formatDeveloperEntry).join("\n")
+    : optionsI18n.t("developerLogEmpty");
+}
+
+async function clearDeveloperLog() {
+  await chrome.runtime.sendMessage({ type: "zotero-check:clear-developer-log" });
+  await refreshDeveloperLog();
 }
 
 function connectionMessage(status, payload) {
@@ -89,20 +222,26 @@ function isCompatibleAddonVersion(addonVersion, extensionVersion) {
 
 async function testConnection() {
   try {
-    var endpoint = validateEndpoint(document.querySelector("#endpoint").value.trim());
-    var token = readPairingToken();
-    var path = "/zotero-checker/health";
-    var headers = await PLCRequestAuth.createHeaders({ secret: token, method: "GET", path, body: "" });
-    var response = await fetch(`${endpoint}/health`, { method: "GET", headers });
-    var payload = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(connectionMessage(response.status, payload));
-    if (payload.indexReady !== true) throw new Error(optionsI18n.t("indexNotReady"));
-    var extensionVersion = chrome.runtime.getManifest().version;
-    if (!isCompatibleAddonVersion(payload.version, extensionVersion)) throw new Error(optionsI18n.t("unexpectedAddonVersion"));
-    setStatus(optionsI18n.t("connectedVersion", payload.version), false);
+    await save();
+    var health = await chrome.runtime.sendMessage({ type: "zotero-check:probe" });
+    if (!health?.connected) throw new Error(optionsI18n.t(errorMessageKey(health?.error)));
+    var modeKey = health.mode === "enhanced" ? "connectionModeEnhanced" : "connectionModeStandard";
+    setStatus(optionsI18n.t("connectedMode", optionsI18n.t(modeKey)), false);
   } catch (error) {
     setStatus(error.message, true);
   }
+}
+
+function errorMessageKey(code) {
+  var keys = {
+    local_api_disabled: "localApiDisabled",
+    local_api_incompatible: "localApiIncompatible",
+    local_api_timeout: "localApiTimeout",
+    enhanced_backend_incompatible: "unexpectedAddonVersion",
+    enhanced_index_unavailable: "indexNotReady",
+    authentication_missing: "pairingTokenMissing"
+  };
+  return keys[code] || "backendUnavailable";
 }
 
 function toggleToken() {
@@ -119,11 +258,35 @@ if (typeof document !== "undefined") {
   document.querySelector("#save").addEventListener("click", save);
   document.querySelector("#testConnection").addEventListener("click", testConnection);
   document.querySelector("#toggleToken").addEventListener("click", toggleToken);
+  document.querySelector("#developerMode").addEventListener("change", (event) => updateDeveloperPanel(event.target.checked));
+  document.querySelector("#refreshDeveloperLog").addEventListener("click", () => refreshDeveloperLog().catch((error) => setStatus(error.message, true)));
+  document.querySelector("#clearDeveloperLog").addEventListener("click", () => clearDeveloperLog().catch((error) => setStatus(error.message, true)));
+  document.querySelector("#refreshIndex").addEventListener("click", () => runIndexAction("start-index-build"));
+  document.querySelector("#clearIndex").addEventListener("click", () => runIndexAction("clear-index"));
+  document.querySelector("#rebuildIndex").addEventListener("click", () => runIndexAction("clear-and-rebuild-index"));
+  document.querySelector("#cancelIndex").addEventListener("click", () => runIndexAction("cancel-index-build"));
+  for (var connectionRadio of document.querySelectorAll("input[name=\"connectionMode\"]")) {
+    connectionRadio.addEventListener("change", () => updateConnectionFields(selectedMode()));
+  }
   load().catch((error) => setStatus(error.message, true));
 }
 
 if (typeof module !== "undefined" && module.exports) module.exports = {
+  DEFAULT_OPTIONS,
+  connectionStorageUpdate,
   connectionMessage,
+  errorMessageKey,
+  formatDeveloperEntry,
+  formatIndexDate,
   isCompatibleAddonVersion,
+  normalizeConnectionMode,
+  indexStateKey,
+  refreshIndexStatus,
+  renderIndexStatus,
+  runIndexAction,
+  save,
+  testConnection,
+  updateDeveloperPanel,
+  updateConnectionFields,
   validateEndpoint
 };

@@ -25,11 +25,19 @@ Paper Library Checker 是一个仍处于 alpha 阶段的本地优先 Zotero 配�
 运行要求：
 
 - Zotero 9.0.x；
-- 配套的 Paper Library Checker Zotero 附加组件；
-- Zotero 及该附加组件需要保持运行；未运行时显示“离线（Offline）”属于预期行为。
+- Zotero 保持运行并启用其内置 Local API。
 
-本扩展不会保存文献，也不会替代 Zotero Connector；不会上传用户的 Zotero
-文献库；没有遥测、广告或开发者运营的服务器。匹配和配对均在用户电脑上完成。
+Zotero 未运行或所选后端无法连接时，显示“离线（Offline）”属于预期行为。
+
+标准模式无需安装 Paper Library Checker Zotero 附加组件，支持标识符/题名精确
+匹配和参考文献批量检查。可选增强模式通过配套附加组件提供更快批量检查、完整
+模糊匹配、“可能匹配”和实时索引更新。自动模式优先使用健康且兼容的增强后端，
+否则回退标准模式并显示原因。
+
+本扩展不会保存文献，也不会替代 Zotero Connector。标准模式的 Local API 原始
+记录只在扩展 service worker 内存中处理，不返回网页；增强模式使用认证的本机
+回环请求和最小化结果。两种模式都不会上传用户的 Zotero 文献库或用于遥测；
+项目没有遥测、广告或开发者运营的服务器。
 
 Chrome 是本次 Chrome Web Store 上架的目标浏览器。Microsoft Edge 通常可以
 安装 Chrome Web Store 扩展，但不能保证所有 Edge 环境都兼容。

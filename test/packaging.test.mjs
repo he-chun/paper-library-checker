@@ -65,7 +65,24 @@ test("builds and inspects release artifacts", () => {
     "src/common/i18n.js",
     "src/common/ui-state.js",
     "src/common/page-controller.js",
-    "src/common/sender-security.js"
+    "src/common/sender-security.js",
+    "src/backends/backend-resolver.js",
+    "src/backends/enhanced-backend.js",
+    "src/backends/direct-local-api-backend.js",
+    "src/backends/local-api-backend.js",
+    "src/backends/indexed-local-api-backend.js",
+    "src/backends/standard-backend-resolver.js",
+    "src/common/developer-diagnostics.js",
+    "src/backends/local-api-matcher.js",
+    "src/index/index-schema.js",
+    "src/index/index-state.js",
+    "src/index/index-record-normalizer.js",
+    "src/index/indexeddb-index-repository.js",
+    "src/index/index-generation-manager.js",
+    "src/index/local-api-library-discovery.js",
+    "src/index/local-api-index-builder.js",
+    "src/index/index-build-controller.js",
+    "src/index/index-build-progress.js"
   ]) assert(inventory.extension.entries.includes(name), name);
   assert(inventory.plugin.entries.includes("src/i18n.js"));
   assert.equal(inventory.plugin.dataDescriptorEntries, 0);

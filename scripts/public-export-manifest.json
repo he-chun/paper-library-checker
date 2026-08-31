@@ -32,17 +32,22 @@
     "scripts/zip.mjs",
     "docs/architecture.md",
     "docs/broad-detection-plan.md",
+    "docs/dual-backend-architecture.md",
     "docs/license-decision.md",
     "docs/matching.md",
     "docs/migration-0.3.md",
+    "docs/migration-0.5.md",
     "docs/protocol.md",
     "docs/releasing.md",
     "docs/test-matrix.md",
     "docs/threat-model.md",
     "docs/verification/public-export-boundary.md",
+    "docs/verification/dual-mode-0.5.0-qualification.md",
     "docs/verification/release-qualification-0.3.0.md",
     "docs/verification/release-qualification-0.3.0.json",
-    "docs/verification/reproducible-artifact-policy.md"
+    "docs/verification/release-qualification-0.5.0.md",
+    "docs/verification/reproducible-artifact-policy.md",
+    "docs/verification/standard-local-api-batch-manual-test.md"
   ],
   "directories": [
     ".github",

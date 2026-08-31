@@ -1,9 +1,9 @@
 # Privacy
 
 Paper Library Checker is local-first. The browser extension extracts scholarly
-metadata from supported pages and sends it to a Zotero add-on on the loopback
-interface. The add-on compares that metadata with an in-memory index of the
-local Zotero library.
+metadata from supported pages. Enhanced mode sends it to the Paper Library
+Checker Zotero add-on on loopback. Standard mode queries Zotero's built-in
+read-only Local API and compares candidate records in service-worker memory.
 
 ## Data processed
 
@@ -18,11 +18,32 @@ attachments, notes, collections, tags, or local paths.
 ## Where data goes
 
 - Zotero matching requests go only to the configured HTTP loopback endpoint.
+- Standard-mode reads go only to Zotero's fixed Local API root on port 23119.
+  Raw Local API item JSON remains in service-worker memory and is not returned
+  to pages, written to browser storage or logs, or forwarded elsewhere.
+  Personal and accessible group libraries are queried only for the current
+  candidate set. Successful query responses may be retained in a bounded
+  five-second memory cache, and the group list in a thirty-second memory cache.
+  No persistent full-library index is created.
 - When enabled, Zotero translation-server receives the current public HTTP(S)
   page URL at its fixed loopback endpoint. Private, local, and mismatched URLs
   are rejected by the extension.
 - The project has no telemetry, analytics, advertising, crash upload, or remote
   account service.
+
+## Mode-specific privacy boundaries
+
+Standard mode and enhanced mode have intentionally different trust boundaries:
+
+- **Standard mode:** the extension service worker reads search candidates from
+  Zotero's built-in read-only Local API. Raw records can exist briefly in that
+  worker's memory so identifiers, normalized title, year, and authors can be
+  re-verified. They never cross into the content script or visited page and are
+  not uploaded to a developer-operated server or used for telemetry.
+- **Enhanced mode:** the separately installed Zotero add-on owns the full local
+  index. The browser sends authenticated, minimized candidates over loopback and
+  receives only minimized match results and capabilities. Raw Zotero records do
+  not enter the browser extension.
 
 The extension does not upload Zotero library data. A separately installed
 translation-server may fetch the public page URL supplied to it; users should
@@ -54,6 +75,10 @@ Paper Library Checker's use of user data complies with the Chrome Web Store User
 
 ## Authentication data
 
+Standard-mode Local API reads do not use the pairing token. Zotero requires the
+user to enable its local API preference; Paper Library Checker performs no
+Local API writes and requests no write authorization.
+
 The Zotero add-on generates a 256-bit random pairing token on first run and
 stores it in a local Zotero preference. The browser extension stores the copied
 token in `chrome.storage.local`. Non-sensitive preferences may use
@@ -69,6 +94,14 @@ rotating immediately invalidates the previous token. Clipboard contents remain
 under operating-system and clipboard-manager control after copying.
 
 ## Logs
+
+The browser extension's optional Developer mode is off by default. When enabled,
+it keeps at most 200 structured performance entries in service-worker memory and
+shows them only on the extension Options page. Entries cover backend phases,
+timings, personal/group query class, cache use, counts, HTTP status, and stable
+error codes. They do not contain pairing tokens or raw Zotero item JSON, are not
+written to browser storage, and disappear when the worker restarts or the user
+selects **Clear log**.
 
 The add-on writes a bounded local diagnostic log in the Zotero profile. Project
 log calls omit library identifiers, item identifiers, item keys, titles,
@@ -103,8 +136,9 @@ batch checking remains limited to explicit adapters.
 
 ## Retention and deletion
 
-Matching caches are memory-only and expire or are cleared when the add-on stops,
-the index changes, or the token rotates. Remove the extension's local storage
-from the browser and revoke the Zotero token to remove pairing state.
+Standard-mode query and group-list caches are bounded, memory-only, and expire
+within seconds. Enhanced-mode matching caches and indexes remain within the
+add-on and are cleared when it stops or its index changes. Remove the
+extension's local storage and revoke the Zotero token to remove pairing state.
 
 Report privacy concerns using the private process in `SECURITY.md`.

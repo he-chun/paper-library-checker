@@ -1,7 +1,11 @@
 # Matching rules
 
-The Zotero plugin builds an in-memory index from Zotero items and refreshes it
-when Zotero emits item notifications.
+Enhanced mode uses the Zotero plugin's in-memory index and refreshes it when
+Zotero emits item notifications. Standard Indexed mode queries a minimal full
+snapshot of personal and accessible group libraries. Standard Direct mode is a
+cold-start and small-batch fallback that searches Zotero's built-in Local API.
+All engines independently verify normalized identifiers, title, year, and
+creators before returning a match.
 
 ## Result structure
 
@@ -29,6 +33,7 @@ Supported formal keys:
 - DOI
 - PMID
 - ISBN
+- CNKI file identifier or a supported CNKI URL
 
 DOIs are normalized by removing `https://doi.org/`, `http://dx.doi.org/`, and
 `doi:`, then trimming and lowercasing. PMID and ISBN values are lowercased and
@@ -87,3 +92,45 @@ Thresholds:
 - lower scores return `not_found`
 
 Fuzzy matches still use the same year and author hints when present.
+
+Fuzzy matching and `possible_match` are enhanced-mode capabilities only.
+Ready Standard Indexed and Enhanced/XPI engines have complete negative results;
+their `not_found` may be displayed as `Not saved`. Direct and stale Indexed
+misses have `complete=false` and must be displayed as `No match; result may be
+incomplete`.
+
+The Direct standard engine verifies exact identifiers and normalized
+exact titles in the quicksearch candidate set;
+it returns `matched`, `not_found`, or an isolated stable error and never upgrades
+a Local API search hit without rechecking identifiers, title, year, and authors.
+Identifier matches have confidence `1`; exact title matches retain confidence
+`0.95`. Attachments, notes, and annotations are not formal bibliographic items.
+
+Standard batches deduplicate normalized candidates, reuse duplicate results,
+and expand results back into input order. Title-bearing candidates use
+`titleCreatorYear` without launching a second full-text search; exact identifiers
+are still reverified in every returned title candidate. Identifier-only
+candidates retain the `everything` compatibility path needed when DOI, PMID, ISBN, or CNKI
+data is stored outside the title index. Search hits from either mode remain
+candidates until the same exact matcher rechecks them. During a standard
+reference batch, each completed minimized result can update its page row
+immediately; the final response still contains the complete input-ordered array.
+
+The shared scheduler has a hard ceiling of four active Local API item requests.
+Production uses up to four concurrent lightweight title queries, while the
+identifier-only `everything` lane remains limited to one because real Zotero
+measurements showed that its full-text searches serialize internally. Each lane
+is stable within its priority, with detail-page work ahead of queued
+reference-list work; lightweight health probes do not join either lane. The
+item-query cache is bounded to 256 entries for five seconds; group membership is
+cached for thirty seconds. The 30-second per-request timeout accommodates large
+real libraries. An item timeout opens a sixty-second fail-fast cooldown, and page
+automatic retries back off from sixty seconds to five minutes, preventing
+browser aborts or dynamic DOM events from continuously extending Zotero's own
+search queue. These rules apply only to Direct fallback; the primary Indexed
+engine queries the persistent minimal full-library snapshot without per-item
+Zotero HTTP searches. Direct misses return `complete=false` with
+`reason=direct_search_no_candidate`; therefore the legacy `exactIdentifiers`
+and `exactTitle` aliases describe exact verification, not complete recall or a
+complete negative result. See `mode-capability-contract.md` for the canonical
+capability fields.

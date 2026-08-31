@@ -36,6 +36,93 @@ test("unknown and malformed DOM yields no candidate", async () => {
   dom.window.close();
 });
 
+test("stale index misses are not rendered as not saved and refresh completion rechecks", async () => {
+  const html = await readFile(new URL("./fixtures/mdpi-detail.html", import.meta.url), "utf8");
+  let listener;
+  let checks = 0;
+  const dom = new JSDOM(html, {
+    url: "https://www.mdpi.com/1/2/3",
+    runScripts: "outside-only",
+    pretendToBeVisual: true
+  });
+  dom.window.chrome = {
+    i18n: { getMessage: () => "", getUILanguage: () => "en" },
+    storage: { sync: { get: (_defaults, callback) => callback({ translationServerMode: "off" }) } },
+    runtime: {
+      id: "test-extension",
+      getURL: (value) => `chrome-extension://test-extension/${value}`,
+      onMessage: { addListener: (value) => { listener = value; } },
+      sendMessage: (message, callback) => {
+        if (message.type !== "zotero-check:match") return;
+        checks += 1;
+        callback({ ok: true, result: checks === 1
+          ? { status: "not_found", matchType: null, confidence: 0, complete: false, freshness: "stale" }
+          : { status: "not_found", matchType: null, confidence: 0, complete: true } });
+      }
+    }
+  };
+  for (const name of [
+    "common/i18n.js", "common/backend-contract.js", "common/ui-state.js", "common/page-controller.js", "common/sender-security.js",
+    "common/normalization.js", "extractors/cnki.js", "extractors/generic.js", "extractors/runner.js",
+    "adapters/sciencedirect.js", "content.js"
+  ]) dom.window.eval(await source(name));
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    const label = dom.window.document.querySelector("#zotero-check-badge-host").shadowRoot
+      .querySelector(".zotero-check-label");
+    assert.equal(label.textContent, "Library: index needs update");
+    listener({ type: "zotero-check:index-refreshed" }, { id: "test-extension" }, () => {});
+    await new Promise((resolve) => setTimeout(resolve, 800));
+    assert.equal(checks, 2);
+    assert.equal(label.textContent, "Library: not saved");
+  } finally {
+    dom.window.close();
+  }
+});
+
+test("Direct misses are rendered as incomplete rather than not saved", async () => {
+  const html = await readFile(new URL("./fixtures/mdpi-detail.html", import.meta.url), "utf8");
+  const dom = new JSDOM(html, {
+    url: "https://www.mdpi.com/1/2/3",
+    runScripts: "outside-only",
+    pretendToBeVisual: true
+  });
+  dom.window.chrome = {
+    i18n: { getMessage: () => "", getUILanguage: () => "en" },
+    storage: { sync: { get: (_defaults, callback) => callback({ translationServerMode: "off" }) } },
+    runtime: {
+      id: "test-extension",
+      getURL: (value) => `chrome-extension://test-extension/${value}`,
+      onMessage: { addListener: () => {} },
+      sendMessage: (message, callback) => {
+        if (message.type === "zotero-check:match") {
+          callback({
+            ok: true,
+            result: {
+              status: "not_found", matchType: null, confidence: 0,
+              complete: false, mode: "standard", engine: "direct", freshness: "unavailable"
+            }
+          });
+        }
+      }
+    }
+  };
+  for (const name of [
+    "common/i18n.js", "common/backend-contract.js", "common/ui-state.js", "common/page-controller.js",
+    "common/sender-security.js", "common/normalization.js", "extractors/cnki.js", "extractors/generic.js",
+    "extractors/runner.js", "adapters/sciencedirect.js", "content.js"
+  ]) dom.window.eval(await source(name));
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    const host = dom.window.document.querySelector("#zotero-check-badge-host");
+    assert.equal(host.shadowRoot.querySelector(".zotero-check-label").textContent,
+      "Library: no match; result may be incomplete");
+    assert.equal(host.shadowRoot.querySelector(".zotero-check-badge").dataset.state, "unknown");
+  } finally {
+    dom.window.close();
+  }
+});
+
 test("ScienceDirect adapter collects a minimal reference candidate", async () => {
   const html = await readFile(new URL("./fixtures/sciencedirect-references.html", import.meta.url), "utf8");
   const dom = new JSDOM(html, { url: "https://www.sciencedirect.com/science/article/pii/HOST", runScripts: "outside-only" });
@@ -63,6 +150,7 @@ test("CNKI reference and citation blocks produce a batch message", async () => {
   };
   for (const name of [
     "common/i18n.js",
+    "common/backend-contract.js",
     "common/ui-state.js",
     "common/page-controller.js",
     "common/sender-security.js",
@@ -74,10 +162,275 @@ test("CNKI reference and citation blocks produce a batch message", async () => {
     "content.js"
   ]) dom.window.eval(await source(name));
   await new Promise((resolve) => setTimeout(resolve, 700));
+  const detail = messages.find((message) => Array.isArray(message.candidates) && message.candidates.every((candidate) => candidate.source !== "cnki-list"));
   const batch = messages.find((message) => Array.isArray(message.candidates) && message.candidates.some((candidate) => candidate.source === "cnki-list"));
+  assert.equal(detail.workload, "detail");
+  assert.equal(batch.workload, "references");
   assert.equal(batch.candidates.length, 2);
   assert.equal(Array.from(batch.candidates, (candidate) => candidate.title).sort().join("|"), "Synthetic Citation Two|Synthetic Reference One");
   dom.window.close();
+});
+
+test("repeated forced scheduling does not send the same reference batch while it is in flight", async () => {
+  const html = await readFile(new URL("./fixtures/cnki-references.html", import.meta.url), "utf8");
+  const messages = [];
+  const dom = new JSDOM(html, {
+    url: "https://kns.cnki.net/kcms2/article/abstract?v=HOST",
+    runScripts: "outside-only",
+    pretendToBeVisual: true
+  });
+  dom.window.chrome = {
+    i18n: { getMessage: () => "", getUILanguage: () => "en" },
+    storage: { sync: { get: (_defaults, callback) => callback({ autoCheckReferenceLists: true, translationServerMode: "off" }) } },
+    runtime: {
+      id: "test-extension",
+      getURL: (value) => `chrome-extension://test-extension/${value}`,
+      onMessage: { addListener: () => {} },
+      sendMessage: (message, callback) => {
+        messages.push(message);
+        if (!Array.isArray(message.candidates)) callback?.({ ok: true, result: { status: "not_found" } });
+      }
+    }
+  };
+  for (const name of [
+    "common/i18n.js",
+    "common/backend-contract.js",
+    "common/ui-state.js",
+    "common/page-controller.js",
+    "common/sender-security.js",
+    "common/normalization.js",
+    "extractors/cnki.js",
+    "extractors/generic.js",
+    "extractors/runner.js",
+    "adapters/sciencedirect.js",
+    "content.js"
+  ]) dom.window.eval(await source(name));
+
+  const referenceBatches = () => messages.filter((message) =>
+    Array.isArray(message.candidates) && message.candidates.some((candidate) => candidate.source === "cnki-list")
+  );
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 700));
+    assert.equal(referenceBatches().length, 1);
+    dom.window.dispatchEvent(new dom.window.Event("focus"));
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    assert.equal(referenceBatches().length, 1);
+  } finally {
+    dom.window.close();
+  }
+});
+
+test("reference results render incrementally while the final batch response is pending", async () => {
+  const html = await readFile(new URL("./fixtures/cnki-references.html", import.meta.url), "utf8");
+  const messages = [];
+  let messageListener;
+  let finishReferenceBatch;
+  const dom = new JSDOM(html, {
+    url: "https://kns.cnki.net/kcms2/article/abstract?v=HOST",
+    runScripts: "outside-only",
+    pretendToBeVisual: true
+  });
+  dom.window.chrome = {
+    i18n: { getMessage: () => "", getUILanguage: () => "en" },
+    storage: { sync: { get: (_defaults, callback) => callback({ autoCheckReferenceLists: true, translationServerMode: "off" }) } },
+    runtime: {
+      id: "test-extension",
+      getURL: (value) => `chrome-extension://test-extension/${value}`,
+      onMessage: { addListener: (listener) => { messageListener = listener; } },
+      sendMessage: (message, callback) => {
+        messages.push(message);
+        if (message.workload === "references") {
+          finishReferenceBatch = callback;
+        } else {
+          callback?.({ ok: true, result: { status: "not_found" } });
+        }
+      }
+    }
+  };
+  for (const name of [
+    "common/i18n.js",
+    "common/backend-contract.js",
+    "common/ui-state.js",
+    "common/page-controller.js",
+    "common/sender-security.js",
+    "common/normalization.js",
+    "extractors/cnki.js",
+    "extractors/generic.js",
+    "extractors/runner.js",
+    "adapters/sciencedirect.js",
+    "content.js"
+  ]) dom.window.eval(await source(name));
+
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 700));
+    const batch = messages.find((message) => message.workload === "references");
+    const anchors = dom.window.document.querySelectorAll("#quoted-references a, #quoted-citations a");
+    assert.equal(Number.isSafeInteger(batch.requestId), true);
+    assert.equal(anchors[0].dataset.zoteroCheckState, "checking");
+    assert.equal(anchors[1].dataset.zoteroCheckState, "checking");
+
+    messageListener({
+      type: "zotero-check:batch-progress",
+      requestId: batch.requestId - 1,
+      index: 0,
+      result: { status: "matched", matchType: "title", confidence: 0.95 }
+    }, {
+      id: "test-extension"
+    }, () => {});
+    assert.equal(anchors[0].dataset.zoteroCheckState, "checking");
+
+    messageListener({
+      type: "zotero-check:batch-progress",
+      requestId: batch.requestId,
+      index: 0,
+      result: { status: "matched", matchType: "title", confidence: 0.95 }
+    }, {
+      id: "test-extension"
+    }, () => {});
+
+    assert.equal(anchors[0].dataset.zoteroCheckState, "matched");
+    assert.equal(anchors[1].dataset.zoteroCheckState, "checking");
+    finishReferenceBatch({
+      ok: true,
+      result: { results: [
+        { status: "matched", matchType: "title", confidence: 0.95 },
+        { status: "not_found", matchType: null, confidence: 0 }
+      ] }
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  } finally {
+    dom.window.close();
+  }
+});
+
+test("automatic foreground and DOM triggers do not resend a completed reference batch", async () => {
+  const html = await readFile(new URL("./fixtures/cnki-references.html", import.meta.url), "utf8");
+  const messages = [];
+  let messageListener;
+  const dom = new JSDOM(html, {
+    url: "https://kns.cnki.net/kcms2/article/abstract?v=HOST",
+    runScripts: "outside-only",
+    pretendToBeVisual: true
+  });
+  dom.window.requestIdleCallback = (callback) => dom.window.setTimeout(callback, 0);
+  dom.window.chrome = {
+    i18n: { getMessage: () => "", getUILanguage: () => "en" },
+    storage: { sync: { get: (_defaults, callback) => callback({ autoCheckReferenceLists: true, translationServerMode: "off" }) } },
+    runtime: {
+      id: "test-extension",
+      getURL: (value) => `chrome-extension://test-extension/${value}`,
+      onMessage: { addListener: (listener) => { messageListener = listener; } },
+      sendMessage: (message, callback) => {
+        messages.push(message);
+        if (Array.isArray(message.candidates) && message.candidates.some((candidate) => candidate.source === "cnki-list")) {
+          callback?.({
+            ok: true,
+            result: { results: message.candidates.map(() => ({ status: "not_found", matchType: null, confidence: 0 })) }
+          });
+        } else {
+          callback?.({ ok: true, result: { status: "not_found" } });
+        }
+      }
+    }
+  };
+  for (const name of [
+    "common/i18n.js",
+    "common/backend-contract.js",
+    "common/ui-state.js",
+    "common/page-controller.js",
+    "common/sender-security.js",
+    "common/normalization.js",
+    "extractors/cnki.js",
+    "extractors/generic.js",
+    "extractors/runner.js",
+    "adapters/sciencedirect.js",
+    "content.js"
+  ]) dom.window.eval(await source(name));
+
+  const referenceBatches = () => messages.filter((message) =>
+    Array.isArray(message.candidates) && message.candidates.some((candidate) => candidate.source === "cnki-list")
+  );
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 700));
+    assert.equal(referenceBatches().length, 1);
+
+    dom.window.dispatchEvent(new dom.window.Event("focus"));
+    dom.window.dispatchEvent(new dom.window.Event("pageshow"));
+    dom.window.document.body.appendChild(dom.window.document.createElement("div"));
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    assert.equal(referenceBatches().length, 1);
+
+    const addedReference = dom.window.document.createElement("a");
+    addedReference.href = "/kcms2/article/abstract?v=SYN003";
+    addedReference.title = "Synthetic Reference Three";
+    addedReference.textContent = "Synthetic Reference Three";
+    dom.window.document.querySelector("#quoted-references").appendChild(addedReference);
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    assert.equal(referenceBatches().length, 2);
+
+    const sender = { id: "test-extension", url: "chrome-extension://test-extension/src/popup.html" };
+    messageListener({ type: "zotero-check:manual-page-check" }, sender, () => {});
+    await new Promise((resolve) => setTimeout(resolve, 700));
+    assert.equal(referenceBatches().length, 3);
+  } finally {
+    dom.window.close();
+  }
+});
+
+test("an all-error reference batch is not force-retried during its cooldown", async () => {
+  const html = await readFile(new URL("./fixtures/cnki-references.html", import.meta.url), "utf8");
+  const messages = [];
+  const dom = new JSDOM(html, {
+    url: "https://kns.cnki.net/kcms2/article/abstract?v=HOST",
+    runScripts: "outside-only",
+    pretendToBeVisual: true
+  });
+  dom.window.chrome = {
+    i18n: { getMessage: () => "", getUILanguage: () => "en" },
+    storage: { sync: { get: (_defaults, callback) => callback({ autoCheckReferenceLists: true, translationServerMode: "off" }) } },
+    runtime: {
+      id: "test-extension",
+      getURL: (value) => `chrome-extension://test-extension/${value}`,
+      onMessage: { addListener: () => {} },
+      sendMessage: (message, callback) => {
+        messages.push(message);
+        if (Array.isArray(message.candidates) && message.candidates.some((candidate) => candidate.source === "cnki-list")) {
+          callback?.({
+            ok: true,
+            result: { results: message.candidates.map(() => ({ status: "error", error: "local_api_timeout" })) }
+          });
+        } else {
+          callback?.({ ok: true, result: { status: "not_found" } });
+        }
+      }
+    }
+  };
+  for (const name of [
+    "common/i18n.js",
+    "common/backend-contract.js",
+    "common/ui-state.js",
+    "common/page-controller.js",
+    "common/sender-security.js",
+    "common/normalization.js",
+    "extractors/cnki.js",
+    "extractors/generic.js",
+    "extractors/runner.js",
+    "adapters/sciencedirect.js",
+    "content.js"
+  ]) dom.window.eval(await source(name));
+
+  const referenceBatches = () => messages.filter((message) =>
+    Array.isArray(message.candidates) && message.candidates.some((candidate) => candidate.source === "cnki-list")
+  );
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 700));
+    assert.equal(referenceBatches().length, 1);
+    dom.window.dispatchEvent(new dom.window.Event("focus"));
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    assert.equal(referenceBatches().length, 1);
+  } finally {
+    dom.window.close();
+  }
 });
 
 test("manual recheck returns an unrecognized page to its final state", async () => {
@@ -99,6 +452,7 @@ test("manual recheck returns an unrecognized page to its final state", async () 
   };
   for (const name of [
     "common/i18n.js",
+    "common/backend-contract.js",
     "common/ui-state.js",
     "common/page-controller.js",
     "common/sender-security.js",

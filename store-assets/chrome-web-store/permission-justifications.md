@@ -1,6 +1,6 @@
 # Chrome Web Store permission justifications
 
-The 0.4.1 permission set is unchanged from 0.4.0.
+The 0.5.0 candidate permission set is unchanged from 0.4.1.
 
 ## `storage`
 
@@ -10,8 +10,10 @@ maintainer.
 
 ## `http://localhost:23119/*` and `http://127.0.0.1:23119/*`
 
-Connect to the companion Paper Library Checker Zotero add-on on the same
-computer for health, indexing, and authenticated local-library matching.
+Connect either to Zotero's built-in read-only Local API for standard-mode exact
+matching or to the companion Paper Library Checker Zotero add-on for enhanced
+health, indexing, and authenticated local-library matching. Both destinations
+use fixed loopback hosts and port 23119.
 
 ## `http://localhost:1969/*` and `http://127.0.0.1:1969/*`
 

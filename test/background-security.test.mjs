@@ -7,6 +7,7 @@ global.chrome = {
   runtime: {
     id: "extension-id",
     getURL: (value) => `chrome-extension://extension-id/${value}`,
+    getManifest: () => ({ version: "0.4.1" }),
     onMessage: { addListener() {} }
   },
   storage: { sync: { get: async () => ({}) }, local: { get: async () => ({}) } }
@@ -21,12 +22,23 @@ test("accepts only messages tied to the sender tab", () => {
   assert.equal(background.isTrustedMessage({ type: "zotero-check:match", candidate: {} }, { ...sender, id: "other" }), false);
 });
 
-test("popup-only health messages require the extension origin", () => {
-  const message = { type: "zotero-check:popup-health" };
-  assert.equal(background.isTrustedExtensionMessage(message, {
+test("popup health, options probe, and developer logs require the extension origin", () => {
+  for (const type of [
+    "zotero-check:popup-health",
+    "zotero-check:probe",
+    "zotero-check:developer-log",
+    "zotero-check:clear-developer-log",
+    "start-index-build",
+    "cancel-index-build",
+    "get-index-status"
+  ]) {
+    const message = { type };
+    assert.equal(background.isTrustedExtensionMessage(message, {
     id: "extension-id",
     url: "chrome-extension://extension-id/src/popup.html"
-  }), true);
+    }), true);
+  }
+  const message = { type: "zotero-check:popup-health" };
   assert.equal(background.isTrustedExtensionMessage(message, {
     id: "extension-id",
     url: "https://evil.example/"
@@ -37,13 +49,21 @@ test("popup-only health messages require the extension origin", () => {
   }), false);
 });
 
-test("popup health response exposes only connection and index readiness", async () => {
+test("popup health projects mode and capabilities without backend secrets", async () => {
   const originalFetch = global.fetch;
-  global.chrome.storage.sync.get = async () => ({ endpoint: "http://127.0.0.1:23119/zotero-checker" });
+  global.chrome.storage.sync.get = async () => ({
+    endpoint: "http://127.0.0.1:23119/zotero-checker",
+    connectionMode: "enhanced"
+  });
   global.chrome.storage.local.get = async () => ({ token: "a".repeat(64) });
-  global.fetch = async () => ({ ok: true, json: async () => ({ indexReady: true, version: "0.4.0", token: "secret" }) });
+  global.fetch = async () => ({ ok: true, json: async () => ({ ok: true, indexReady: true, version: "0.4.1", token: "secret" }) });
   try {
-    assert.deepEqual(await background.getPopupHealth(), { connected: true, indexReady: true });
+    const health = await background.getPopupHealth();
+    assert.equal(health.connected, true);
+    assert.equal(health.indexReady, true);
+    assert.equal(health.mode, "enhanced");
+    assert.equal(health.capabilities.realtimeIndex, true);
+    assert.equal(JSON.stringify(health).includes("secret"), false);
   } finally {
     global.fetch = originalFetch;
   }

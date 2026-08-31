@@ -40,10 +40,13 @@ test("public export manifest excludes superseded engineering reports", async () 
   assert.deepEqual(
     manifest.files.filter(name => name.startsWith("docs/verification/")).sort(),
     [
+      "docs/verification/dual-mode-0.5.0-qualification.md",
       "docs/verification/public-export-boundary.md",
       "docs/verification/release-qualification-0.3.0.json",
       "docs/verification/release-qualification-0.3.0.md",
-      "docs/verification/reproducible-artifact-policy.md"
+      "docs/verification/release-qualification-0.5.0.md",
+      "docs/verification/reproducible-artifact-policy.md",
+      "docs/verification/standard-local-api-batch-manual-test.md"
     ]
   );
 });

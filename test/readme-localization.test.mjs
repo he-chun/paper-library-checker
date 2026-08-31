@@ -40,9 +40,9 @@ test("README language switchers are reciprocal and mark the current language", (
   assert.match(chinese, /^# Paper Library Checker\r?\n\r?\n\[English\]\(README\.md\) \| \*\*简体中文\*\*/);
 });
 
-test("localized READMEs point to the current published version", () => {
+test("localized READMEs distinguish the source candidate from the published version", () => {
   const addon = updateManifest.addons["paper-library-checker@he-chun.github.io"];
-  assert.equal(currentVersion, "0.4.1");
+  assert.equal(currentVersion, "0.5.0");
   assert.equal(addon.updates.at(-1).version, "0.4.1");
   for (const content of [english, chinese]) {
     for (const fact of canonicalFacts) assert(content.includes(fact), fact);
@@ -57,6 +57,8 @@ test("both READMEs link to the published Chrome Web Store listing", () => {
   }
   assert(english.includes("the published store version is 0.4.1"));
   assert(chinese.includes("当前商店版本为 0.4.1"));
+  assert(english.includes("source tree is preparing version 0.5.0"));
+  assert(chinese.includes("正在准备 0.5.0 发布候选"));
 });
 
 test("Simplified Chinese support matrix preserves qualified support levels", () => {
@@ -71,7 +73,7 @@ test("Simplified Chinese support matrix preserves qualified support levels", () 
   for (const row of rows) assert(chinese.includes(row), row);
 });
 
-test("both READMEs retain installation and pairing instructions", () => {
+test("both READMEs put standard installation before optional enhanced pairing", () => {
   for (const marker of [
     "Tools > Plugins",
     "Install Plugin From File",
@@ -92,6 +94,8 @@ test("both READMEs retain installation and pairing instructions", () => {
   ]) assert(chinese.includes(marker), marker);
   assert(english.includes("pairing token"));
   assert(chinese.includes("配对令牌"));
+  assert(english.indexOf("Standard mode needs no pairing token") < english.indexOf("Optional enhanced mode"));
+  assert(chinese.indexOf("标准模式不需要配对令牌") < chinese.indexOf("可选的增强模式"));
 });
 
 test("both READMEs prefer store installation and document unpacked migration", () => {

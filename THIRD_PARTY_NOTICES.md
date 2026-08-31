@@ -17,6 +17,9 @@ is licensed under Apache-2.0 as stated in `LICENSE`.
 
 ## Test dependency
 
+- `fake-indexeddb@6.2.5` is an Apache-2.0-licensed in-memory IndexedDB
+  implementation used by Node tests. It is not used at runtime and is not
+  bundled in release artifacts.
 - `jsdom@29.1.1` is an MIT-licensed DOM test environment. It is not used at
   runtime and is not bundled in release artifacts.
 

@@ -2,6 +2,7 @@
   const api = window.ZoteroCheck;
   const i18n = window.PLCI18n;
   const uiState = window.PLCUIState;
+  const backendContract = window.PLCBackendContract;
   const senderSecurity = window.PLCSenderSecurity;
   const SKIPPED_HOSTS = new Set([
     "chatgpt.com",
@@ -38,10 +39,16 @@
   const MAX_DYNAMIC_CHECKS = 10;
   const BATCH_LIMIT = 80;
   const RETRY_DELAY_MS = 5000;
+  const BATCH_RETRY_INITIAL_MS = 60000;
+  const BATCH_RETRY_MAX_MS = 300000;
   const FOREGROUND_CHECK_DEBOUNCE_MS = 1000;
   let checkCount = 0;
   let lastSuccessfulCandidateKey = "";
   let lastSuccessfulBatchKey = "";
+  let inFlightBatchKey = "";
+  let lastFailedBatchKey = "";
+  let batchRetryNotBefore = 0;
+  let batchRetryDelayMs = BATCH_RETRY_INITIAL_MS;
   let detailTimer = null;
   let batchTimer = null;
   let detailRetryTimer = null;
@@ -51,6 +58,10 @@
   let lastForegroundCheckAt = 0;
   let detailRunSerial = 0;
   let batchRunSerial = 0;
+  // A page-scoped time prefix prevents late progress from a prior navigation
+  // from colliding with a new content-script instance in the same tab.
+  let batchRequestSequence = Date.now() * 1000;
+  let activeBatchProgress = null;
   let observerDebounceTimer = null;
   let observerCheckPending = false;
 
@@ -76,6 +87,24 @@
   });
 
   chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
+    if (message?.type === "zotero-check:batch-progress") {
+      if (!senderSecurity.isTrustedExtensionContextSender(sender, chrome.runtime)) return false;
+      applyBatchProgress(message);
+      return false;
+    }
+    if (message?.type === "zotero-check:index-refreshed") {
+      if (!senderSecurity.isTrustedExtensionContextSender(sender, chrome.runtime)) return false;
+      const hadReferenceCheck = Boolean(lastSuccessfulBatchKey || lastFailedBatchKey || inFlightBatchKey);
+      lastSuccessfulCandidateKey = "";
+      lastSuccessfulBatchKey = "";
+      lastFailedBatchKey = "";
+      batchRetryNotBefore = 0;
+      detailRunSerial += 1;
+      batchRunSerial += 1;
+      scheduleDetailCheck({ force: true });
+      if (_options.autoCheckReferenceLists || hadReferenceCheck) scheduleBatchCheck({ force: true });
+      return false;
+    }
     if (!senderSecurity.isTrustedExtensionPageSender(sender, chrome.runtime)) return false;
     if (message?.type === "zotero-check:get-page-state") {
       sendResponse({ ok: true, pageState: pageController.getState() });
@@ -440,12 +469,15 @@
     return host?.shadowRoot?.querySelector(".zotero-check-choices") || null;
   }
 
-  function sendMatch(candidates) {
+  function sendMatch(candidates, workload, requestId) {
     return new Promise((resolve) => {
+      const message = Array.isArray(candidates)
+        ? { type: "zotero-check:match", candidates }
+        : { type: "zotero-check:match", candidate: candidates };
+      if (Array.isArray(candidates) && workload) message.workload = workload;
+      if (Array.isArray(candidates) && Number.isSafeInteger(requestId)) message.requestId = requestId;
       chrome.runtime.sendMessage(
-        Array.isArray(candidates)
-          ? { type: "zotero-check:match", candidates }
-          : { type: "zotero-check:match", candidate: candidates },
+        message,
         (response) => resolve(response)
       );
     });
@@ -556,7 +588,7 @@
       uiState.PAGE_STATES.CHECKING
     );
 
-    const response = await sendMatch(extraction.candidates);
+    const response = await sendMatch(extraction.candidates, "detail");
     if (runSerial !== detailRunSerial) {
       return;
     }
@@ -648,6 +680,25 @@
       scheduleDetailRetry();
       return;
     }
+    if (result?.complete === false && result?.freshness === "stale") {
+      const matched = isPositiveResult(result);
+      setBadge(
+        matched ? "possible" : "unknown",
+        i18n.t(matched ? "badgeSavedStale" : "badgeIndexStale"),
+        i18n.t("staleIndexResultDescription"),
+        matched ? uiState.PAGE_STATES.STALE_MATCH : uiState.PAGE_STATES.STALE_UNKNOWN
+      );
+      return;
+    }
+    if (backendContract.isIncompleteNotFound(result)) {
+      setBadge(
+        "unknown",
+        i18n.t("badgeIncompleteNotFound"),
+        i18n.t("incompleteNotFoundDescription"),
+        uiState.PAGE_STATES.INCOMPLETE_NOT_FOUND
+      );
+      return;
+    }
     if (isPositiveResult(result)) {
       setBadge(
         result.status === "possible_match" ? "possible" : "matched",
@@ -710,7 +761,6 @@
   }
 
   async function runBatchCheck() {
-    const runSerial = ++batchRunSerial;
     const force = forceNextBatchCheck;
     forceNextBatchCheck = false;
     const userInitiated = _batchUserInitiated;
@@ -727,9 +777,9 @@
 
     if (adapter) {
       // Compute fast signature before expensive collectBatchTargets
-      if (!force && typeof adapter.getBatchSignature === "function") {
+      if (typeof adapter.getBatchSignature === "function") {
         signature = adapter.getBatchSignature();
-        if (signature && signature === lastSuccessfulBatchKey) {
+        if (!force && signature && signature === lastSuccessfulBatchKey) {
           return;
         }
       }
@@ -743,19 +793,40 @@
     }
 
     var batchKey = targets.map(function (t) { return t.sourceId || t.key; }).join(";");
-    if (!force && signature) {
+    if (signature) {
       // Use the pre-computed signature if available
       batchKey = signature;
     }
     if (!force && batchKey === lastSuccessfulBatchKey) {
       return;
     }
+    if (!userInitiated && batchKey === lastFailedBatchKey && Date.now() < batchRetryNotBefore) {
+      return;
+    }
+    if (batchKey === inFlightBatchKey) {
+      return;
+    }
+
+    const runSerial = ++batchRunSerial;
+    const requestId = ++batchRequestSequence;
+    inFlightBatchKey = batchKey;
+    activeBatchProgress = { adapter, requestId, runSerial, targets };
 
     if (!adapter) {
       targets.forEach(function (target) { applyTargetState(target, "checking"); });
     }
 
-    const response = await sendMatch(targets.map(function (target) { return target.candidate; }));
+    let response;
+    try {
+      response = await sendMatch(
+        targets.map(function (target) { return target.candidate; }),
+        "references",
+        requestId
+      );
+    } finally {
+      if (inFlightBatchKey === batchKey) inFlightBatchKey = "";
+      if (activeBatchProgress?.requestId === requestId) activeBatchProgress = null;
+    }
     if (runSerial !== batchRunSerial) {
       return;
     }
@@ -769,12 +840,23 @@
       } else {
         targets.forEach(function (target) { applyTargetState(target, "error", response?.error || i18n.t("checkerOffline")); });
       }
-      scheduleBatchRetry();
+      scheduleBatchRetry(batchKey);
       return;
     }
 
-    clearTimeout(batchRetryTimer);
-    lastSuccessfulBatchKey = batchKey;
+    const batchResults = response.result.results;
+    const allErrored = batchResults.length > 0 && batchResults.every(function (result) {
+      return result?.status === "error";
+    });
+    if (allErrored) {
+      scheduleBatchRetry(batchKey);
+    } else {
+      clearTimeout(batchRetryTimer);
+      batchRetryDelayMs = BATCH_RETRY_INITIAL_MS;
+      batchRetryNotBefore = 0;
+      lastFailedBatchKey = "";
+      lastSuccessfulBatchKey = batchKey;
+    }
 
     if (adapter) {
       var results = response.result.results.map(function (r, i) {
@@ -792,12 +874,33 @@
     }
   }
 
-  function scheduleBatchRetry() {
+  function applyBatchProgress(message) {
+    const active = activeBatchProgress;
+    if (!active || message.requestId !== active.requestId || active.runSerial !== batchRunSerial ||
+        !Number.isInteger(message.index) || message.index < 0 || message.index >= active.targets.length ||
+        !message.result || typeof message.result !== "object") {
+      return;
+    }
+    const target = active.targets[message.index];
+    if (active.adapter) {
+      active.adapter.applyBatchResults([
+        Object.assign({}, message.result, { sourceId: target.sourceId || "" })
+      ]);
+    } else {
+      applyTargetResult(target, message.result);
+    }
+  }
+
+  function scheduleBatchRetry(batchKey) {
     clearTimeout(batchRetryTimer);
+    const delay = batchRetryDelayMs;
+    lastFailedBatchKey = batchKey || lastFailedBatchKey;
+    batchRetryNotBefore = Date.now() + delay;
+    batchRetryDelayMs = Math.min(BATCH_RETRY_MAX_MS, delay * 2);
     batchRetryTimer = setTimeout(() => {
       lastSuccessfulBatchKey = "";
       scheduleBatchCheck();
-    }, RETRY_DELAY_MS);
+    }, delay);
   }
 
   function collectCNKITargets() {
@@ -893,6 +996,18 @@
   function applyTargetResult(target, result) {
     if (!result) {
       applyTargetState(target, "missing", i18n.t("noResultReturned"));
+      return;
+    }
+    if (result.complete === false && result.freshness === "stale") {
+      applyTargetState(
+        target,
+        result.status === "matched" ? "possible" : "unknown",
+        i18n.t(result.status === "matched" ? "savedInStaleIndex" : "staleIndexNoMatch")
+      );
+      return;
+    }
+    if (backendContract.isIncompleteNotFound(result)) {
+      applyTargetState(target, "unknown", i18n.t("incompleteNotFoundInLibrary"));
       return;
     }
     if (result.status === "matched") {
@@ -1027,9 +1142,7 @@
         return;
       }
       lastListSignature = sig;
-      lastSuccessfulBatchKey = "";
-      forceNextBatchCheck = true;
-      scheduleIdleBatchCheck({ force: true });
+      scheduleIdleBatchCheck();
     }
 
     function isInsideBadge(node) {
@@ -1167,7 +1280,7 @@
 
     scheduleDetailCheck({ force: true, delay: 120 });
     if (_options.autoCheckReferenceLists) {
-      scheduleBatchCheck({ force: true, delay: 250 });
+      scheduleBatchCheck({ delay: 250 });
     }
   }
 
@@ -1202,7 +1315,7 @@
         sig = getCNKIListSignature();
       }
       if (sig && sig !== lastSuccessfulBatchKey) {
-        scheduleIdleBatchCheck({ force: true });
+        scheduleIdleBatchCheck();
       }
     }, 200);
   });
@@ -1233,7 +1346,7 @@
   function observeRefsContainer(target) {
     var io = new IntersectionObserver(function (entries) {
       if (entries[0].isIntersecting) {
-        scheduleIdleBatchCheck({ force: true });
+        scheduleIdleBatchCheck();
         io.disconnect();
       }
     }, { rootMargin: "200px" });

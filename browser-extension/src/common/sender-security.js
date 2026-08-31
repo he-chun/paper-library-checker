@@ -25,5 +25,11 @@
     }
   }
 
-  return { isTrustedContentScriptSender, isTrustedExtensionPageSender };
+  function isTrustedExtensionContextSender(sender, runtime) {
+    if (!sender || sender.id !== runtime?.id || sender.tab) return false;
+    if (sender.url === undefined) return true;
+    return isTrustedExtensionPageSender(sender, runtime);
+  }
+
+  return { isTrustedContentScriptSender, isTrustedExtensionContextSender, isTrustedExtensionPageSender };
 });
