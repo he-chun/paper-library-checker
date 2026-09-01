@@ -16,8 +16,8 @@ Paper Library Checker 将知网（CNKI）等受支持学术页面的元数据与
 
 **[从 Chrome Web Store 安装](https://chromewebstore.google.com/detail/paper-library-checker/pmfobjnkoiiplambnbbkfdlfjcbdogon)** — 当前商店版本为 0.4.1。
 
-当前源码树正在准备 0.5.0 发布候选；在配套 0.5.0 产物正式发布前，
-公开商店条目和 GitHub 可下载 Release 仍保持 0.4.1。
+GitHub Release 版本为 0.5.0。Chrome Web Store 公开版本仍为 0.4.1，
+直到单独提交并发布商店更新。
 
 Zotero 是 Corporation for Digital Scholarship 的注册商标。本独立项目与 Zotero 项目没有关联，也未获得 Zotero 项目的认可或背书。
 
@@ -48,7 +48,7 @@ Zotero 是 Corporation for Digital Scholarship 的注册商标。本独立项目
 
 ### 可选的增强模式
 
-1. 从 [GitHub v0.4.1 Release](https://github.com/he-chun/paper-library-checker/releases/tag/v0.4.1) 下载 Zotero XPI，并通过 Zotero 的**工具（Tools）> 插件（Plugins）> 从文件安装插件（Install Plugin From File）**安装。
+1. 从 [GitHub v0.5.0 Release](https://github.com/he-chun/paper-library-checker/releases/tag/v0.5.0) 下载 Zotero XPI，并通过 Zotero 的**工具（Tools）> 插件（Plugins）> 从文件安装插件（Install Plugin From File）**安装。
 2. 重启 Zotero，选择**工具 > 文献库检查器：复制配对令牌**。
 3. 在扩展**设置**中选择**增强模式**（或保留**自动**），展开增强模式连接设置，把 64 字符令牌粘贴到**配对令牌（Pairing token）**，再点击**测试连接**。
 
@@ -70,7 +70,7 @@ Direct 未命中和过期索引未命中只显示**未找到匹配，结果可�
 
 ### 手动/开发者安装
 
-如需开发、审计或手动安装备用流程，请从 GitHub v0.4.1 Release 下载浏览器
+如需开发、审计或手动安装备用流程，请从 GitHub v0.5.0 Release 下载浏览器
 ZIP，并解压到不会移动或删除的稳定目录。打开 `chrome://extensions` 或
 `edge://extensions`，启用**开发人员模式（Developer mode）**，选择
 **加载解压缩的扩展（Load unpacked）**，并选中直接包含 `manifest.json` 的
@@ -241,18 +241,18 @@ Zotero Connector 用于把条目保存到 Zotero。Paper Library Checker 不会�
 <details>
 <summary>Release 验证与 SHA-256 校验和</summary>
 
-0.5.0 是已准备的双模式发布候选。已接受的资格证据覆盖规范自动测试套件，
+0.5.0 是当前 GitHub alpha 版本。已接受的资格证据覆盖规范自动测试套件，
 以及报告中记录的 Chrome、Zotero 9.0.6、标准 Indexed、Direct 回退、
-增强/XPI、生命周期和 CNKI 真实运行验证。在 0.5.0 产物正式发布前，
-Chrome Web Store 和 GitHub Release 仍保持 0.4.1；“发布候选”不表示已经发布。
+增强/XPI、生命周期和 CNKI 真实运行验证。Chrome Web Store 仍保持 0.4.1，
+直到单独的商店更新正式发布。
 历史完整 Edge 资格验证的精确目标仍为 Microsoft Edge 151.0.4129.78。
 
-在 v0.5.0 正式发布前，请从
-[v0.4.1 GitHub Release](https://github.com/he-chun/paper-library-checker/releases/tag/v0.4.1)
-下载当前公开产物及
-[`SHA256SUMS.txt`](https://github.com/he-chun/paper-library-checker/releases/download/v0.4.1/SHA256SUMS.txt)。
-候选准备期间，仓库根目录 [`updates.json`](updates.json) 有意继续指向已发布的
-0.4.1 Zotero 更新。已接受的候选证据见
+请从
+[v0.5.0 GitHub Release](https://github.com/he-chun/paper-library-checker/releases/tag/v0.5.0)
+下载公开产物及
+[`SHA256SUMS.txt`](https://github.com/he-chun/paper-library-checker/releases/download/v0.5.0/SHA256SUMS.txt)。
+仓库根目录 [`updates.json`](updates.json) 已发布对应的 0.5.0 Zotero 更新 URL
+和 XPI 哈希。已接受的候选证据见
 [0.5.0 资格报告](docs/verification/dual-mode-0.5.0-qualification.md)。
 
 </details>

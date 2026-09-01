@@ -16,9 +16,8 @@ Paper Library Checker compares metadata from supported scholarly pages, includin
 
 **[Install from Chrome Web Store](https://chromewebstore.google.com/detail/paper-library-checker/pmfobjnkoiiplambnbbkfdlfjcbdogon)** — the published store version is 0.4.1.
 
-The source tree is preparing version 0.5.0 as a release candidate. The public
-store listing and downloadable GitHub release remain 0.4.1 until the matching
-0.5.0 artifacts are published.
+GitHub Release version is 0.5.0. The published Chrome Web Store listing remains
+0.4.1 until its separate store update is submitted and published.
 
 Zotero is a registered trademark of the Corporation for Digital Scholarship. This independent project is not affiliated with or endorsed by the Zotero project.
 
@@ -49,7 +48,7 @@ The browser extension and Zotero desktop are required. The companion Zotero add-
 
 ### Optional enhanced mode
 
-1. Download the Zotero XPI from the [GitHub v0.4.1 Release](https://github.com/he-chun/paper-library-checker/releases/tag/v0.4.1). In Zotero, open **Tools > Plugins**, choose **Install Plugin From File**, and install the XPI.
+1. Download the Zotero XPI from the [GitHub v0.5.0 Release](https://github.com/he-chun/paper-library-checker/releases/tag/v0.5.0). In Zotero, open **Tools > Plugins**, choose **Install Plugin From File**, and install the XPI.
 2. Restart Zotero and choose **Tools > Paper Library Checker: Copy pairing token**.
 3. In extension **Options**, choose **Enhanced mode** (or keep **Automatic**), expand the enhanced connection settings, paste the 64-character **Pairing token**, and select **Test connection**.
 
@@ -72,7 +71,7 @@ Direct and stale-index misses display **No match; result may be incomplete** rat
 ### Manual/developer installation
 
 For development, auditing, or a manual-installation fallback, download the
-browser ZIP from the GitHub v0.4.1 Release and extract it to a stable directory.
+browser ZIP from the GitHub v0.5.0 Release and extract it to a stable directory.
 Open `chrome://extensions` or `edge://extensions`, enable **Developer mode**,
 choose **Load unpacked**, and select the directory that directly contains
 `manifest.json`. Click **Reload** there after replacing files with a newer
@@ -247,19 +246,18 @@ ScienceDirect and MDPI pages with `citation_doi` normally use the generic extrac
 <details>
 <summary>Release verification and SHA-256 checksums</summary>
 
-Version 0.5.0 is the prepared dual-mode release candidate. Its accepted
+Version 0.5.0 is the current GitHub alpha release. Its accepted
 qualification covers the canonical automated suite and the recorded Chrome,
 Zotero 9.0.6, Standard Indexed, Direct fallback, Enhanced/XPI, lifecycle, and
-CNKI runtime evidence. The public Chrome Web Store and GitHub release remain at
-0.4.1 until the 0.5.0 artifacts are published; this candidate status does not
-claim that publication has occurred. The historical broader Edge qualification
+CNKI runtime evidence. The public Chrome Web Store remains at 0.4.1 until its
+separate store update is published. The historical broader Edge qualification
 target remains Microsoft Edge 151.0.4129.78.
 
-Until v0.5.0 is published, download the current public artifacts and
-[`SHA256SUMS.txt`](https://github.com/he-chun/paper-library-checker/releases/download/v0.4.1/SHA256SUMS.txt)
-from the [v0.4.1 GitHub Release](https://github.com/he-chun/paper-library-checker/releases/tag/v0.4.1).
-The repository-root [`updates.json`](updates.json) intentionally remains the
-published 0.4.1 Zotero update manifest during candidate preparation. See the
+Download the public artifacts and
+[`SHA256SUMS.txt`](https://github.com/he-chun/paper-library-checker/releases/download/v0.5.0/SHA256SUMS.txt)
+from the [v0.5.0 GitHub Release](https://github.com/he-chun/paper-library-checker/releases/tag/v0.5.0).
+The repository-root [`updates.json`](updates.json) publishes the matching 0.5.0
+Zotero update URL and XPI hash. See the
 [0.5.0 qualification](docs/verification/dual-mode-0.5.0-qualification.md) for
 the accepted candidate evidence.
 

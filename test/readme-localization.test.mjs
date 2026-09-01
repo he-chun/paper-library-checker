@@ -40,10 +40,10 @@ test("README language switchers are reciprocal and mark the current language", (
   assert.match(chinese, /^# Paper Library Checker\r?\n\r?\n\[English\]\(README\.md\) \| \*\*简体中文\*\*/);
 });
 
-test("localized READMEs distinguish the source candidate from the published version", () => {
+test("localized READMEs distinguish the GitHub release from the store version", () => {
   const addon = updateManifest.addons["paper-library-checker@he-chun.github.io"];
   assert.equal(currentVersion, "0.5.0");
-  assert.equal(addon.updates.at(-1).version, "0.4.1");
+  assert.equal(addon.updates.at(-1).version, "0.5.0");
   for (const content of [english, chinese]) {
     for (const fact of canonicalFacts) assert(content.includes(fact), fact);
   }
@@ -57,8 +57,8 @@ test("both READMEs link to the published Chrome Web Store listing", () => {
   }
   assert(english.includes("the published store version is 0.4.1"));
   assert(chinese.includes("当前商店版本为 0.4.1"));
-  assert(english.includes("source tree is preparing version 0.5.0"));
-  assert(chinese.includes("正在准备 0.5.0 发布候选"));
+  assert(english.includes("GitHub Release version is 0.5.0"));
+  assert(chinese.includes("GitHub Release 版本为 0.5.0"));
 });
 
 test("Simplified Chinese support matrix preserves qualified support levels", () => {

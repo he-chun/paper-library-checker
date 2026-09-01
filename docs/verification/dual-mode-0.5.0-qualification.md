@@ -59,8 +59,9 @@ final versioned 0.5.0 candidate artifacts are recorded separately below.
 
 The final XPI and browser ZIP embed version 0.5.0. Candidate update metadata is
 untracked build output, points to the versioned XPI, and closes over the XPI
-hash above. The published root `updates.json` remains byte-for-byte unchanged
-with SHA-256 `cff17b678e450cdc067d526f48c2ee6045b4cccc9ce268b122cb19e1918590c6`.
+hash above. During candidate preparation the root `updates.json` remained at
+0.4.1; after the formal v0.5.0 asset was published, the follow-up metadata
+commit published the matching 0.5.0 URL and XPI hash.
 
 ## Automated gates
 
@@ -197,5 +198,5 @@ claim that unexecuted environments passed. User-reported defects after release
 will be reproduced and addressed against the affected environment.
 
 The release-preparation change synchronizes source and candidate package
-metadata at `0.5.0`. The repository-root `updates.json` intentionally remains
-the published `0.4.1` channel until the formal v0.5.0 release asset is online.
+metadata at `0.5.0`. After the formal v0.5.0 release asset became available,
+the follow-up metadata commit published the matching root `updates.json`.

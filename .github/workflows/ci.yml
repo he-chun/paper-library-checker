@@ -162,7 +162,7 @@ jobs:
       - run: npm ci
       - name: Validate candidate XPI/update closure
         run: PLC_DIST_DIR="$PWD/compare/ubuntu/dist" PLC_UPDATES_FILE="$PWD/compare/ubuntu/dist/candidate-updates.json" npm run validate:candidate-updates
-      - name: Verify v0.3.0 release history and current v0.4.1 published update manifest
+      - name: Verify v0.3.0 release history and current v0.5.0 published update manifest
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
