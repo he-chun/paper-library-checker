@@ -181,4 +181,4 @@ jobs:
             --output "$RUNNER_TEMP/published.zip"
           echo "91331ef1bcee06c34bbcadaaf956866b5c06125999da630f48f0f6837234ef59  $RUNNER_TEMP/published.xpi" | sha256sum -c -
           echo "ef69fec94e4ac8bb9de87b4b1c6ab42b226c50d895a6df893150da2f07dc9bd5  $RUNNER_TEMP/published.zip" | sha256sum -c -
-          echo "cff17b678e450cdc067d526f48c2ee6045b4cccc9ce268b122cb19e1918590c6  updates.json" | sha256sum -c -
+          echo "c9bd7accc7094e6ce7332354a454ae6943d08930ac739345b39436295bb82084  updates.json" | sha256sum -c -
