@@ -19,6 +19,7 @@ test("index records reuse the existing identifier and bibliographic normalizers"
       ISBN: "978-1-4028-9462-6",
       extra: "CNKI File ID: TEST_001",
       date: "2024-05-02",
+      publicationTitle: "Journal of Tests",
       creators: [{ firstName: "Jane", lastName: "Doe" }]
     }
   });
@@ -36,6 +37,7 @@ test("index records reuse the existing identifier and bibliographic normalizers"
       "cnki:test_001"
     ],
     titleKey: matcher.normalizeTitle("  中文：Title &amp; Test  "),
+    publicationTitleKey: matcher.normalizeTitle("Journal of Tests"),
     year: "2024",
     creatorKeys: [matcher.normalizePerson("DoeJane")],
     itemType: "journalarticle"
@@ -70,6 +72,7 @@ test("index records persist only the minimal allowlist", () => {
     "itemType",
     "itemVersion",
     "libraryKey",
+    "publicationTitleKey",
     "scopeKey",
     "titleKey",
     "year"

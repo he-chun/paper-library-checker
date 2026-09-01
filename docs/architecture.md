@@ -65,12 +65,14 @@ existing final request/response envelopes are unchanged.
 
 ## Detection classes
 
-Article detail detection uses site-specific and generic embedded metadata.
-Reference/list detection is a separate capability and runs only for CNKI or an
-explicit adapter such as ScienceDirect. Generic metadata never enables unknown
-site reference scanning.
+Article detail detection uses site-specific and generic embedded metadata. The
+Scopus detail extractor reads the stable document-header fields because the
+current publications page exposes no citation meta tags or JSON-LD.
+Search/reference/list detection is a separate capability and runs only through
+an explicit adapter such as CNKI, Scopus, or ScienceDirect. Generic metadata
+never enables unknown-site list scanning.
 
-The same extractor runner, CNKI extractor, adapters, candidate deduplication,
+The same extractor runner, CNKI and Scopus extractors, adapters, candidate deduplication,
 request IDs, incremental renderer, popup, Options, i18n, and page-state model
 serve every engine. Backend selection happens only in the service worker; no
 mode-specific page extractor or content-script network path exists.

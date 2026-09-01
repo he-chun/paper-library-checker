@@ -87,3 +87,24 @@ test("service sanitizer remains fail-closed above 20 creators", () => {
     normalization.normalizeCandidateForLocalAPI(candidate)
   ));
 });
+
+test("enhanced sanitizer preserves the bounded Scopus tiered fields", () => {
+  const sanitized = security.sanitizeCandidate({
+    title: "Synthetic Scopus candidate",
+    alternateTitles: ["合成 Scopus 候选文献"],
+    date: "2024",
+    creators: [{ name: "Xu Z." }],
+    publicationTitle: "Construction and Building Materials",
+    matchPolicy: "scopus-tiered"
+  });
+  assert.equal(sanitized.publicationTitle, "Construction and Building Materials");
+  assert.deepEqual(sanitized.alternateTitles, ["合成 Scopus 候选文献"]);
+  assert.equal(sanitized.matchPolicy, "scopus-tiered");
+
+  for (const alternateTitles of ["not-an-array", ["1", "2", "3", "4", "5"]]) {
+    assert.throws(
+      () => security.sanitizeCandidate({ title: "Synthetic", alternateTitles }),
+      (error) => error && error.code === "invalid_alternate_titles"
+    );
+  }
+});

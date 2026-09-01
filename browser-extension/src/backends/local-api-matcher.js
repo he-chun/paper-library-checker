@@ -47,6 +47,22 @@
       .replace(/[\p{P}\p{S}]/gu, "");
   }
 
+  function candidateTitleValues(candidate = {}) {
+    const inputs = [candidate.title, ...(Array.isArray(candidate.alternateTitles)
+      ? candidate.alternateTitles
+      : [])];
+    const seen = new Set();
+    const values = [];
+    for (const input of inputs) {
+      const value = typeof input === "string" ? input.trim() : "";
+      const key = normalizeTitle(value);
+      if (!value || !key || seen.has(key)) continue;
+      seen.add(key);
+      values.push(value);
+    }
+    return values;
+  }
+
   function normalizePerson(value) {
     return String(value || "")
       .normalize("NFKC")
@@ -63,6 +79,27 @@
           return normalizePerson(`${creator.lastName || ""}${creator.firstName || ""}${creator.name || ""}`);
         }).filter(Boolean)
       : [];
+  }
+
+  function normalizeScopusCreatorPrefixes(creators) {
+    if (!Array.isArray(creators)) return [];
+    return creators.map((creator) => {
+      const rawName = typeof creator === "string"
+        ? creator
+        : creator && typeof creator === "object"
+          ? creator.name
+          : "";
+      const tokens = String(rawName || "").normalize("NFKC").match(/[\p{L}\p{N}]+/gu) || [];
+      if (tokens.length < 2 || Array.from(tokens[1]).length !== 1) return "";
+      return normalizePerson(`${tokens[0]}${tokens[1]}`);
+    }).filter(Boolean);
+  }
+
+  function creatorsMatch(itemCreators, candidate) {
+    if (candidate.creators.some((creator) => itemCreators.includes(creator))) return true;
+    return (candidate.scopusCreatorPrefixes || []).some((prefix) =>
+      itemCreators.some((creator) => creator.length > prefix.length && creator.startsWith(prefix))
+    );
   }
 
   function extractYear(value) {
@@ -117,11 +154,16 @@
   }
 
   function prepareCandidate(candidate = {}) {
+    const titles = candidateTitleValues(candidate).map(normalizeTitle);
     return {
       identifiers: collectIdentifiers(candidate),
-      title: normalizeTitle(candidate.title),
+      title: titles[0] || "",
+      titles,
       year: extractYear(candidate.date || candidate.year),
-      creators: normalizeCreators(candidate.creators)
+      creators: normalizeCreators(candidate.creators),
+      publicationTitle: normalizeTitle(candidate.publicationTitle),
+      matchPolicy: candidate.matchPolicy === "scopus-tiered" ? "scopus-tiered" : "",
+      scopusCreatorPrefixes: normalizeScopusCreatorPrefixes(candidate.creators)
     };
   }
 
@@ -139,8 +181,22 @@
       identifiers,
       title: normalizeTitle(data.title),
       year: extractYear(data.date || data.year),
-      creators: normalizeCreators(data.creators)
+      creators: normalizeCreators(data.creators),
+      publicationTitle: normalizeTitle(
+        data.publicationTitle || data.journalAbbreviation || data.proceedingsTitle || data.bookTitle
+      )
     };
+  }
+
+  function scopusTieredEvidence(item, candidate) {
+    if (!candidate.year || !item.year || candidate.year !== item.year) return "none";
+    const authorMatched = candidate.creators.length > 0 && item.creators.length > 0 &&
+      creatorsMatch(item.creators, candidate);
+    const journalMatched = Boolean(
+      candidate.publicationTitle && item.publicationTitle &&
+      candidate.publicationTitle === item.publicationTitle
+    );
+    return authorMatched && journalMatched ? "full" : "title_year";
   }
 
   function hintsMatch(item, candidate) {
@@ -160,8 +216,19 @@
         return { status: "matched", matchType: type, confidence: 1 };
       }
     }
-    if (normalizedCandidate.title) {
-      const sameTitle = preparedItems.filter((item) => item.title === normalizedCandidate.title);
+    if (normalizedCandidate.titles.length) {
+      const titleKeys = new Set(normalizedCandidate.titles);
+      const sameTitle = preparedItems.filter((item) => titleKeys.has(item.title));
+      if (normalizedCandidate.matchPolicy === "scopus-tiered") {
+        const evidence = sameTitle.map((item) => scopusTieredEvidence(item, normalizedCandidate));
+        if (evidence.includes("full")) {
+          return { status: "matched", matchType: "title", confidence: 0.95 };
+        }
+        if (evidence.includes("title_year")) {
+          return { status: "possible_match", matchType: "title", confidence: 0.75 };
+        }
+        return { status: "not_found", matchType: null, confidence: 0 };
+      }
       if (sameTitle.some((item) => hintsMatch(item, normalizedCandidate))) {
         return { status: "matched", matchType: "title", confidence: 0.95 };
       }
@@ -173,7 +240,7 @@
     const normalized = prepareCandidate(candidate);
     return [...new Set([
       ...IDENTIFIER_PRIORITY.map((type) => normalized.identifiers[type]),
-      String(candidate?.title || "").trim()
+      ...candidateTitleValues(candidate)
     ].filter(Boolean))];
   }
 
@@ -181,9 +248,11 @@
     const normalized = prepareCandidate(candidate);
     return JSON.stringify({
       identifiers: IDENTIFIER_PRIORITY.map((type) => normalized.identifiers[type] || ""),
-      title: normalized.title,
+      titles: normalized.titles,
       year: normalized.year,
-      creators: [...new Set(normalized.creators)].sort()
+      creators: [...new Set(normalized.creators)].sort(),
+      publicationTitle: normalized.publicationTitle,
+      matchPolicy: normalized.matchPolicy
     });
   }
 
@@ -194,13 +263,15 @@
       identifiers: IDENTIFIER_PRIORITY.map((type) => prepared.identifiers[type] || ""),
       title: prepared.title,
       year: prepared.year,
-      creators: [...new Set(prepared.creators)].sort()
+      creators: [...new Set(prepared.creators)].sort(),
+      publicationTitle: prepared.publicationTitle
     });
   }
 
   return {
     IDENTIFIER_PRIORITY,
     NON_BIBLIOGRAPHIC_TYPES,
+    candidateTitleValues,
     collectIdentifiers,
     candidateKey,
     extractCNKIFromURL,
@@ -208,6 +279,7 @@
     identifiersFromExtra,
     itemFingerprint,
     matchCandidate,
+    creatorsMatch,
     normalizeCreators,
     normalizeDOI,
     normalizeIdentifier,
@@ -215,6 +287,7 @@
     normalizeTitle,
     prepareCandidate,
     prepareItem,
+    scopusTieredEvidence,
     searchTerms
   };
 });

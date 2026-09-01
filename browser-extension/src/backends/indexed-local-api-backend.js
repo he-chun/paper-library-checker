@@ -65,8 +65,19 @@
         return result("matched", type, 1, context);
       }
     }
-    if (candidate.title && (queryResult.titles[candidate.title] || []).some((record) => hintsMatch(record, candidate))) {
-      return result("matched", "title", 0.95, context);
+    if (candidate.titles.length) {
+      const records = candidate.titles.flatMap((title) => queryResult.titles[title] || []);
+      if (candidate.matchPolicy === "scopus-tiered") {
+        const evidence = records.map((record) => matcher.scopusTieredEvidence({
+          year: record.year,
+          creators: record.creatorKeys,
+          publicationTitle: record.publicationTitleKey || ""
+        }, candidate));
+        if (evidence.includes("full")) return result("matched", "title", 0.95, context);
+        if (evidence.includes("title_year")) return result("possible_match", "title", 0.75, context);
+      } else if (records.some((record) => hintsMatch(record, candidate))) {
+        return result("matched", "title", 0.95, context);
+      }
     }
     const value = result("not_found", null, 0, context);
     if (!value.complete) value.reason = "stale_index_no_match";
@@ -80,7 +91,7 @@
       for (const type of matcher.IDENTIFIER_PRIORITY) {
         if (candidate.identifiers[type]) identifierKeys.add(`${type}:${candidate.identifiers[type]}`);
       }
-      if (candidate.title) titleKeys.add(candidate.title);
+      for (const title of candidate.titles) titleKeys.add(title);
     }
     return { identifierKeys: [...identifierKeys], titleKeys: [...titleKeys] };
   }

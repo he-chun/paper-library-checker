@@ -31,6 +31,30 @@ test("matches exact title and identifier with year and creator hints", () => {
   assert.equal(conflict.reason, "title_hint_conflict");
 });
 
+test("enhanced Scopus matching distinguishes four-field and title-year evidence", () => {
+  const title = "Development of slag-based filling cementitious materials";
+  const alternateTitle = "矿渣基充填胶凝材料的开发";
+  const journal = "Construction and Building Materials";
+  const records = [{
+    title: alternateTitle,
+    date: "2024-11-22",
+    publicationTitle: journal,
+    creators: [{ firstName: "Zhuo", lastName: "Xu" }]
+  }];
+  const candidate = {
+    title,
+    alternateTitles: [alternateTitle],
+    date: "2024",
+    publicationTitle: journal,
+    creators: [{ name: "Xu Z." }],
+    matchPolicy: "scopus-tiered"
+  };
+
+  assert.equal(matcher.matchRecords(candidate, records).status, "matched");
+  assert.equal(matcher.matchRecords({ ...candidate, publicationTitle: "Other Journal" }, records).status, "possible_match");
+  assert.equal(matcher.matchRecords({ ...candidate, date: "2023" }, records).status, "not_found");
+});
+
 test("applies fuzzy threshold and handles duplicate and malformed input", () => {
   const records = [{ title: "Effects of synthetic testing", date: "2025", creators: ["Ada"] }];
   assert.equal(matcher.matchRecords({ title: "Effects of synthetic testing methods", date: "2025", creators: ["Ada"] }, records).status, "possible_match");

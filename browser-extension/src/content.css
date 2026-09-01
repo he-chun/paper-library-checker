@@ -60,6 +60,33 @@
   color: #9333ea !important;
 }
 
+.zotero-check-search-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 18px;
+  margin-left: 7px;
+  padding: 1px 5px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  box-sizing: border-box;
+  font: 600 11px/1.35 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  letter-spacing: 0;
+  vertical-align: 1px;
+  white-space: nowrap;
+}
+
+.zotero-check-search-status[data-state="matched"] {
+  color: #8b1d1d;
+  background: #fff1f1;
+  border-color: #f4b4b4;
+}
+
+.zotero-check-search-status[data-state="possible"] {
+  color: #744100;
+  background: #fff7e8;
+  border-color: #edc576;
+}
+
 /* ScienceDirect reference batch-check states (applied via data-zotero-check-state) */
 .reference[data-zotero-check-state="matched"] {
   background: #ffe7e7 !important;

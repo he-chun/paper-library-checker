@@ -141,6 +141,11 @@ ZoteroCheck.Indexer = class {
       const titleKey = ZoteroCheck.Matcher.normalizeTitle(title);
       const year = ZoteroCheck.Utils.extractYear(this.getFieldSafe(item, "date"));
       const creators = this.getCreatorsSafe(item);
+      const publicationTitle = ZoteroCheck.Matcher.normalizeTitle(
+        this.getFieldSafe(item, "publicationTitle") ||
+        this.getFieldSafe(item, "proceedingsTitle") ||
+        this.getFieldSafe(item, "bookTitle")
+      );
       const result = ZoteroCheck.Utils.itemToResult(item);
 
       this.itemsByID.set(item.id, {
@@ -150,7 +155,8 @@ ZoteroCheck.Indexer = class {
         titleRaw: title,
         titleKey,
         year,
-        creators
+        creators,
+        publicationTitle
       });
 
       for (const [type, value] of Object.entries(identifiers)) {
@@ -259,9 +265,31 @@ ZoteroCheck.Indexer = class {
       }
     }
 
-    if (normalizedCandidate.titleKey) {
-      const exactTitleIDs = this.titleIndex.get(normalizedCandidate.titleKey);
-      if (exactTitleIDs && exactTitleIDs.size) {
+    if (normalizedCandidate.titleKeys.length) {
+      const exactTitleIDs = new Set();
+      for (const titleKey of normalizedCandidate.titleKeys) {
+        for (const id of this.titleIndex.get(titleKey) || []) exactTitleIDs.add(id);
+      }
+      if (exactTitleIDs.size) {
+        if (normalizedCandidate.matchPolicy === "scopus-tiered") {
+          const evidence = [...exactTitleIDs].map((id) => ({
+            id,
+            kind: ZoteroCheck.Matcher.scopusTieredEvidence(
+              this.itemsByID.get(id) || {}, normalizedCandidate
+            )
+          }));
+          const full = evidence.filter((entry) => entry.kind === "full").map((entry) => entry.id);
+          if (full.length) return this.buildResult(full, "matched", "title", 0.95, "title_match");
+          const titleYear = evidence
+            .filter((entry) => entry.kind === "title_year")
+            .map((entry) => entry.id);
+          if (titleYear.length) {
+            return this.buildResult(titleYear, "possible_match", "title", 0.75, "title_year_match");
+          }
+          return ZoteroCheck.Matcher.createResult(
+            "not_found", null, 0, [], "title_hint_conflict"
+          );
+        }
         const filtered = this.filterByBibliographicHints([...exactTitleIDs], normalizedCandidate);
         if (!filtered.length) {
           return ZoteroCheck.Matcher.createResult(
@@ -282,7 +310,8 @@ ZoteroCheck.Indexer = class {
       }
     }
 
-    if (this.fuzzyMatching && normalizedCandidate.titleKey) {
+    if (this.fuzzyMatching && normalizedCandidate.titleKey &&
+        normalizedCandidate.matchPolicy !== "scopus-tiered") {
       const fuzzyMatch = this.findFuzzyTitleMatches(normalizedCandidate);
       if (fuzzyMatch.ids.length) {
         return this.buildResult(
@@ -300,7 +329,7 @@ ZoteroCheck.Indexer = class {
       null,
       0,
       [],
-      normalizedCandidate.titleKey || Object.keys(normalizedCandidate.identifiers).length
+      normalizedCandidate.titleKeys.length || Object.keys(normalizedCandidate.identifiers).length
         ? "no_match"
         : "no_metadata"
     );

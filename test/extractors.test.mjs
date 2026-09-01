@@ -64,7 +64,7 @@ test("stale index misses are not rendered as not saved and refresh completion re
   for (const name of [
     "common/i18n.js", "common/backend-contract.js", "common/ui-state.js", "common/page-controller.js", "common/sender-security.js",
     "common/normalization.js", "extractors/cnki.js", "extractors/generic.js", "extractors/runner.js",
-    "adapters/sciencedirect.js", "content.js"
+    "adapters/cnki.js", "adapters/sciencedirect.js", "content.js"
   ]) dom.window.eval(await source(name));
   try {
     await new Promise((resolve) => setTimeout(resolve, 1500));
@@ -110,7 +110,7 @@ test("Direct misses are rendered as incomplete rather than not saved", async () 
   for (const name of [
     "common/i18n.js", "common/backend-contract.js", "common/ui-state.js", "common/page-controller.js",
     "common/sender-security.js", "common/normalization.js", "extractors/cnki.js", "extractors/generic.js",
-    "extractors/runner.js", "adapters/sciencedirect.js", "content.js"
+    "extractors/runner.js", "adapters/cnki.js", "adapters/sciencedirect.js", "content.js"
   ]) dom.window.eval(await source(name));
   try {
     await new Promise((resolve) => setTimeout(resolve, 1500));
@@ -158,6 +158,7 @@ test("CNKI reference and citation blocks produce a batch message", async () => {
     "extractors/cnki.js",
     "extractors/generic.js",
     "extractors/runner.js",
+    "adapters/cnki.js",
     "adapters/sciencedirect.js",
     "content.js"
   ]) dom.window.eval(await source(name));
@@ -202,6 +203,7 @@ test("repeated forced scheduling does not send the same reference batch while it
     "extractors/cnki.js",
     "extractors/generic.js",
     "extractors/runner.js",
+    "adapters/cnki.js",
     "adapters/sciencedirect.js",
     "content.js"
   ]) dom.window.eval(await source(name));
@@ -257,6 +259,7 @@ test("reference results render incrementally while the final batch response is p
     "extractors/cnki.js",
     "extractors/generic.js",
     "extractors/runner.js",
+    "adapters/cnki.js",
     "adapters/sciencedirect.js",
     "content.js"
   ]) dom.window.eval(await source(name));
@@ -343,6 +346,7 @@ test("automatic foreground and DOM triggers do not resend a completed reference 
     "extractors/cnki.js",
     "extractors/generic.js",
     "extractors/runner.js",
+    "adapters/cnki.js",
     "adapters/sciencedirect.js",
     "content.js"
   ]) dom.window.eval(await source(name));
@@ -415,6 +419,7 @@ test("an all-error reference batch is not force-retried during its cooldown", as
     "extractors/cnki.js",
     "extractors/generic.js",
     "extractors/runner.js",
+    "adapters/cnki.js",
     "adapters/sciencedirect.js",
     "content.js"
   ]) dom.window.eval(await source(name));
@@ -460,6 +465,7 @@ test("manual recheck returns an unrecognized page to its final state", async () 
     "extractors/cnki.js",
     "extractors/generic.js",
     "extractors/runner.js",
+    "adapters/cnki.js",
     "adapters/sciencedirect.js",
     "content.js"
   ]) dom.window.eval(await source(name));

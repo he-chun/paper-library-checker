@@ -11,6 +11,7 @@ ZoteroCheck.Security = (function () {
   const MAX_BATCH_ITEMS = 200;
   const MAX_CACHE_KEY_BYTES = 48 * 1024;
   const MAX_TITLE_LENGTH = 1000;
+  const MAX_ALTERNATE_TITLES = 4;
   const MAX_IDENTIFIER_LENGTH = 512;
   const MAX_CREATORS = 20;
   const MAX_CREATOR_LENGTH = 256;
@@ -231,14 +232,23 @@ ZoteroCheck.Security = (function () {
     if (!value || typeof value !== "object" || Array.isArray(value)) throw new ValidationError("candidate_must_be_object");
     const creators = value.creators == null ? [] : value.creators;
     if (!Array.isArray(creators) || creators.length > MAX_CREATORS) throw new ValidationError("invalid_creators");
+    const alternateTitles = value.alternateTitles == null ? [] : value.alternateTitles;
+    if (!Array.isArray(alternateTitles) || alternateTitles.length > MAX_ALTERNATE_TITLES) {
+      throw new ValidationError("invalid_alternate_titles");
+    }
     return {
       title: cleanString(value.title, MAX_TITLE_LENGTH, "title"),
+      alternateTitles: alternateTitles.map((title) =>
+        cleanString(title, MAX_TITLE_LENGTH, "alternate_title")
+      ),
       DOI: cleanString(value.DOI || value.doi, MAX_IDENTIFIER_LENGTH, "doi"),
       PMID: cleanString(value.PMID || value.pmid, MAX_IDENTIFIER_LENGTH, "pmid"),
       ISBN: cleanString(value.ISBN || value.isbn, MAX_IDENTIFIER_LENGTH, "isbn"),
       cnkiFileID: cleanString(value.cnkiFileID || value.cnki, MAX_IDENTIFIER_LENGTH, "cnki"),
       date: cleanString(value.date || value.year, 64, "date"),
       url: cleanString(value.url, MAX_URL_LENGTH, "url"),
+      publicationTitle: cleanString(value.publicationTitle, MAX_TITLE_LENGTH, "publication_title"),
+      matchPolicy: value.matchPolicy === "scopus-tiered" ? "scopus-tiered" : "",
       creators: creators.map((creator) => {
         if (typeof creator === "string") return cleanString(creator, MAX_CREATOR_LENGTH, "creator");
         if (!creator || typeof creator !== "object" || Array.isArray(creator)) throw new ValidationError("invalid_creator");

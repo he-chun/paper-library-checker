@@ -23,6 +23,9 @@
     "tandfonline.com",
     "mdpi.com"
   ];
+  const CURATED_BATCH_HOSTS = [
+    "scopus.com"
+  ];
   const BROAD_SCHOLARLY_HOST_HINTS = [
     "nature.com",
     "science.org",
@@ -44,8 +47,10 @@
   const FOREGROUND_CHECK_DEBOUNCE_MS = 1000;
   let checkCount = 0;
   let lastSuccessfulCandidateKey = "";
+  let inFlightDetailKey = "";
   let lastSuccessfulBatchKey = "";
   let inFlightBatchKey = "";
+  let inFlightBatchRunSerial = 0;
   let lastFailedBatchKey = "";
   let batchRetryNotBefore = 0;
   let batchRetryDelayMs = BATCH_RETRY_INITIAL_MS;
@@ -64,6 +69,7 @@
   let activeBatchProgress = null;
   let observerDebounceTimer = null;
   let observerCheckPending = false;
+  let observedPageKey = currentPageKey();
 
   if (SKIPPED_HOSTS.has(location.hostname) || location.hostname.endsWith(".openai.com")) {
     return;
@@ -80,6 +86,19 @@
     onManualCheck: function () {
       lastSuccessfulCandidateKey = "";
       lastSuccessfulBatchKey = "";
+      if (isAutomaticSearchResultsPage()) {
+        scheduleManualBatchCheck();
+        return;
+      }
+      if (!shouldRunDetailDetection()) {
+        setBadge(
+          "unknown",
+          i18n.t("badgeUnrecognized"),
+          i18n.t("unsupportedMetadataDescription"),
+          uiState.PAGE_STATES.UNRECOGNIZED
+        );
+        return;
+      }
       setBadge("unknown", i18n.t("badgeChecking"), "", uiState.PAGE_STATES.CHECKING);
       scheduleDetailCheck({ force: true });
       scheduleManualBatchCheck();
@@ -101,8 +120,8 @@
       batchRetryNotBefore = 0;
       detailRunSerial += 1;
       batchRunSerial += 1;
-      scheduleDetailCheck({ force: true });
-      if (_options.autoCheckReferenceLists || hadReferenceCheck) scheduleBatchCheck({ force: true });
+      if (!isAutomaticSearchResultsPage()) scheduleDetailCheck({ force: true });
+      if (shouldRunAutomaticBatchCheck() || hadReferenceCheck) scheduleBatchCheck({ force: true });
       return false;
     }
     if (!senderSecurity.isTrustedExtensionPageSender(sender, chrome.runtime)) return false;
@@ -122,13 +141,21 @@
     if (_options.autoCheckReferenceLists) {
       setupIntersectionObserver();
     }
+    if (shouldRunAutomaticBatchCheck()) {
+      scheduleBatchCheck({ force: true });
+    }
     if (!isCuratedKnownHost() && _options.broadPageDetection && shouldRunDetailDetection()) {
       scheduleDetailCheck({ force: true });
     }
   });
 
   function findAnchorElement() {
+    var adapter = getSiteAdapter();
+    var adapterAnchor = adapter && typeof adapter.getDetailBadgeAnchor === "function"
+      ? adapter.getDetailBadgeAnchor(document)
+      : null;
     return (
+      adapterAnchor ||
       document.querySelector(".wx-tit-scholar .h1-scholar") ||
       document.querySelector(".wx-tit h1") ||
       document.querySelector(".h1-scholar") ||
@@ -492,14 +519,31 @@
       result.results[0];
   }
 
+  function detailCandidateKey(candidate) {
+    const creators = Array.isArray(candidate?.creators)
+      ? candidate.creators.map((creator) => {
+        const name = creator?.name || [creator?.firstName, creator?.lastName].filter(Boolean).join(" ");
+        return api.normalizeTitle(name || "");
+      }).filter(Boolean).join(",")
+      : "";
+    return [
+      candidate?.DOI || "",
+      candidate?.PMID || "",
+      api.normalizeTitle(candidate?.title || ""),
+      (Array.isArray(candidate?.alternateTitles) ? candidate.alternateTitles : [])
+        .map((title) => api.normalizeTitle(title)).join(","),
+      api.normalizeTitle(candidate?.date || ""),
+      creators
+    ].join("|");
+  }
+
   async function detectMetadata(doc, url) {
-    // If page has citation_doi and mode is not "always", skip translation-server
-    if (_options.translationServerMode !== "always") {
-      var hasDOI = doc.querySelector('meta[name="citation_doi"]');
-      if (hasDOI) {
-        var localExtraction = api.detectAndExtract(doc, url);
-        return localExtraction;
-      }
+    var localExtraction = api.detectAndExtract(doc, url);
+    // Embedded DOI metadata and explicitly preferred site extractors are
+    // complete local sources unless the user forces translation-server.
+    if (_options.translationServerMode !== "always" &&
+        (doc.querySelector('meta[name="citation_doi"]') || localExtraction.preferLocal)) {
+      return localExtraction;
     }
 
     try {
@@ -521,8 +565,7 @@
       }
     } catch (error) {}
 
-    var extraction = api.detectAndExtract(doc, url);
-    return extraction;
+    return localExtraction;
   }
 
   function sendTranslateUrl(url) {
@@ -544,12 +587,13 @@
     if (!shouldRunDetailDetection()) {
       return;
     }
-    const runSerial = ++detailRunSerial;
+    const pageKey = currentPageKey();
+    const detectionSerial = detailRunSerial;
     const force = forceNextDetailCheck;
     forceNextDetailCheck = false;
     checkCount += 1;
     const extraction = await detectMetadata(document, location.href);
-    if (runSerial !== detailRunSerial) {
+    if (detectionSerial !== detailRunSerial || pageKey !== currentPageKey()) {
       return;
     }
     if (!extraction.candidates.length) {
@@ -575,11 +619,17 @@
     }
 
     const candidateKey = extraction.candidates
-      .map((candidate) => `${candidate.DOI || ""}|${candidate.PMID || ""}|${api.normalizeTitle(candidate.title)}`)
+      .map(detailCandidateKey)
       .join(";");
     if (!force && candidateKey === lastSuccessfulCandidateKey && document.querySelector("#zotero-check-badge-host")) {
       return;
     }
+    if (!force && candidateKey === inFlightDetailKey) {
+      return;
+    }
+
+    const runSerial = ++detailRunSerial;
+    inFlightDetailKey = candidateKey;
 
     setBadge(
       "unknown",
@@ -588,8 +638,15 @@
       uiState.PAGE_STATES.CHECKING
     );
 
-    const response = await sendMatch(extraction.candidates, "detail");
-    if (runSerial !== detailRunSerial) {
+    let response;
+    try {
+      response = await sendMatch(extraction.candidates, "detail");
+    } finally {
+      if (runSerial === detailRunSerial && inFlightDetailKey === candidateKey) {
+        inFlightDetailKey = "";
+      }
+    }
+    if (runSerial !== detailRunSerial || pageKey !== currentPageKey()) {
       return;
     }
     if (!response || !response.ok) {
@@ -647,6 +704,8 @@
   }
 
   async function checkSelectedTranslationChoice(choice) {
+    const runSerial = ++detailRunSerial;
+    const pageKey = currentPageKey();
     clearChoices();
     const candidate = {
       ...choice,
@@ -654,6 +713,9 @@
     };
     setBadge("unknown", i18n.t("badgeCheckingSource", "translation-server"), "", uiState.PAGE_STATES.CHECKING);
     const response = await sendMatch(candidate);
+    if (runSerial !== detailRunSerial || pageKey !== currentPageKey()) {
+      return;
+    }
     if (!response || !response.ok) {
       setBadge(
         "error",
@@ -665,11 +727,12 @@
       return;
     }
     clearTimeout(detailRetryTimer);
-    lastSuccessfulCandidateKey = `${candidate.DOI || ""}|${candidate.PMID || ""}|${api.normalizeTitle(candidate.title)}`;
+    lastSuccessfulCandidateKey = detailCandidateKey(candidate);
     applyDetailResult(pickBestResult(response.result), "translation-server");
   }
 
   function applyDetailResult(result, metadataSource) {
+    const detailPossibleLabelKey = getSiteAdapter()?.detailPossibleLabelKey || "badgePossibleMatch";
     if (result && result.status === "error") {
       setBadge(
         "error",
@@ -702,7 +765,7 @@
     if (isPositiveResult(result)) {
       setBadge(
         result.status === "possible_match" ? "possible" : "matched",
-        i18n.t(result.status === "possible_match" ? "badgePossibleMatch" : "badgeSaved"),
+        i18n.t(result.status === "possible_match" ? detailPossibleLabelKey : "badgeSaved"),
         `metadataSource: ${metadataSource}`,
         result.status === "possible_match" ? uiState.PAGE_STATES.POSSIBLE_MATCH : uiState.PAGE_STATES.SAVED
       );
@@ -733,7 +796,7 @@
   }
 
   function scheduleBatchCheck(options = {}) {
-    if (!isCNKIPage() && !getSiteAdapter()) {
+    if (!getSiteAdapter()) {
       return;
     }
     if (options.force) {
@@ -766,29 +829,35 @@
     const userInitiated = _batchUserInitiated;
     _batchUserInitiated = false;
 
-    // Gate: only auto-check when enabled; user-initiated always passes
-    if (!_options.autoCheckReferenceLists && !userInitiated) {
+    // Search-result pages are a primary workflow. Reference lists remain
+    // option-gated, while a user-initiated check always passes.
+    if (!shouldRunAutomaticBatchCheck() && !userInitiated) {
       return;
     }
 
     const adapter = getSiteAdapter();
+    if (!adapter) {
+      return;
+    }
     let targets;
     var signature;
 
-    if (adapter) {
-      // Compute fast signature before expensive collectBatchTargets
-      if (typeof adapter.getBatchSignature === "function") {
-        signature = adapter.getBatchSignature();
-        if (!force && signature && signature === lastSuccessfulBatchKey) {
-          return;
-        }
+    // Compute fast signature before expensive collectBatchTargets.
+    if (typeof adapter.getBatchSignature === "function") {
+      signature = adapter.getBatchSignature();
+      if (!force && signature && signature === lastSuccessfulBatchKey) {
+        return;
       }
-      targets = adapter.collectBatchTargets().slice(0, BATCH_LIMIT);
-    } else {
-      targets = collectCNKITargets().slice(0, BATCH_LIMIT);
+      if (!force && signature && signature === inFlightBatchKey) {
+        return;
+      }
     }
+    targets = adapter.collectBatchTargets().slice(0, BATCH_LIMIT);
 
     if (!targets.length) {
+      if (isAutomaticSearchResultsPage()) {
+        pageController.setState(uiState.PAGE_STATES.NOT_CHECKED);
+      }
       return;
     }
 
@@ -808,12 +877,13 @@
     }
 
     const runSerial = ++batchRunSerial;
+    const pageKey = currentPageKey();
     const requestId = ++batchRequestSequence;
     inFlightBatchKey = batchKey;
+    inFlightBatchRunSerial = runSerial;
     activeBatchProgress = { adapter, requestId, runSerial, targets };
-
-    if (!adapter) {
-      targets.forEach(function (target) { applyTargetState(target, "checking"); });
+    if (isAutomaticSearchResultsPage()) {
+      pageController.setState(uiState.PAGE_STATES.CHECKING);
     }
 
     let response;
@@ -824,21 +894,23 @@
         requestId
       );
     } finally {
-      if (inFlightBatchKey === batchKey) inFlightBatchKey = "";
+      if (inFlightBatchKey === batchKey && inFlightBatchRunSerial === runSerial) {
+        inFlightBatchKey = "";
+        inFlightBatchRunSerial = 0;
+      }
       if (activeBatchProgress?.requestId === requestId) activeBatchProgress = null;
     }
-    if (runSerial !== batchRunSerial) {
+    if (runSerial !== batchRunSerial || pageKey !== currentPageKey()) {
       return;
     }
     if (!response || !response.ok || !Array.isArray(response.result?.results)) {
-      if (adapter) {
-        adapter.applyBatchResults(
-          targets.map(function (t) {
-            return { sourceId: t.sourceId, status: "error", error: response?.error || i18n.t("checkerOffline") };
-          })
-        );
-      } else {
-        targets.forEach(function (target) { applyTargetState(target, "error", response?.error || i18n.t("checkerOffline")); });
+      adapter.applyBatchResults(
+        targets.map(function (t) {
+          return { sourceId: t.sourceId, status: "error", error: response?.error || i18n.t("checkerOffline") };
+        })
+      );
+      if (isAutomaticSearchResultsPage()) {
+        pageController.setState(uiState.PAGE_STATES.ERROR);
       }
       scheduleBatchRetry(batchKey);
       return;
@@ -858,19 +930,13 @@
       lastSuccessfulBatchKey = batchKey;
     }
 
-    if (adapter) {
-      var results = response.result.results.map(function (r, i) {
-        var t = targets[i];
-        return Object.assign({}, r, { sourceId: t ? t.sourceId : "" });
-      });
-      adapter.applyBatchResults(results);
-    } else {
-      response.result.results.forEach(function (result, index) {
-        const target = targets[index];
-        if (target) {
-          applyTargetResult(target, result);
-        }
-      });
+    var results = response.result.results.map(function (r, i) {
+      var t = targets[i];
+      return Object.assign({}, r, { sourceId: t ? t.sourceId : "" });
+    });
+    adapter.applyBatchResults(results);
+    if (isAutomaticSearchResultsPage()) {
+      pageController.setState(uiState.PAGE_STATES.NOT_CHECKED);
     }
   }
 
@@ -882,13 +948,9 @@
       return;
     }
     const target = active.targets[message.index];
-    if (active.adapter) {
-      active.adapter.applyBatchResults([
-        Object.assign({}, message.result, { sourceId: target.sourceId || "" })
-      ]);
-    } else {
-      applyTargetResult(target, message.result);
-    }
+    active.adapter.applyBatchResults([
+      Object.assign({}, message.result, { sourceId: target.sourceId || "" })
+    ]);
   }
 
   function scheduleBatchRetry(batchKey) {
@@ -903,143 +965,6 @@
     }, delay);
   }
 
-  function collectCNKITargets() {
-    const anchors = new Set();
-    const selectors = [
-      '#literature-recommend a[href]',
-      '#kcms-data-similar a[href]',
-      '#kcms-data-reader-recommend a[href]',
-      '#kcms-related-fund-literature a[href]',
-      '#div-literatureRef a[href]',
-      '#quoted-references a[href]',
-      '#quoted-citations a[href]',
-      '#quoted-coreferences a[href]',
-      '#quoted-cocitations a[href]',
-      '#quoted-secondreferences a[href]',
-      '#quoted-secondcitations a[href]',
-      '#refpartdiv a[href]',
-      '.essayBox a[href]',
-      '.result-table-list a[href]',
-      '.result-list a[href]',
-      '.name a[href]',
-      'a.fz14[href]',
-      'a[href*="/kcms2/article/abstract"]',
-      'a[href*="/kcms/detail/detail.aspx"]'
-    ];
-
-    selectors.forEach((selector) => {
-      document.querySelectorAll(selector).forEach((anchor) => {
-        if (isCandidateAnchor(anchor)) {
-          anchors.add(anchor);
-        }
-      });
-    });
-
-    return [...anchors].map((anchor) => makeTarget(anchor)).filter(Boolean);
-  }
-
-  function isCandidateAnchor(anchor) {
-    const href = anchor.getAttribute("href") || "";
-    if (!href || href.startsWith("javascript:")) {
-      return false;
-    }
-    if (!isCNKIArticleURL(href)) {
-      return false;
-    }
-    const title = getAnchorTitle(anchor);
-    return title.length >= 4 && !anchor.closest(".zotero-check-badge");
-  }
-
-  function makeTarget(anchor) {
-    const title = getAnchorTitle(anchor);
-    if (!title) {
-      return null;
-    }
-    const url = new URL(anchor.getAttribute("href"), location.href).href;
-    const candidate = {
-      itemType: "journalArticle",
-      title,
-      url,
-      source: "cnki-list"
-    };
-    return {
-      anchor,
-      key: `${api.normalizeTitle(title)}|${url}`,
-      candidate
-    };
-  }
-
-  function getAnchorTitle(anchor) {
-    const titleNode = anchor.querySelector(".title[title], [data-title]");
-    return String(
-      anchor.dataset.zoteroCheckOriginalTitle ||
-        anchor.getAttribute("title") ||
-        titleNode?.getAttribute("title") ||
-        titleNode?.getAttribute("data-title") ||
-        anchor.textContent ||
-        ""
-    )
-      .replace(/\s+/g, " ")
-      .trim();
-  }
-
-  function isCNKIArticleURL(href) {
-    try {
-      const url = new URL(href, location.href);
-      return /(?:^|\.)cnki\.net$/i.test(url.hostname) &&
-        /\/kcms(?:2)?\/(?:article\/abstract|detail\/detail\.aspx|detail)/i.test(url.pathname);
-    } catch (error) {
-      return false;
-    }
-  }
-
-  function applyTargetResult(target, result) {
-    if (!result) {
-      applyTargetState(target, "missing", i18n.t("noResultReturned"));
-      return;
-    }
-    if (result.complete === false && result.freshness === "stale") {
-      applyTargetState(
-        target,
-        result.status === "matched" ? "possible" : "unknown",
-        i18n.t(result.status === "matched" ? "savedInStaleIndex" : "staleIndexNoMatch")
-      );
-      return;
-    }
-    if (backendContract.isIncompleteNotFound(result)) {
-      applyTargetState(target, "unknown", i18n.t("incompleteNotFoundInLibrary"));
-      return;
-    }
-    if (result.status === "matched") {
-      applyTargetState(target, "matched", i18n.t("savedInLibrary"));
-      return;
-    }
-    if (result.status === "possible_match") {
-      applyTargetState(target, "possible", i18n.t("possibleInLibrary"));
-      return;
-    }
-    if (result.status === "error") {
-      applyTargetState(target, "error", result.error || result.reason || i18n.t("checkerError"));
-      return;
-    }
-    applyTargetState(target, "missing", result.reason || i18n.t("noMatchingItem"));
-  }
-
-  function applyTargetState(target, state, title = "") {
-    const row = target.anchor.closest("li, tr, .essayBox, .result, .result-item, .doc-item");
-    if (!target.anchor.dataset.zoteroCheckOriginalTitle) {
-      target.anchor.dataset.zoteroCheckOriginalTitle = getAnchorTitle(target.anchor);
-    }
-    target.anchor.dataset.zoteroCheckState = state;
-    target.anchor.classList.add("zotero-check-link");
-    if (row) {
-      row.dataset.zoteroCheckState = state;
-    }
-    if (title) {
-      target.anchor.setAttribute("title", title);
-    }
-  }
-
   function isLikelyAcademicPage() {
     return isCNKIPage() ||
       Boolean(document.querySelector('meta[name^="citation_"], meta[name^="DC."], .Z3988[title]'));
@@ -1052,6 +977,13 @@
   function isCuratedKnownHost() {
     var hostname = location.hostname.toLowerCase();
     return CURATED_DETAIL_HOSTS.some(function (domain) {
+      return hostnameMatches(hostname, domain);
+    });
+  }
+
+  function isCuratedBatchHost() {
+    var hostname = location.hostname.toLowerCase();
+    return CURATED_BATCH_HOSTS.some(function (domain) {
       return hostnameMatches(hostname, domain);
     });
   }
@@ -1078,6 +1010,12 @@
   }
 
   function shouldRunDetailDetection() {
+    if (isAutomaticSearchResultsPage()) {
+      return false;
+    }
+    if (isAdapterDetailPage()) {
+      return true;
+    }
     if (isCuratedKnownHost()) {
       return true;
     }
@@ -1102,39 +1040,98 @@
     return null;
   }
 
+  function isAutomaticSearchResultsPage() {
+    var adapter = getSiteAdapter();
+    return Boolean(
+      adapter &&
+      typeof adapter.isSearchResultsPage === "function" &&
+      adapter.isSearchResultsPage()
+    );
+  }
+
+  function isAdapterDetailPage() {
+    var adapter = getSiteAdapter();
+    return Boolean(
+      adapter &&
+      typeof adapter.isDetailPage === "function" &&
+      adapter.isDetailPage(location.href)
+    );
+  }
+
+  function shouldRunAutomaticBatchCheck() {
+    return Boolean(_options.autoCheckReferenceLists || isAutomaticSearchResultsPage());
+  }
+
+  function currentPageKey() {
+    return location.pathname + location.search;
+  }
+
+  function removeDetailBadge() {
+    var host = document.querySelector("#zotero-check-badge-host");
+    if (host) host.remove();
+  }
+
+  function resetWorkForRouteChange() {
+    detailRunSerial += 1;
+    batchRunSerial += 1;
+    checkCount = 0;
+    lastSuccessfulCandidateKey = "";
+    inFlightDetailKey = "";
+    lastSuccessfulBatchKey = "";
+    inFlightBatchKey = "";
+    inFlightBatchRunSerial = 0;
+    lastFailedBatchKey = "";
+    batchRetryNotBefore = 0;
+    batchRetryDelayMs = BATCH_RETRY_INITIAL_MS;
+    forceNextDetailCheck = false;
+    forceNextBatchCheck = false;
+    _batchUserInitiated = false;
+    activeBatchProgress = null;
+    clearTimeout(detailTimer);
+    clearTimeout(batchTimer);
+    clearTimeout(detailRetryTimer);
+    clearTimeout(batchRetryTimer);
+    removeDetailBadge();
+    document.querySelectorAll(".zotero-check-search-status").forEach(function (chip) {
+      chip.remove();
+    });
+    pageController.setState(uiState.PAGE_STATES.NOT_CHECKED);
+  }
+
+  function syncRouteState() {
+    var pageKey = currentPageKey();
+    if (pageKey === observedPageKey) return false;
+    observedPageKey = pageKey;
+    resetWorkForRouteChange();
+    if (shouldRunDetailDetection()) {
+      scheduleDetailCheck({ force: true, delay: 120 });
+    }
+    if (shouldRunAutomaticBatchCheck()) {
+      scheduleBatchCheck({ force: true, delay: 250 });
+    }
+    return true;
+  }
+
   function getCNKIListSignature() {
-    var targets = collectCNKITargets();
-    if (!targets.length) {
+    var adapter = getSiteAdapter();
+    if (!adapter || typeof adapter.getBatchSignature !== "function") {
       return "";
     }
-    return targets.map(function (t) { return t.key; }).sort().join("|");
+    return adapter.getBatchSignature();
   }
 
   function setupCNKIDynamicListWatcher() {
-    if (!isCNKIPage()) {
+    var adapter = getSiteAdapter();
+    if (!adapter || adapter.id !== "cnki") {
       return;
     }
-
-    var CONTAINER_IDS = [
-      "quoted-references",
-      "quoted-citations",
-      "quoted-coreferences",
-      "quoted-cocitations",
-      "quoted-secondreferences",
-      "quoted-secondcitations",
-      "kcms-data-similar",
-      "kcms-data-reader-recommend",
-      "kcms-related-fund-literature",
-      "kcms-study-period-results"
-    ];
 
     var lastListSignature = "";
     var containerWatchers = [];
     var bodyFallbackObserver = null;
-    var bodyFallbackActive = false;
 
     function triggerBatchIfChanged() {
-      if (!_options.autoCheckReferenceLists) {
+      if (!shouldRunAutomaticBatchCheck()) {
         return;
       }
       var sig = getCNKIListSignature();
@@ -1180,8 +1177,11 @@
 
     function discoverContainers() {
       var found = false;
-      for (var k = 0; k < CONTAINER_IDS.length; k++) {
-        var container = document.getElementById(CONTAINER_IDS[k]);
+      var containers = typeof adapter.getBatchMutationContainers === "function"
+        ? adapter.getBatchMutationContainers()
+        : [];
+      for (var k = 0; k < containers.length; k++) {
+        var container = containers[k];
         if (container) {
           found = true;
           attachContainerObserver(container);
@@ -1193,7 +1193,6 @@
     // Initial discovery — try after a short delay for AJAX to load
     setTimeout(function () {
       if (!discoverContainers()) {
-        bodyFallbackActive = true;
         bodyFallbackObserver = new MutationObserver(function () {
           if (discoverContainers()) {
             triggerBatchIfChanged();
@@ -1210,10 +1209,11 @@
 
     // Pagination click catch-all
     document.addEventListener("click", function (event) {
-      if (!isPaginationLike(event)) {
+      if (typeof adapter.isBatchNavigationEvent !== "function" ||
+          !adapter.isBatchNavigationEvent(event)) {
         return;
       }
-      if (!_options.autoCheckReferenceLists) {
+      if (!shouldRunAutomaticBatchCheck()) {
         return;
       }
       if (typeof requestIdleCallback === "function") {
@@ -1224,36 +1224,6 @@
         setTimeout(function () { triggerBatchIfChanged(); }, 2500);
       }
     }, true);
-  }
-
-  function isPaginationLike(event) {
-    var target = event.target;
-    if (!target) {
-      return false;
-    }
-    var text = (target.textContent || "").replace(/\s+/g, "");
-
-    // Chinese pagination text
-    if (/^(下一页|上一页|首页|尾页|末页|上页|下页|跳转|转到|确定)$/.test(text)) {
-      return true;
-    }
-    // English pagination text
-    if (/^(Next|Prev|Previous|First|Last)$/i.test(text)) {
-      return true;
-    }
-    // Arrow symbols often used for pagination
-    if (/^[»«›‹▶◀▲▼]$/.test(text) || /^(>>|<<|>$|<$)$/.test(text)) {
-      return true;
-    }
-    // Bare page number inside a pager container
-    if (/^\d+$/.test(text)) {
-      var pager = target.closest('.pager, .pagination, #paginate, .pagebar, .turn_page, [class*="paging"], [class*="page-list"], .countPage, #cpPage, .TurnPage, .sabrosus, #pe100_page_有') ||
-                  target.closest('[id*="page"], [class*="page"], [id*="pager"], [class*="pager"], [id*="paging"], [class*="paging"]');
-      if (pager && !target.closest('input, textarea, select')) {
-        return true;
-      }
-    }
-    return false;
   }
 
   function getBadgeState() {
@@ -1267,27 +1237,34 @@
       return;
     }
 
+    if (syncRouteState()) {
+      return;
+    }
+
     const now = Date.now();
     if (now - lastForegroundCheckAt < FOREGROUND_CHECK_DEBOUNCE_MS) {
       return;
     }
     lastForegroundCheckAt = now;
 
-    const currentState = getBadgeState();
-    if (currentState === "matched") {
-      return;
+    if (!isAutomaticSearchResultsPage()) {
+      const currentState = getBadgeState();
+      if (currentState !== "matched") {
+        scheduleDetailCheck({ force: true, delay: 120 });
+      }
     }
 
-    scheduleDetailCheck({ force: true, delay: 120 });
-    if (_options.autoCheckReferenceLists) {
+    if (shouldRunAutomaticBatchCheck()) {
       scheduleBatchCheck({ delay: 250 });
     }
   }
 
   setupCNKIDynamicListWatcher();
 
-  scheduleDetailCheck();
-  if (_options.autoCheckReferenceLists) {
+  if (!isAutomaticSearchResultsPage()) {
+    scheduleDetailCheck();
+  }
+  if (shouldRunAutomaticBatchCheck()) {
     scheduleBatchCheck();
   }
 
@@ -1299,29 +1276,36 @@
     clearTimeout(observerDebounceTimer);
     observerDebounceTimer = setTimeout(function () {
       observerCheckPending = false;
-      if (checkCount >= MAX_DYNAMIC_CHECKS) {
+      if (syncRouteState()) {
+        return;
+      }
+      if (checkCount >= MAX_DYNAMIC_CHECKS && !isCuratedBatchHost()) {
         observer.disconnect();
         return;
       }
-      scheduleDetailCheck();
+      if (!isAutomaticSearchResultsPage() && checkCount < MAX_DYNAMIC_CHECKS) {
+        scheduleDetailCheck();
+      }
 
-      // Only schedule batch check if signature changed (and autoCheck enabled)
-      if (!_options.autoCheckReferenceLists) return;
+      // Search-result pages auto-check; reference lists remain option-gated.
+      if (!shouldRunAutomaticBatchCheck()) return;
       var adapter = getSiteAdapter();
       var sig = "";
       if (adapter && typeof adapter.getBatchSignature === "function") {
         sig = adapter.getBatchSignature();
-      } else if (isCNKIPage()) {
-        sig = getCNKIListSignature();
       }
       if (sig && sig !== lastSuccessfulBatchKey) {
         scheduleIdleBatchCheck();
       }
     }, 200);
   });
-  if (isLikelyAcademicPage()) {
+  const automaticSearchResultsPage = isAutomaticSearchResultsPage();
+  const curatedBatchHost = isCuratedBatchHost();
+  if (isLikelyAcademicPage() || automaticSearchResultsPage || curatedBatchHost) {
     observer.observe(document.documentElement, { childList: true, subtree: true });
-    setTimeout(function () { observer.disconnect(); }, 20000);
+    if (!automaticSearchResultsPage && !curatedBatchHost) {
+      setTimeout(function () { observer.disconnect(); }, 20000);
+    }
   }
 
   function setupIntersectionObserver() {
@@ -1360,4 +1344,5 @@
   });
   window.addEventListener("focus", scheduleForegroundCheck);
   window.addEventListener("pageshow", scheduleForegroundCheck);
+  window.addEventListener("popstate", scheduleForegroundCheck);
 })();

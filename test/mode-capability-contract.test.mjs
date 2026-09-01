@@ -128,13 +128,14 @@ test("page extraction and rendering remain shared and backend-agnostic", async (
   const manifest = JSON.parse(await readFile(new URL("../browser-extension/manifest.json", import.meta.url), "utf8"));
   const scripts = manifest.content_scripts.flatMap((entry) => entry.js || []);
   for (const required of [
-    "src/extractors/cnki.js", "src/extractors/generic.js", "src/extractors/runner.js",
-    "src/adapters/sciencedirect.js", "src/content.js"
+    "src/extractors/cnki.js", "src/extractors/scopus.js", "src/extractors/generic.js", "src/extractors/runner.js",
+    "src/adapters/cnki.js", "src/adapters/scopus.js", "src/adapters/sciencedirect.js",
+    "src/content.js"
   ]) assert.equal(scripts.filter((value) => value === required).length, 1, required);
 
   for (const name of [
-    "extractors/cnki.js", "extractors/generic.js", "extractors/runner.js",
-    "adapters/sciencedirect.js", "content.js"
+    "extractors/cnki.js", "extractors/scopus.js", "extractors/generic.js", "extractors/runner.js",
+    "adapters/cnki.js", "adapters/scopus.js", "adapters/sciencedirect.js", "content.js"
   ]) {
     const source = await readFile(new URL(`../browser-extension/src/${name}`, import.meta.url), "utf8");
     assert.doesNotMatch(source, /EnhancedBackend|IndexedLocalApiBackend|DirectLocalApiBackend|\/zotero-checker|127\.0\.0\.1:23119\/api/);

@@ -24,7 +24,7 @@ Zotero is a registered trademark of the Corporation for Digital Scholarship. Thi
 ## Why use it?
 
 - Check for an existing Zotero item before clicking Zotero Connector to save.
-- Review CNKI articles and supported reference lists without repeatedly searching Zotero.
+- Review CNKI articles, search results, and supported reference lists without repeatedly searching Zotero.
 - Distinguish confirmed matches from fuzzy matches that need manual review.
 - Keep library matching on your computer.
 
@@ -94,6 +94,7 @@ produce duplicate status badges or conflicting page state.
 | --- | --- | --- | --- |
 | CNKI Chinese | Built-in CNKI extractor | Supported and tested | Experimental |
 | CNKI English | Built-in CNKI/generic extraction | Experimental | Experimental |
+| Scopus | Dedicated document-details extractor and publications-search adapter | Experimental; live DOM verified | Experimental; search results only, in Table and List views |
 | MDPI | Generic citation metadata | Supported and tested | Not supported |
 | ScienceDirect | Generic metadata plus a site adapter; optional local translation-server | Best effort; live access may be challenged | Best effort |
 | Springer, Wiley, PubMed, arXiv, IEEE, ACM, Taylor & Francis, and DOI.org | Generic metadata; optional local translation-server | Experimental / best effort | Not supported |
@@ -143,7 +144,7 @@ Badge and page-glow colors use red for saved/matched, orange for possible matche
 
 Enhanced mode listens for Zotero item additions, modifications, deletions, and trash events and updates its add-on index in real time. Standard mode uses full snapshot refreshes because Zotero 9.0.6 does not provide a reliable complete `since`-based change guarantee. A successful standard refresh notifies previously checked pages to re-check. Use **Refresh index** after a change when an immediate result matters.
 
-**Auto-check reference lists** is off by default. When enabled, supported pages are checked as they load and scroll; otherwise click `↻` to start a supported list check manually. A page processes at most 80 candidates. CNKI reference/list checks are experimental, ScienceDirect is best effort, and MDPI References are not supported.
+Scopus `/pages/publications/<id>` document-detail pages are checked from their visible DOI, title, displayed author names, year, and source metadata. CNKI KNS8 and Scopus publications search-result pages are checked automatically and display inline positive matches; Scopus Table and List views are supported. **Auto-check reference lists** remains off by default and controls reference/citation lists: when enabled, supported lists are checked as they load and scroll; otherwise click `↻` to start a supported list check manually. A page processes at most 80 candidates. Scopus detail and search checks and CNKI search checks remain experimental, ScienceDirect is best effort, and MDPI References are not supported.
 
 ### Page glow and pairing-token actions
 
@@ -195,7 +196,7 @@ Zotero Connector saves items into Zotero. Paper Library Checker does not replace
 
 ### Does Paper Library Checker work with CNKI?
 
-Yes. CNKI Chinese article details are supported and tested. CNKI English details and CNKI reference/list checks are experimental.
+Yes. CNKI Chinese article details are supported and tested. KNS8 search results have an explicit adapter; search results, CNKI English details, and CNKI reference/list checks remain experimental.
 
 ### Does it upload my Zotero library?
 
