@@ -398,8 +398,10 @@
     }
 
     function searchQueries(candidate) {
-      const title = String(candidate?.title || "").trim();
-      if (title) return [{ term: title, type: "title", qmode: "titleCreatorYear" }];
+      const titles = matcher.candidateTitleValues(candidate);
+      if (titles.length) {
+        return titles.map((term) => ({ term, type: "title", qmode: "titleCreatorYear" }));
+      }
       const prepared = matcher.prepareCandidate(candidate);
       const queries = [];
       for (const type of matcher.IDENTIFIER_PRIORITY) {

@@ -88,6 +88,10 @@
     const itemKey = boundedText(record.itemKey || record.key || data.key, MAX_KEY_LENGTH, true);
     const itemType = boundedText(data.itemType, 64, true).toLowerCase();
     const titleKey = boundedText(record.titleKey || prepared.title, MAX_TITLE_KEY_LENGTH);
+    const publicationTitleKey = boundedText(
+      record.publicationTitleKey || prepared.publicationTitle,
+      MAX_TITLE_KEY_LENGTH
+    );
     const year = matcher.extractYear(record.year || prepared.year);
     return {
       scopeKey: normalizedScope,
@@ -97,6 +101,7 @@
       itemVersion: normalizeVersion(record.itemVersion ?? record.version ?? data.version),
       identifierKeys: normalizeIdentifierKeys(record, prepared),
       titleKey,
+      publicationTitleKey,
       year,
       creatorKeys: normalizeCreatorKeys(record, prepared),
       itemType

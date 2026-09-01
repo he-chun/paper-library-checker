@@ -66,6 +66,22 @@ ZoteroCheck.Matcher = (function () {
       .replace(/[\p{P}\p{S}]/gu, "");
   }
 
+  function candidateTitleValues(candidate = {}) {
+    const inputs = [candidate.title, ...(Array.isArray(candidate.alternateTitles)
+      ? candidate.alternateTitles
+      : [])];
+    const seen = new Set();
+    const values = [];
+    for (const input of inputs) {
+      const value = typeof input === "string" ? input.trim() : "";
+      const key = normalizeTitle(value);
+      if (!value || !key || seen.has(key)) continue;
+      seen.add(key);
+      values.push(value);
+    }
+    return values;
+  }
+
   function normalizeTokenTitle(value) {
     return String(value || "")
       .normalize("NFKC")
@@ -145,12 +161,19 @@ ZoteroCheck.Matcher = (function () {
 
   function normalizeCandidate(candidate = {}) {
     const identifiers = collectCandidateIdentifiers(candidate);
+    const titleRaws = candidateTitleValues(candidate);
+    const titleKeys = titleRaws.map(normalizeTitle);
     return {
       identifiers,
-      titleRaw: candidate.title || "",
-      titleKey: normalizeTitle(candidate.title),
+      titleRaw: titleRaws[0] || "",
+      titleRaws,
+      titleKey: titleKeys[0] || "",
+      titleKeys,
       year: extractYear(candidate.date || candidate.year),
-      creators: normalizeCreators(candidate.creators)
+      creators: normalizeCreators(candidate.creators),
+      publicationTitle: normalizeTitle(candidate.publicationTitle),
+      matchPolicy: candidate.matchPolicy === "scopus-tiered" ? "scopus-tiered" : "",
+      scopusCreatorPrefixes: normalizeScopusCreatorPrefixes(candidate.creators)
     };
   }
 
@@ -205,6 +228,27 @@ ZoteroCheck.Matcher = (function () {
       : [];
   }
 
+  function normalizeScopusCreatorPrefixes(creators) {
+    if (!Array.isArray(creators)) return [];
+    return creators.map((creator) => {
+      const rawName = typeof creator === "string"
+        ? creator
+        : creator && typeof creator === "object"
+          ? creator.name
+          : "";
+      const tokens = String(rawName || "").normalize("NFKC").match(/[\p{L}\p{N}]+/gu) || [];
+      if (tokens.length < 2 || Array.from(tokens[1]).length !== 1) return "";
+      return normalizePerson(`${tokens[0]}${tokens[1]}`);
+    }).filter(Boolean);
+  }
+
+  function creatorsMatch(recordCreators, candidate) {
+    if (candidate.creators.some((creator) => recordCreators.includes(creator))) return true;
+    return (candidate.scopusCreatorPrefixes || []).some((prefix) =>
+      recordCreators.some((creator) => creator.length > prefix.length && creator.startsWith(prefix))
+    );
+  }
+
   function normalizePerson(value) {
     return String(value || "")
       .normalize("NFKC")
@@ -225,8 +269,20 @@ ZoteroCheck.Matcher = (function () {
       titleKey: record.titleKey || normalizeTitle(record.titleRaw || record.title),
       year: record.year || extractYear(record.date),
       creators: normalizeCreators(record.creators),
+      publicationTitle: record.publicationTitleKey || normalizeTitle(record.publicationTitle),
       result: record.result || record
     };
+  }
+
+  function scopusTieredEvidence(record, candidate) {
+    if (!candidate.year || !record.year || candidate.year !== record.year) return "none";
+    const authorMatched = candidate.creators.length > 0 && record.creators.length > 0 &&
+      creatorsMatch(record.creators, candidate);
+    const journalMatched = Boolean(
+      candidate.publicationTitle && record.publicationTitle &&
+      candidate.publicationTitle === record.publicationTitle
+    );
+    return authorMatched && journalMatched ? "full" : "title_year";
   }
 
   function matchRecords(candidate, records, { fuzzyMatching = true } = {}) {
@@ -244,8 +300,29 @@ ZoteroCheck.Matcher = (function () {
       }
     }
 
-    if (normalizedCandidate.titleKey) {
-      const sameTitleRecords = preparedRecords.filter((record) => record.titleKey === normalizedCandidate.titleKey);
+    if (normalizedCandidate.titleKeys.length) {
+      const titleKeys = new Set(normalizedCandidate.titleKeys);
+      const sameTitleRecords = preparedRecords.filter((record) => titleKeys.has(record.titleKey));
+      if (normalizedCandidate.matchPolicy === "scopus-tiered") {
+        const fullMatches = sameTitleRecords.filter((record) =>
+          scopusTieredEvidence(record, normalizedCandidate) === "full"
+        );
+        if (fullMatches.length) {
+          return createResult("matched", "title", 0.95, fullMatches.map((record) => record.result), "title_match");
+        }
+        const titleYearMatches = sameTitleRecords.filter((record) =>
+          scopusTieredEvidence(record, normalizedCandidate) === "title_year"
+        );
+        if (titleYearMatches.length) {
+          return createResult(
+            "possible_match", "title", 0.75,
+            titleYearMatches.map((record) => record.result), "title_year_match"
+          );
+        }
+        if (sameTitleRecords.length) {
+          return createResult("not_found", null, 0, [], "title_hint_conflict");
+        }
+      }
       const exactMatches = filterByHints(sameTitleRecords, normalizedCandidate);
       if (exactMatches.length) {
         return createResult("matched", "title", 0.95, exactMatches.map((record) => record.result), "title_match");
@@ -255,7 +332,7 @@ ZoteroCheck.Matcher = (function () {
       }
     }
 
-    if (fuzzyMatching && normalizedCandidate.titleKey) {
+    if (fuzzyMatching && normalizedCandidate.titleKey && normalizedCandidate.matchPolicy !== "scopus-tiered") {
       const fuzzyMatches = [];
       for (const record of preparedRecords) {
         const score = titleSimilarity(normalizedCandidate.titleRaw || normalizedCandidate.titleKey, record.titleRaw || record.titleKey);
@@ -279,7 +356,7 @@ ZoteroCheck.Matcher = (function () {
       null,
       0,
       [],
-      normalizedCandidate.titleKey || Object.keys(normalizedCandidate.identifiers).length ? "no_match" : "no_metadata"
+      normalizedCandidate.titleKeys.length || Object.keys(normalizedCandidate.identifiers).length ? "no_match" : "no_metadata"
     );
   }
 
@@ -322,12 +399,15 @@ ZoteroCheck.Matcher = (function () {
     normalizeCNKI,
     normalizeIdentifier,
     normalizeTitle,
+    candidateTitleValues,
     normalizeTokenTitle,
     titleSimilarity,
     normalizeCandidate,
+    creatorsMatch,
     normalizePerson,
     extractYear,
     prepareRecord,
+    scopusTieredEvidence,
     matchRecords,
     createResult,
     roundConfidence

@@ -43,6 +43,7 @@
       itemVersion: value.itemVersion,
       identifierKeys: Array.isArray(value.identifierKeys) ? [...value.identifierKeys] : [],
       titleKey: value.titleKey || "",
+      publicationTitleKey: value.publicationTitleKey || "",
       year: value.year || "",
       creatorKeys: Array.isArray(value.creatorKeys) ? [...value.creatorKeys] : [],
       itemType: value.itemType || ""

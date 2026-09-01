@@ -304,7 +304,7 @@ test("persisted records never contain forbidden raw Zotero fields", async () => 
   const stored = (await repo.queryByIdentifier("scope", "doi:10.1000/private"))[0];
   assert.deepEqual(Object.keys(stored).sort(), [
     "creatorKeys", "generation", "identifierKeys", "itemKey", "itemType", "itemVersion",
-    "libraryKey", "scopeKey", "titleKey", "year"
+    "libraryKey", "publicationTitleKey", "scopeKey", "titleKey", "year"
   ]);
   const serialized = JSON.stringify(stored);
   for (const forbidden of ["secret abstract", "Private note", "private tag", "PRIVATE_COLLECTION", "secret.pdf", "example.test"]) {

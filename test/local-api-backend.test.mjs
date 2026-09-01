@@ -156,6 +156,42 @@ test("a candidate with title and DOI uses the lightweight title query first and 
   assert.equal(itemRequests[0].searchParams.get("qmode"), "titleCreatorYear");
 });
 
+test("direct Scopus lookup queries each title variant and verifies the Chinese hit", async () => {
+  const requests = [];
+  const englishTitle = "Simulation study on settling dewatering of fine tailings";
+  const chineseTitle = "浓密机内细尾砂沉降脱水规律模拟研究";
+  const backend = localApi.createLocalApiBackend({
+    fetch: async (url) => {
+      const parsed = new URL(url);
+      requests.push(parsed);
+      if (parsed.pathname.endsWith("/groups")) return response({ payload: [] });
+      return response({ payload: parsed.searchParams.get("q") === chineseTitle ? [{
+        data: {
+          itemType: "journalArticle",
+          title: chineseTitle,
+          date: "2025",
+          publicationTitle: "Journal of Central South University Science and Technology",
+          creators: [{ firstName: "C.", lastName: "Li" }]
+        }
+      }] : [] });
+    }
+  });
+
+  const result = await backend.check({
+    title: englishTitle,
+    alternateTitles: [chineseTitle],
+    date: "2025",
+    publicationTitle: "Journal of Central South University Science and Technology",
+    creators: [{ name: "Li C." }],
+    matchPolicy: "scopus-tiered"
+  });
+  assert.equal(result.status, "matched");
+  assert.deepEqual(
+    requests.filter((url) => url.pathname.endsWith("/items")).map((url) => url.searchParams.get("q")),
+    [englishTitle, chineseTitle]
+  );
+});
+
 test("title-bearing candidates do not fall through to expensive everything searches", async () => {
   const requests = [];
   const backend = localApi.createLocalApiBackend({
@@ -297,6 +333,39 @@ test("year and author conflicts exclude otherwise exact title matches", () => {
     date: "2025",
     creators: [{ firstName: "John", lastName: "Smith" }]
   }, [item]), { status: "not_found", matchType: null, confidence: 0 });
+});
+
+test("Scopus tiered matching distinguishes full metadata from title-year-only evidence", () => {
+  const item = {
+    data: {
+      itemType: "journalArticle",
+      title: "矿渣基充填胶凝材料的开发",
+      date: "2024-11-22",
+      publicationTitle: "Construction and Building Materials",
+      creators: [{ firstName: "Zhuo", lastName: "Xu" }]
+    }
+  };
+  const candidate = {
+    title: "Development of slag-based filling cementitious materials",
+    alternateTitles: [item.data.title],
+    date: "2024",
+    publicationTitle: item.data.publicationTitle,
+    creators: [{ name: "Xu Z." }],
+    matchPolicy: "scopus-tiered"
+  };
+
+  assert.deepEqual(matcher.matchCandidate(candidate, [item]), {
+    status: "matched", matchType: "title", confidence: 0.95
+  });
+  assert.deepEqual(matcher.matchCandidate({ ...candidate, publicationTitle: "Other Journal" }, [item]), {
+    status: "possible_match", matchType: "title", confidence: 0.75
+  });
+  assert.deepEqual(matcher.matchCandidate({ ...candidate, creators: [{ name: "Xu A." }] }, [item]), {
+    status: "possible_match", matchType: "title", confidence: 0.75
+  });
+  assert.deepEqual(matcher.matchCandidate({ ...candidate, date: "2023" }, [item]), {
+    status: "not_found", matchType: null, confidence: 0
+  });
 });
 
 test("attachments, notes, and annotations never count as bibliographic matches", () => {

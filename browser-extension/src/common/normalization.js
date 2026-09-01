@@ -63,7 +63,9 @@
       const key = [
         candidate.DOI || candidate.doi || "",
         candidate.cnkiFileID || "",
-        api.normalizeTitle(candidate.title || "")
+        api.normalizeTitle(candidate.title || ""),
+        (Array.isArray(candidate.alternateTitles) ? candidate.alternateTitles : [])
+          .map((title) => api.normalizeTitle(title)).join(",")
       ].join("|");
       if (!candidate.title && !candidate.DOI && !candidate.doi) {
         continue;

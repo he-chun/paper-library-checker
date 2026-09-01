@@ -65,6 +65,7 @@ test("Simplified Chinese support matrix preserves qualified support levels", () 
   const rows = [
     "| CNKI 中文页面 | 内置 CNKI 提取器 | 已支持并完成测试 | 实验性 |",
     "| CNKI 英文页面 | 内置 CNKI/通用元数据提取 | 实验性 | 实验性 |",
+    "| Scopus | 专用文献详情提取器和 publications 检索结果适配器 | 实验性；已验证真实 DOM | 实验性；仅检索结果，支持 Table 和 List 视图 |",
     "| MDPI | 通用引文元数据 | 已支持并完成测试 | 不支持 |",
     "| ScienceDirect | 通用元数据和站点适配器；可选本地 translation-server | 尽力支持；真实访问可能受到站点验证限制 | 尽力支持 |",
     "Springer、Wiley、PubMed、arXiv、IEEE、ACM、Taylor & Francis 和 DOI.org",
@@ -223,12 +224,31 @@ test("both support matrices preserve qualified support levels", () => {
   const englishRows = [
     "| CNKI Chinese | Built-in CNKI extractor | Supported and tested | Experimental |",
     "| CNKI English | Built-in CNKI/generic extraction | Experimental | Experimental |",
+    "| Scopus | Dedicated document-details extractor and publications-search adapter | Experimental; live DOM verified | Experimental; search results only, in Table and List views |",
     "| MDPI | Generic citation metadata | Supported and tested | Not supported |",
     "| ScienceDirect | Generic metadata plus a site adapter; optional local translation-server | Best effort; live access may be challenged | Best effort |",
     "Springer, Wiley, PubMed, arXiv, IEEE, ACM, Taylor & Francis, and DOI.org",
     "it is not by itself a claim of live-site support"
   ];
   for (const row of englishRows) assert(english.includes(row), row);
+});
+
+test("localized usage separates automatic search checks from opt-in reference checks", () => {
+  for (const marker of [
+    "Scopus `/pages/publications/<id>` document-detail pages are checked",
+    "CNKI KNS8 and Scopus publications search-result pages are checked automatically and display inline positive matches",
+    "remains off by default and controls reference/citation lists",
+    "A page processes at most 80 candidates",
+    "Scopus detail and search checks and CNKI search checks remain experimental"
+  ]) assert(english.includes(marker), marker);
+
+  for (const marker of [
+    "Scopus `/pages/publications/<id>` 文献详情页会根据页面可见的 DOI",
+    "CNKI KNS8 和 Scopus publications 检索结果页会自动检查，并以内联标记显示正向匹配",
+    "仍默认关闭，仅控制参考文献/引证列表",
+    "单页最多处理 80 个候选",
+    "Scopus 详情与检索检查及 CNKI 检索检查仍为实验性"
+  ]) assert(chinese.includes(marker), marker);
 });
 
 test("both READMEs answer the high-intent discovery FAQ questions", () => {

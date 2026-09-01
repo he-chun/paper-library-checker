@@ -21,6 +21,7 @@ function indexed(records, fuzzyMatching = true) {
       titleKey,
       year: matcher.extractYear(record.year),
       creators: (record.creators || []).map(matcher.normalizePerson),
+      publicationTitle: matcher.normalizeTitle(record.publicationTitle),
       identifiers: {},
       result: { id, library: record.library || 1 }
     });
@@ -53,6 +54,31 @@ test("Indexer.match treats missing record hints as unknown rather than conflicti
   assert.equal(indexed([{ id: 1, title: "Shared title", year: "2025" }]).match({
     title: "Shared title", year: "2025", creators: ["Ada"]
   }).status, "matched");
+});
+
+test("Indexer.match applies the Scopus four-field confidence tiers", () => {
+  const title = "Development of slag-based filling cementitious materials";
+  const alternateTitle = "矿渣基充填胶凝材料的开发";
+  const journal = "Construction and Building Materials";
+  const indexer = indexed([{
+    id: 1,
+    title: alternateTitle,
+    year: "2024",
+    creators: ["XuZhuo"],
+    publicationTitle: journal
+  }]);
+  const candidate = {
+    title,
+    alternateTitles: [alternateTitle],
+    year: "2024",
+    creators: [{ name: "Xu Z." }],
+    publicationTitle: journal,
+    matchPolicy: "scopus-tiered"
+  };
+
+  assert.equal(indexer.match(candidate).status, "matched");
+  assert.equal(indexer.match({ ...candidate, creators: [{ name: "Xu A." }] }).status, "possible_match");
+  assert.equal(indexer.match({ ...candidate, year: "2023" }).status, "not_found");
 });
 
 test("Indexer.match returns all non-conflicting duplicates and supports no-hint exact titles", () => {

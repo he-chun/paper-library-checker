@@ -15,6 +15,7 @@ function record(itemKey, values = {}) {
     itemVersion: 1,
     identifierKeys: values.identifierKeys || [],
     titleKey: values.titleKey || "",
+    publicationTitleKey: values.publicationTitleKey || "",
     year: values.year || "",
     creatorKeys: values.creatorKeys || [],
     itemType: "journalarticle"
@@ -99,6 +100,30 @@ test("matches normalized English and Chinese titles with year and author conflic
   assert.equal((await backend.check({ title: "中文: 精确标题", year: "2023", creators: ["张三"] })).matchType, "title");
   assert.equal((await backend.check({ title: "An English Title", year: "2022" })).status, "not_found");
   assert.equal((await backend.check({ title: "An English Title", creators: ["Other Author"] })).status, "not_found");
+});
+
+test("indexed Scopus matching returns saved only for all four matching fields", async () => {
+  const title = "Development of slag-based filling cementitious materials";
+  const alternateTitle = "矿渣基充填胶凝材料的开发";
+  const journal = "Construction and Building Materials";
+  const { backend } = harness([record("SCOPUS", {
+    titleKey: matcher.normalizeTitle(alternateTitle),
+    publicationTitleKey: matcher.normalizeTitle(journal),
+    year: "2024",
+    creatorKeys: [matcher.normalizePerson("XuZhuo")]
+  })]);
+  const candidate = {
+    title,
+    alternateTitles: [alternateTitle],
+    year: "2024",
+    creators: [{ name: "Xu Z." }],
+    publicationTitle: journal,
+    matchPolicy: "scopus-tiered"
+  };
+
+  assert.equal((await backend.check(candidate)).status, "matched");
+  assert.equal((await backend.check({ ...candidate, publicationTitle: "Other Journal" })).status, "possible_match");
+  assert.equal((await backend.check({ ...candidate, year: "2023" })).status, "not_found");
 });
 
 test("complete misses and multi-library duplicates return only minimized fields", async () => {

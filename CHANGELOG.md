@@ -5,7 +5,16 @@ Versioning while remaining pre-1.0.
 
 ## [Unreleased]
 
-- No changes yet.
+- Adds an explicit CNKI search-results adapter for KNS8 result tables, including
+  stable batch signatures, title/author/year/source extraction, positive inline
+  library badges, automatic AJAX/pagination rechecks, and synthetic regression
+  coverage without relying on CNKI's volatile `v` query token.
+- Adds an experimental Scopus publications-search adapter for both Table and
+  List views, verified against the live 2026 search DOM and covered by synthetic
+  extraction, rendering, SPA-navigation, and packaging regressions.
+- Adds an experimental Scopus document-details extractor for the live
+  `/pages/publications/<id>` DOM, including DOI/title/author/year/source
+  extraction and stale-response-safe SPA transitions between details and search.
 
 ## [0.5.0] - 2026-08-30
 
