@@ -95,6 +95,7 @@ produce duplicate status badges or conflicting page state.
 | CNKI Chinese | Built-in CNKI extractor | Supported and tested | Experimental |
 | CNKI English | Built-in CNKI/generic extraction | Experimental | Experimental |
 | Scopus | Dedicated document-details extractor and publications-search adapter | Experimental; live DOM verified | Experimental; search results only, in Table and List views |
+| Web of Science | Dedicated Full Record extractor and Summary results adapter | Experimental; live DOM verified | Experimental; Summary search results |
 | MDPI | Generic citation metadata | Supported and tested | Not supported |
 | ScienceDirect | Generic metadata plus a site adapter; optional local translation-server | Best effort; live access may be challenged | Best effort |
 | Springer, Wiley, PubMed, arXiv, IEEE, ACM, Taylor & Francis, and DOI.org | Generic metadata; optional local translation-server | Experimental / best effort | Not supported |
@@ -145,6 +146,8 @@ Badge and page-glow colors use red for saved/matched, orange for possible matche
 Enhanced mode listens for Zotero item additions, modifications, deletions, and trash events and updates its add-on index in real time. Standard mode uses full snapshot refreshes because Zotero 9.0.6 does not provide a reliable complete `since`-based change guarantee. A successful standard refresh notifies previously checked pages to re-check. Use **Refresh index** after a change when an immediate result matters.
 
 Scopus `/pages/publications/<id>` document-detail pages are checked from their visible DOI, title, displayed author names, year, and source metadata. CNKI KNS8 and Scopus publications search-result pages are checked automatically and display inline positive matches; Scopus Table and List views are supported. **Auto-check reference lists** remains off by default and controls reference/citation lists: when enabled, supported lists are checked as they load and scroll; otherwise click `↻` to start a supported list check manually. A page processes at most 80 candidates. Scopus detail and search checks and CNKI search checks remain experimental, ScienceDirect is best effort, and MDPI References are not supported.
+
+Web of Science `/wos/<database>/full-record/<id>` pages use the visible Full Record title, DOI, full author names, publication date, document type, and source. `/wos/<database>/summary/<search-id>/<sort>/<page>` result pages are checked automatically from their stable record markers; when available, each result's OpenURL supplies its DOI and unabbreviated first-author name. Only positive matches receive inline badges. Both Web of Science integrations remain experimental and were verified against the live 2026 Angular DOM.
 
 ### Page glow and pairing-token actions
 

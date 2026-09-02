@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Synthetic Web of Science search results</title>
+  </head>
+  <body>
+    <app-records-list>
+      <app-record class="app-record-holder Summary-record-view">
+        <div data-test="Summary-publication-record" class="summary-record summary-record-new">
+          <app-summary-title>
+            <h3>
+              <a data-ta="summary-record-title-link"
+                 href="/wos/woscc/full-record/WOS:000000000000001">
+                Synthetic Web of Science Article
+              </a>
+            </h3>
+          </app-summary-title>
+          <app-summary-authors>
+            <div data-ta="SumAuthTa-0-MainDiv-author-en">
+              <a data-ta="SumAuthTa-0-DisplayName-author-en-0" href="/wos/author/record/1">Example, A</a>;
+              <a data-ta="SumAuthTa-0-DisplayName-author-en-1" href="/wos/author/record/2">Sample, B</a>
+              <a data-ta="SumAuthTa-0-DisplayName-author-en-2" href="/wos/author/record/3" hidden>Hidden, H</a>
+            </div>
+          </app-summary-authors>
+          <span data-ta="summary-record-pubdate">Feb 2026</span>
+          <app-summary-source>
+            <a data-ta="jcr-link-menu" href="#">
+              <span>JOURNAL OF SYNTHETIC RESULTS</span><mat-icon>arrow_drop_down</mat-icon>
+            </a>
+          </app-summary-source>
+          <a href="https://webofscience.com/api/gateway?SrcAuth=IC2JCR">Journal metrics</a>
+          <a href="https://webofscience.com/api/gateway?SrcAuth=OpenURL&amp;DestURL=https%3A%2F%2Fresolver.example%2Fopenurl%3Frft_id%3Dinfo%253Adoi%252F10.5555%252Fwos.alpha%26rft.genre%3Darticle%26rft.date%3D2026%26rft.jtitle%3DJOURNAL%2BOF%2BSYNTHETIC%2BRESULTS%26rft.aufirst%3DAda%26rft.aulast%3DExample">Context Sensitive Links</a>
+        </div>
+      </app-record>
+
+      <app-record class="app-record-holder Summary-record-view">
+        <div data-test="Summary-publication-record" class="summary-record summary-record-new">
+          <app-summary-title>
+            <h3>
+              <a data-ta="summary-record-title-link"
+                 href="/wos/woscc/full-record/WOS:000000000000002">
+                Synthetic Web of Science Proceedings Paper
+              </a>
+            </h3>
+          </app-summary-title>
+          <app-summary-authors>
+            <a data-ta="SumAuthTa-1-DisplayName-author-en-0" href="/wos/author/record/4">Fixture, C</a>
+          </app-summary-authors>
+          <span data-ta="summary-record-pubdate">2025</span>
+          <app-summary-source>
+            <a data-ta="jcr-link-menu" href="#">SYNTHETIC PROCEEDINGS</a>
+          </app-summary-source>
+          <a href="https://webofscience.com/api/gateway?SrcAuth=OpenURL&amp;DestURL=https%3A%2F%2Fresolver.example%2Fopenurl%3Frft.genre%3Dconference%26rft.date%3D2025%26rft.jtitle%3DSYNTHETIC%2BPROCEEDINGS%26rft.aufirst%3DCora%26rft.aulast%3DFixture">Context Sensitive Links</a>
+        </div>
+      </app-record>
+
+      <app-record hidden>
+        <div data-test="Summary-publication-record">
+          <a data-ta="summary-record-title-link" href="/wos/woscc/full-record/WOS:STALE">
+            Hidden stale Web of Science record
+          </a>
+        </div>
+      </app-record>
+    </app-records-list>
+  </body>
+</html>

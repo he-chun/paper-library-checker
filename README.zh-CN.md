@@ -93,6 +93,7 @@ unpacked 版和商店版，否则重复 content script 可能产生重复状态�
 | CNKI 中文页面 | 内置 CNKI 提取器 | 已支持并完成测试 | 实验性 |
 | CNKI 英文页面 | 内置 CNKI/通用元数据提取 | 实验性 | 实验性 |
 | Scopus | 专用文献详情提取器和 publications 检索结果适配器 | 实验性；已验证真实 DOM | 实验性；仅检索结果，支持 Table 和 List 视图 |
+| Web of Science | 专用 Full Record 提取器和 Summary 检索结果适配器 | 实验性；已验证真实 DOM | 实验性；Summary 检索结果 |
 | MDPI | 通用引文元数据 | 已支持并完成测试 | 不支持 |
 | ScienceDirect | 通用元数据和站点适配器；可选本地 translation-server | 尽力支持；真实访问可能受到站点验证限制 | 尽力支持 |
 | Springer、Wiley、PubMed、arXiv、IEEE、ACM、Taylor & Francis 和 DOI.org | 通用元数据；可选本地 translation-server | 实验性/尽力支持 | 不支持 |
@@ -143,6 +144,8 @@ unpacked 版和商店版，否则重复 content script 可能产生重复状态�
 增强模式会监听 Zotero 条目的新增、修改、删除和移入回收站事件，并实时更新附加组件索引。由于 Zotero 9.0.6 不能可靠保证基于 `since` 捕获全部变化，标准模式采用完整快照刷新。标准刷新成功后会通知已检查页面重新检查；若修改后需要立即得到新结果，请使用**刷新索引**。
 
 Scopus `/pages/publications/<id>` 文献详情页会根据页面可见的 DOI、标题、已显示作者名、年份和来源元数据进行检查。CNKI KNS8 和 Scopus publications 检索结果页会自动检查，并以内联标记显示正向匹配；Scopus 的 Table 和 List 视图均受支持。**自动检查参考文献列表（Auto-check reference lists）**仍默认关闭，仅控制参考文献/引证列表：开启后，受支持列表会在加载和滚动时自动检查；未开启时可点击 `↻` 手动检查。单页最多处理 80 个候选。Scopus 详情与检索检查及 CNKI 检索检查仍为实验性，ScienceDirect 为尽力支持，MDPI References 不支持。
+
+Web of Science `/wos/<database>/full-record/<id>` 页面会读取 Full Record 中可见的标题、DOI、完整作者名、发表日期、文献类型和来源。`/wos/<database>/summary/<search-id>/<sort>/<page>` 检索结果页会根据稳定的记录标记自动检查；若单条结果带有 OpenURL，还会从中获取 DOI 和未缩写的第一作者姓名。只有正向匹配才显示内联徽标。两项 Web of Science 集成均为实验性，并已对照 2026 年真实 Angular DOM 验证。
 
 ### 页面边缘效果和配对令牌
 

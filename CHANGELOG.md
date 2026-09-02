@@ -15,6 +15,9 @@ Versioning while remaining pre-1.0.
 - Adds an experimental Scopus document-details extractor for the live
   `/pages/publications/<id>` DOM, including DOI/title/author/year/source
   extraction and stale-response-safe SPA transitions between details and search.
+- Adds experimental Web of Science Summary search-result and Full Record
+  support for `webofscience.com` and the China-hosted Clarivate site, using
+  stable semantic DOM markers plus per-record OpenURL metadata when available.
 
 ## [0.5.0] - 2026-08-30
 

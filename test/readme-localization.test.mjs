@@ -66,6 +66,7 @@ test("Simplified Chinese support matrix preserves qualified support levels", () 
     "| CNKI 中文页面 | 内置 CNKI 提取器 | 已支持并完成测试 | 实验性 |",
     "| CNKI 英文页面 | 内置 CNKI/通用元数据提取 | 实验性 | 实验性 |",
     "| Scopus | 专用文献详情提取器和 publications 检索结果适配器 | 实验性；已验证真实 DOM | 实验性；仅检索结果，支持 Table 和 List 视图 |",
+    "| Web of Science | 专用 Full Record 提取器和 Summary 检索结果适配器 | 实验性；已验证真实 DOM | 实验性；Summary 检索结果 |",
     "| MDPI | 通用引文元数据 | 已支持并完成测试 | 不支持 |",
     "| ScienceDirect | 通用元数据和站点适配器；可选本地 translation-server | 尽力支持；真实访问可能受到站点验证限制 | 尽力支持 |",
     "Springer、Wiley、PubMed、arXiv、IEEE、ACM、Taylor & Francis 和 DOI.org",
@@ -225,6 +226,7 @@ test("both support matrices preserve qualified support levels", () => {
     "| CNKI Chinese | Built-in CNKI extractor | Supported and tested | Experimental |",
     "| CNKI English | Built-in CNKI/generic extraction | Experimental | Experimental |",
     "| Scopus | Dedicated document-details extractor and publications-search adapter | Experimental; live DOM verified | Experimental; search results only, in Table and List views |",
+    "| Web of Science | Dedicated Full Record extractor and Summary results adapter | Experimental; live DOM verified | Experimental; Summary search results |",
     "| MDPI | Generic citation metadata | Supported and tested | Not supported |",
     "| ScienceDirect | Generic metadata plus a site adapter; optional local translation-server | Best effort; live access may be challenged | Best effort |",
     "Springer, Wiley, PubMed, arXiv, IEEE, ACM, Taylor & Francis, and DOI.org",
@@ -241,6 +243,11 @@ test("localized usage separates automatic search checks from opt-in reference ch
     "A page processes at most 80 candidates",
     "Scopus detail and search checks and CNKI search checks remain experimental"
   ]) assert(english.includes(marker), marker);
+  for (const marker of [
+    "Web of Science `/wos/<database>/full-record/<id>` pages use the visible Full Record title",
+    "each result's OpenURL supplies its DOI and unabbreviated first-author name",
+    "Only positive matches receive inline badges"
+  ]) assert(english.includes(marker), marker);
 
   for (const marker of [
     "Scopus `/pages/publications/<id>` 文献详情页会根据页面可见的 DOI",
@@ -248,6 +255,11 @@ test("localized usage separates automatic search checks from opt-in reference ch
     "仍默认关闭，仅控制参考文献/引证列表",
     "单页最多处理 80 个候选",
     "Scopus 详情与检索检查及 CNKI 检索检查仍为实验性"
+  ]) assert(chinese.includes(marker), marker);
+  for (const marker of [
+    "Web of Science `/wos/<database>/full-record/<id>` 页面会读取 Full Record 中可见的标题",
+    "从中获取 DOI 和未缩写的第一作者姓名",
+    "只有正向匹配才显示内联徽标"
   ]) assert(chinese.includes(marker), marker);
 });
 

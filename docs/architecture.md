@@ -72,7 +72,7 @@ Search/reference/list detection is a separate capability and runs only through
 an explicit adapter such as CNKI, Scopus, or ScienceDirect. Generic metadata
 never enables unknown-site list scanning.
 
-The same extractor runner, CNKI and Scopus extractors, adapters, candidate deduplication,
+The same extractor runner, CNKI, Scopus, and Web of Science extractors and adapters, candidate deduplication,
 request IDs, incremental renderer, popup, Options, i18n, and page-state model
 serve every engine. Backend selection happens only in the service worker; no
 mode-specific page extractor or content-script network path exists.

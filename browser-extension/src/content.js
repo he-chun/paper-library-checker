@@ -13,6 +13,8 @@
   const CURATED_DETAIL_HOSTS = [
     "cnki.net",
     "doi.org",
+    "webofscience.com",
+    "webofscience.clarivate.cn",
     "sciencedirect.com",
     "springer.com",
     "wiley.com",
@@ -24,7 +26,9 @@
     "mdpi.com"
   ];
   const CURATED_BATCH_HOSTS = [
-    "scopus.com"
+    "scopus.com",
+    "webofscience.com",
+    "webofscience.clarivate.cn"
   ];
   const BROAD_SCHOLARLY_HOST_HINTS = [
     "nature.com",

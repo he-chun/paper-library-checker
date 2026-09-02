@@ -7,3 +7,6 @@ records.
 
 `scopus-detail.html` and `scopus-search-results.html` are synthetic fixtures for
 the verified Scopus document-detail and Table/List search-result selectors.
+
+`web-of-science-detail.html` and `web-of-science-search-results.html` reproduce
+the verified Web of Science Full Record and Summary record markers.

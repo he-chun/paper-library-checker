@@ -243,10 +243,12 @@ test("Scopus SPA navigation from home activates one automatic result batch", asy
     "common/normalization.js",
     "extractors/cnki.js",
     "extractors/scopus.js",
+    "extractors/web-of-science.js",
     "extractors/generic.js",
     "extractors/runner.js",
     "adapters/cnki.js",
     "adapters/scopus.js",
+    "adapters/web-of-science.js",
     "adapters/sciencedirect.js",
     "content.js"
   ]) dom.window.eval(await source(name));

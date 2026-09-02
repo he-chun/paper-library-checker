@@ -41,10 +41,12 @@ const contentScripts = [
   "common/normalization.js",
   "extractors/cnki.js",
   "extractors/scopus.js",
+  "extractors/web-of-science.js",
   "extractors/generic.js",
   "extractors/runner.js",
   "adapters/cnki.js",
   "adapters/scopus.js",
+  "adapters/web-of-science.js",
   "adapters/sciencedirect.js",
   "content.js"
 ];
