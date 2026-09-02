@@ -5,6 +5,10 @@ Versioning while remaining pre-1.0.
 
 ## [Unreleased]
 
+- Adds customizable visual cues for CNKI, Scopus, and Web of Science search
+  results, plus configurable page-edge colors, width, and glow/line styles.
+  Visual changes are synchronized through extension settings and update open
+  pages immediately without changing matching, backend, or permission behavior.
 - Adds an explicit CNKI search-results adapter for KNS8 result tables, including
   stable batch signatures, title/author/year/source extraction, positive inline
   library badges, automatic AJAX/pagination rechecks, and synthetic regression

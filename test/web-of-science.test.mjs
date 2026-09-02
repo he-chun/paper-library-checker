@@ -48,6 +48,7 @@ async function loadExtractorDOM(url = "https://webofscience.clarivate.cn/wos/wos
 
 const contentScripts = [
   "common/i18n.js",
+  "common/visual-preferences.js",
   "common/backend-contract.js",
   "common/ui-state.js",
   "common/page-controller.js",
@@ -108,6 +109,7 @@ test("Web of Science search adapter extracts live-DOM fields and OpenURL metadat
 
     const targets = adapter.collectBatchTargets();
     assert.equal(targets.length, 2);
+    assert.equal(targets[0].row.classList.contains("zotero-check-search-result-row"), true);
     assert.deepEqual(JSON.parse(JSON.stringify(targets[0].candidate)), {
       itemType: "journalArticle",
       title: "Synthetic Web of Science Article",
@@ -141,6 +143,7 @@ test("Web of Science adapter rejects non-summary routes and renders only positiv
       { sourceId: targets[1].sourceId, status: "not_found", complete: true }
     ]);
     assert.equal(targets[0].element.querySelector(".zotero-check-search-status").textContent, "Saved");
+    assert.equal(targets[0].element.dataset.zoteroCheckResultState, "matched");
     assert.equal(targets[1].element.querySelector(".zotero-check-search-status"), null);
 
     adapter.applyBatchResults([
@@ -150,6 +153,7 @@ test("Web of Science adapter rejects non-summary routes and renders only positiv
       targets[1].element.querySelector(".zotero-check-search-status").textContent,
       "Possibly saved"
     );
+    assert.equal(targets[1].element.dataset.zoteroCheckResultState, "possible_match");
 
     dom.window.history.replaceState({}, "", "/wos/woscc/full-record/WOS:000000000000001");
     assert.equal(adapter.isSearchResultsPage(), false);

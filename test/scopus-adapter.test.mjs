@@ -45,6 +45,7 @@ test("Scopus adapter extracts stable Table and List search-result candidates", a
     const targets = adapter.collectBatchTargets();
     assert.match(signature, /^table\|/);
     assert.equal(targets.length, 2);
+    assert.equal(targets[0].row.classList.contains("zotero-check-search-result-row"), true);
     assert.deepEqual(JSON.parse(JSON.stringify(targets[0].candidate)), {
       itemType: "journalArticle",
       title: "Synthetic Scopus Table Alpha",
@@ -164,6 +165,7 @@ test("Scopus adapter renders only fresh positive matches with localized chips", 
     const first = targets[0].element;
     const second = targets[1].element;
     assert.equal(first.dataset.zoteroCheckState, "matched");
+    assert.equal(first.dataset.zoteroCheckResultState, "matched");
     assert.equal(first.querySelector(".zotero-check-search-status").textContent, "Saved");
     assert.equal(second.dataset.zoteroCheckState, "unknown");
     assert.equal(second.dataset.zoteroCheckResultState, "incomplete");
@@ -173,6 +175,7 @@ test("Scopus adapter renders only fresh positive matches with localized chips", 
       { sourceId: targets[1].sourceId, status: "possible_match", matchType: "fuzzy", confidence: 0.8 }
     ]);
     assert.equal(second.querySelector(".zotero-check-search-status").textContent, "Possibly saved");
+    assert.equal(second.dataset.zoteroCheckResultState, "possible_match");
 
     adapter.applyBatchResults([
       {
@@ -236,6 +239,7 @@ test("Scopus SPA navigation from home activates one automatic result batch", asy
 
   for (const name of [
     "common/i18n.js",
+    "common/visual-preferences.js",
     "common/backend-contract.js",
     "common/ui-state.js",
     "common/page-controller.js",

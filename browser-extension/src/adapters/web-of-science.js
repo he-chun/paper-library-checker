@@ -264,6 +264,7 @@
     return parseResults().map(function (item) {
       var identity = candidateSignature(item.candidate);
       var sourceId = "zcr-wos-search-" + stableHash(item.recordId || identity);
+      item.container.classList.add("zotero-check-search-result-row");
       item.container.dataset.zoteroCheckId = sourceId;
       item.container.dataset.zoteroCheckKind = "search-result";
       item.container.dataset.zoteroCheckState = "checking";
@@ -284,6 +285,9 @@
     if (!isSearchResultsPage()) return "";
     var parsed = parseResults();
     if (!parsed.length) return "";
+    parsed.forEach(function (item) {
+      item.container.classList.add("zotero-check-search-result-row");
+    });
     return "wos-search:" + parsed.map(function (item) {
       return item.recordId || candidateSignature(item.candidate);
     }).join("|");
@@ -362,6 +366,7 @@
       var container = findTargetElement(result.sourceId || "");
       if (!container) continue;
       var mapped = mapResult(result);
+      container.classList.add("zotero-check-search-result-row");
       container.dataset.zoteroCheckKind = "search-result";
       container.dataset.zoteroCheckState = mapped.state;
       container.dataset.zoteroCheckResultState = mapped.resultState;

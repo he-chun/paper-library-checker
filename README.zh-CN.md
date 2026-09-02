@@ -143,13 +143,13 @@ unpacked 版和商店版，否则重复 content script 可能产生重复状态�
 
 增强模式会监听 Zotero 条目的新增、修改、删除和移入回收站事件，并实时更新附加组件索引。由于 Zotero 9.0.6 不能可靠保证基于 `since` 捕获全部变化，标准模式采用完整快照刷新。标准刷新成功后会通知已检查页面重新检查；若修改后需要立即得到新结果，请使用**刷新索引**。
 
-Scopus `/pages/publications/<id>` 文献详情页会根据页面可见的 DOI、标题、已显示作者名、年份和来源元数据进行检查。CNKI KNS8 和 Scopus publications 检索结果页会自动检查，并以内联标记显示正向匹配；Scopus 的 Table 和 List 视图均受支持。**自动检查参考文献列表（Auto-check reference lists）**仍默认关闭，仅控制参考文献/引证列表：开启后，受支持列表会在加载和滚动时自动检查；未开启时可点击 `↻` 手动检查。单页最多处理 80 个候选。Scopus 详情与检索检查及 CNKI 检索检查仍为实验性，ScienceDirect 为尽力支持，MDPI References 不支持。
+Scopus `/pages/publications/<id>` 文献详情页会根据页面可见的 DOI、标题、已显示作者名、年份和来源元数据进行检查。CNKI KNS8 和 Scopus publications 检索结果页会自动检查，并以内联标记显示正向匹配；Scopus 的 Table 和 List 视图均受支持。已保存和疑似已保存的结果行默认高亮。**自动检查参考文献列表（Auto-check reference lists）**仍默认关闭，仅控制参考文献/引证列表：开启后，受支持列表会在加载和滚动时自动检查；未开启时可点击 `↻` 手动检查。单页最多处理 80 个候选。Scopus 详情与检索检查及 CNKI 检索检查仍为实验性，ScienceDirect 为尽力支持，MDPI References 不支持。
 
-Web of Science `/wos/<database>/full-record/<id>` 页面会读取 Full Record 中可见的标题、DOI、完整作者名、发表日期、文献类型和来源。`/wos/<database>/summary/<search-id>/<sort>/<page>` 检索结果页会根据稳定的记录标记自动检查；若单条结果带有 OpenURL，还会从中获取 DOI 和未缩写的第一作者姓名。只有正向匹配才显示内联徽标。两项 Web of Science 集成均为实验性，并已对照 2026 年真实 Angular DOM 验证。
+Web of Science `/wos/<database>/full-record/<id>` 页面会读取 Full Record 中可见的标题、DOI、完整作者名、发表日期、文献类型和来源。`/wos/<database>/summary/<search-id>/<sort>/<page>` 检索结果页会根据稳定的记录标记自动检查；若单条结果带有 OpenURL，还会从中获取 DOI 和未缩写的第一作者姓名。只有正向匹配才显示内联徽标和行高亮。两项 Web of Science 集成均为实验性，并已对照 2026 年真实 Angular DOM 验证。
 
-### 页面边缘效果和配对令牌
+### 视觉提示和配对令牌
 
-**启用页面边缘光效（Enable page edge glow）**默认关闭，只改变视觉提示；`prefers-reduced-motion` 会禁用动画。
+设置页包含**视觉提示（Visual cues）**区域。检索结果行高亮默认开启，可分别设置已保存和疑似已保存的背景色。页面边缘默认关闭；开启后可自定义各状态颜色、1–16 px 宽度，以及发光、实线、虚线、点线或双线样式。保存或恢复视觉设置后，已打开的受支持页面会立即更新；发光动画遵循 `prefers-reduced-motion`。这些设置只改变显示，不改变匹配结果。
 
 - **复制配对令牌（Copy pairing token）**：复制当前令牌。
 - **重置配对令牌（Reset pairing token）**：生成并自动复制新令牌，旧令牌失效。

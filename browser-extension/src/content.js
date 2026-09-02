@@ -4,6 +4,7 @@
   const uiState = window.PLCUIState;
   const backendContract = window.PLCBackendContract;
   const senderSecurity = window.PLCSenderSecurity;
+  const visualPreferences = window.PLCVisualPreferences;
   const SKIPPED_HOSTS = new Set([
     "chatgpt.com",
     "chat.openai.com",
@@ -79,12 +80,13 @@
     return;
   }
 
-  var _options = {
-    enablePageGlow: false,
+  var _options = Object.assign({}, visualPreferences.DEFAULT_VISUAL_PREFERENCES, {
     autoCheckReferenceLists: false,
     translationServerMode: "auto",
     broadPageDetection: false
-  };
+  });
+  var currentEdgeState = "unknown";
+  visualPreferences.applyDocumentVisualPreferences(document, _options);
   var _batchUserInitiated = false;
   const pageController = window.PLCPageController.createPageController({
     onManualCheck: function () {
@@ -142,6 +144,13 @@
 
   chrome.storage.sync.get(_options, function (loaded) {
     Object.assign(_options, loaded);
+    Object.assign(_options, visualPreferences.normalizeVisualPreferences(_options));
+    visualPreferences.applyDocumentVisualPreferences(document, _options);
+    visualPreferences.applyEdgeVisualPreferences(
+      document.querySelector("#zotero-check-badge-host"),
+      _options,
+      currentEdgeState
+    );
     if (_options.autoCheckReferenceLists) {
       setupIntersectionObserver();
     }
@@ -152,6 +161,28 @@
       scheduleDetailCheck({ force: true });
     }
   });
+
+  if (chrome.storage.onChanged && typeof chrome.storage.onChanged.addListener === "function") {
+    chrome.storage.onChanged.addListener(function (changes, areaName) {
+      if (areaName !== "sync") return;
+      var changed = false;
+      var draft = Object.assign({}, _options);
+      visualPreferences.VISUAL_PREFERENCE_KEYS.forEach(function (key) {
+        if (Object.prototype.hasOwnProperty.call(changes, key)) {
+          draft[key] = changes[key].newValue;
+          changed = true;
+        }
+      });
+      if (!changed) return;
+      Object.assign(_options, visualPreferences.normalizeVisualPreferences(draft));
+      visualPreferences.applyDocumentVisualPreferences(document, _options);
+      visualPreferences.applyEdgeVisualPreferences(
+        document.querySelector("#zotero-check-badge-host"),
+        _options,
+        currentEdgeState
+      );
+    });
+  }
 
   function findAnchorElement() {
     var adapter = getSiteAdapter();
@@ -305,8 +336,12 @@
         z-index: 2147483646;
         pointer-events: none;
         box-sizing: border-box;
-        border: 6px solid transparent;
+        border-width: var(--plc-page-edge-width, 6px);
+        border-style: solid;
+        border-color: transparent;
         opacity: 0;
+        box-shadow: none;
+        animation: none;
         transition: opacity 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
         contain: strict;
       }
@@ -314,55 +349,46 @@
       .zotero-check-edge-glow[data-state="disabled"] {
         display: none !important;
       }
-      .zotero-check-edge-glow[data-state="matched"] {
-        opacity: 1;
-        border-color: rgba(255, 45, 45, 0.92);
-        box-shadow:
-          inset 0 0 24px rgba(255, 45, 45, 0.95),
-          inset 0 0 72px rgba(255, 45, 45, 0.55),
-          0 0 28px rgba(255, 45, 45, 0.85);
-        animation: zotero-check-glow-pulse-red 1.8s ease-in-out infinite;
+      .zotero-check-edge-glow[data-style="solid"] {
+        border-style: solid;
       }
-      .zotero-check-edge-glow[data-state="missing"] {
-        opacity: 1;
-        border-color: rgba(37, 99, 235, 0.92);
-        box-shadow:
-          inset 0 0 24px rgba(37, 99, 235, 0.95),
-          inset 0 0 72px rgba(37, 99, 235, 0.52),
-          0 0 28px rgba(37, 99, 235, 0.78);
-        animation: zotero-check-glow-pulse-blue 1.8s ease-in-out infinite;
+      .zotero-check-edge-glow[data-style="dashed"] {
+        border-style: dashed;
       }
+      .zotero-check-edge-glow[data-style="dotted"] {
+        border-style: dotted;
+      }
+      .zotero-check-edge-glow[data-style="double"] {
+        border-style: double;
+      }
+      .zotero-check-edge-glow:not([data-state="disabled"]) {
+        border-color: var(--plc-page-edge-active-color, var(--plc-page-edge-unknown-color, #eab308));
+      }
+      .zotero-check-edge-glow[data-state="matched"],
+      .zotero-check-edge-glow[data-state="missing"],
       .zotero-check-edge-glow[data-state="possible"] {
         opacity: 1;
-        border-color: rgba(245, 158, 11, 0.95);
-        box-shadow:
-          inset 0 0 22px rgba(245, 158, 11, 0.9),
-          inset 0 0 64px rgba(245, 158, 11, 0.45),
-          0 0 24px rgba(245, 158, 11, 0.72);
       }
       .zotero-check-edge-glow[data-state="unknown"] {
         opacity: 0.72;
-        border-color: rgba(234, 179, 8, 0.78);
-        box-shadow:
-          inset 0 0 18px rgba(234, 179, 8, 0.7),
-          inset 0 0 48px rgba(234, 179, 8, 0.34),
-          0 0 18px rgba(234, 179, 8, 0.45);
       }
       .zotero-check-edge-glow[data-state="error"] {
         opacity: 0.85;
-        border-color: rgba(147, 51, 234, 0.86);
+      }
+      .zotero-check-edge-glow[data-style="glow"]:not([data-state="disabled"]) {
+        border-style: solid;
         box-shadow:
-          inset 0 0 20px rgba(147, 51, 234, 0.75),
-          inset 0 0 56px rgba(147, 51, 234, 0.36),
-          0 0 20px rgba(147, 51, 234, 0.55);
+          inset 0 0 24px rgba(var(--plc-page-edge-active-rgb, 234, 179, 8), 0.9),
+          inset 0 0 72px rgba(var(--plc-page-edge-active-rgb, 234, 179, 8), 0.5),
+          0 0 28px rgba(var(--plc-page-edge-active-rgb, 234, 179, 8), 0.78);
       }
-      @keyframes zotero-check-glow-pulse-red {
-        0%, 100% { box-shadow: inset 0 0 22px rgba(255, 45, 45, 0.9), inset 0 0 64px rgba(255, 45, 45, 0.48), 0 0 22px rgba(255, 45, 45, 0.72); }
-        50% { box-shadow: inset 0 0 34px rgba(255, 45, 45, 1), inset 0 0 92px rgba(255, 45, 45, 0.72), 0 0 38px rgba(255, 45, 45, 0.92); }
+      .zotero-check-edge-glow[data-style="glow"][data-state="matched"],
+      .zotero-check-edge-glow[data-style="glow"][data-state="missing"] {
+        animation: zotero-check-glow-pulse 1.8s ease-in-out infinite;
       }
-      @keyframes zotero-check-glow-pulse-blue {
-        0%, 100% { box-shadow: inset 0 0 22px rgba(37, 99, 235, 0.88), inset 0 0 64px rgba(37, 99, 235, 0.46), 0 0 22px rgba(37, 99, 235, 0.65); }
-        50% { box-shadow: inset 0 0 34px rgba(37, 99, 235, 1), inset 0 0 92px rgba(37, 99, 235, 0.68), 0 0 38px rgba(37, 99, 235, 0.86); }
+      @keyframes zotero-check-glow-pulse {
+        0%, 100% { box-shadow: inset 0 0 22px rgba(var(--plc-page-edge-active-rgb), 0.88), inset 0 0 64px rgba(var(--plc-page-edge-active-rgb), 0.46), 0 0 22px rgba(var(--plc-page-edge-active-rgb), 0.65); }
+        50% { box-shadow: inset 0 0 34px rgba(var(--plc-page-edge-active-rgb), 1), inset 0 0 92px rgba(var(--plc-page-edge-active-rgb), 0.68), 0 0 38px rgba(var(--plc-page-edge-active-rgb), 0.86); }
       }
       @media (prefers-reduced-motion: reduce) {
         .zotero-check-edge-glow {
@@ -452,22 +478,14 @@
     });
 
     shadow.appendChild(floatBtn);
+    visualPreferences.applyEdgeVisualPreferences(host, _options, currentEdgeState);
     return badge;
   }
 
   function setPageGlowState(state) {
+    currentEdgeState = state;
     const host = document.querySelector("#zotero-check-badge-host");
-    const edgeGlow = host?.shadowRoot?.querySelector(".zotero-check-edge-glow");
-    if (!edgeGlow) return;
-
-    if (!_options.enablePageGlow) {
-      edgeGlow.hidden = true;
-      edgeGlow.dataset.state = "disabled";
-      return;
-    }
-
-    edgeGlow.hidden = false;
-    edgeGlow.dataset.state = state;
+    visualPreferences.applyEdgeVisualPreferences(host, _options, currentEdgeState);
   }
 
   function setBadge(state, text, title = "", pageState) {
@@ -1096,6 +1114,7 @@
     clearTimeout(detailRetryTimer);
     clearTimeout(batchRetryTimer);
     removeDetailBadge();
+    visualPreferences.clearSearchResultVisualState(document);
     document.querySelectorAll(".zotero-check-search-status").forEach(function (chip) {
       chip.remove();
     });

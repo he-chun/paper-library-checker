@@ -124,3 +124,20 @@
   padding-left: 8px !important;
   box-sizing: border-box !important;
 }
+.zotero-check-search-result-row {
+  transition: background-color 160ms ease;
+}
+
+html[data-zotero-check-highlight-search-results="true"]
+  .zotero-check-search-result-row[data-zotero-check-result-state="matched"],
+html[data-zotero-check-highlight-search-results="true"]
+  .zotero-check-search-result-row[data-zotero-check-result-state="matched"] > td {
+  background-color: var(--plc-search-result-matched-background, #ffe7e7) !important;
+}
+
+html[data-zotero-check-highlight-search-results="true"]
+  .zotero-check-search-result-row[data-zotero-check-result-state="possible_match"],
+html[data-zotero-check-highlight-search-results="true"]
+  .zotero-check-search-result-row[data-zotero-check-result-state="possible_match"] > td {
+  background-color: var(--plc-search-result-possible-background, #fff1d6) !important;
+}

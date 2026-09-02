@@ -42,6 +42,7 @@ test("CNKI adapter extracts stable KNS8 search-result candidates", async () => {
     const signatureBefore = adapter.getBatchSignature();
     const targets = adapter.collectBatchTargets();
     assert.equal(targets.length, 2);
+    assert.equal(targets[0].row.classList.contains("zotero-check-search-result-row"), true);
     assert.match(targets[0].sourceId, /^zcr-cnki-search-/);
     assert.notEqual(targets[0].sourceId, targets[1].sourceId);
 
@@ -207,6 +208,7 @@ test("CNKI detail pages with related result tables still run detail detection", 
 
   for (const name of [
     "common/i18n.js",
+    "common/visual-preferences.js",
     "common/backend-contract.js",
     "common/ui-state.js",
     "common/page-controller.js",
@@ -247,6 +249,7 @@ test("CNKI adapter renders only positive search-result badges and preserves unce
 
     const rows = dom.window.document.querySelectorAll("table.result-table-list tbody tr");
     assert.equal(rows[0].dataset.zoteroCheckState, "matched");
+    assert.equal(rows[0].dataset.zoteroCheckResultState, "matched");
     assert.equal(rows[0].querySelector(".zotero-check-search-status").textContent, "Saved");
     assert.equal(rows[1].dataset.zoteroCheckState, "unknown");
     assert.equal(rows[1].dataset.zoteroCheckResultState, "incomplete");
@@ -318,6 +321,7 @@ test("CNKI KNS8 search pages auto-check after asynchronous option loading", asyn
 
   for (const name of [
     "common/i18n.js",
+    "common/visual-preferences.js",
     "common/backend-contract.js",
     "common/ui-state.js",
     "common/page-controller.js",

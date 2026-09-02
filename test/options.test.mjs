@@ -10,6 +10,127 @@ const options = require("../browser-extension/src/options.js");
 test("options default to automatic backend selection", () => {
   assert.equal(options.DEFAULT_OPTIONS.connectionMode, "auto");
   assert.equal(options.DEFAULT_OPTIONS.developerMode, false);
+  assert.equal(options.DEFAULT_OPTIONS.highlightSearchResultRows, true);
+  assert.equal(options.DEFAULT_OPTIONS.enablePageGlow, false);
+});
+
+test("options render, normalize, and read visual preferences with a width output", async () => {
+  const html = await readFile(new URL("../browser-extension/src/options.html", import.meta.url), "utf8");
+  const oldDocument = globalThis.document;
+  globalThis.document = new JSDOM(html).window.document;
+  try {
+    options.renderVisualPreferences({
+      highlightSearchResultRows: false,
+      enablePageGlow: true,
+      pageEdgeStyle: "dotted",
+      pageEdgeWidth: 14,
+      pageEdgeMatchedColor: "#ABCDEF"
+    });
+    assert.equal(document.querySelector("#highlightSearchResultRows").checked, false);
+    assert.equal(document.querySelector("#enablePageGlow").checked, true);
+    assert.equal(document.querySelector("#pageEdgeStyle").value, "dotted");
+    assert.equal(document.querySelector("#pageEdgeWidthOutput").textContent, "14 px");
+    assert.equal(options.readVisualPreferences().pageEdgeMatchedColor, "#abcdef");
+  } finally {
+    globalThis.document = oldDocument;
+  }
+});
+
+test("restoring visual defaults writes only visual settings", async () => {
+  const html = await readFile(new URL("../browser-extension/src/options.html", import.meta.url), "utf8");
+  const oldDocument = globalThis.document;
+  const oldChrome = globalThis.chrome;
+  const writes = [];
+  globalThis.document = new JSDOM(html).window.document;
+  globalThis.chrome = { storage: { sync: { set: async (value) => writes.push(value) } } };
+  try {
+    document.querySelector("#endpoint").value = "http://localhost:23119/zotero-checker";
+    document.querySelector("#developerMode").checked = true;
+    await options.resetVisualPreferences();
+    assert.equal(writes.length, 1);
+    assert.deepEqual(Object.keys(writes[0]).sort(), [
+      "enablePageGlow",
+      "highlightSearchResultRows",
+      "pageEdgeErrorColor",
+      "pageEdgeMatchedColor",
+      "pageEdgeMissingColor",
+      "pageEdgePossibleColor",
+      "pageEdgeStyle",
+      "pageEdgeUnknownColor",
+      "pageEdgeWidth",
+      "searchResultMatchedBackground",
+      "searchResultPossibleBackground"
+    ]);
+    assert.equal(document.querySelector("#endpoint").value, "http://localhost:23119/zotero-checker");
+    assert.equal(document.querySelector("#developerMode").checked, true);
+    assert.equal(document.querySelector("#highlightSearchResultRows").checked, true);
+    assert.equal(document.querySelector("#enablePageGlow").checked, false);
+  } finally {
+    globalThis.document = oldDocument;
+    globalThis.chrome = oldChrome;
+  }
+});
+
+test("stored visual settings load through normalization", async () => {
+  const html = await readFile(new URL("../browser-extension/src/options.html", import.meta.url), "utf8");
+  const oldDocument = globalThis.document;
+  const oldChrome = globalThis.chrome;
+  globalThis.document = new JSDOM(html).window.document;
+  globalThis.chrome = {
+    storage: {
+      sync: {
+        get: async (defaults) => Object.hasOwn(defaults, "endpoint")
+          ? { ...defaults, pageEdgeStyle: "double", pageEdgeWidth: 16, pageEdgeMatchedColor: "#ABCDEF" }
+          : defaults,
+        remove: async () => {}
+      },
+      local: { get: async (defaults) => defaults, set: async () => {} }
+    },
+    runtime: { sendMessage: async () => ({ ok: true, status: { state: "ready" } }) }
+  };
+  try {
+    await options.load();
+    assert.equal(document.querySelector("#pageEdgeStyle").value, "double");
+    assert.equal(document.querySelector("#pageEdgeWidth").value, "16");
+    assert.equal(document.querySelector("#pageEdgeWidthOutput").textContent, "16 px");
+    assert.equal(document.querySelector("#pageEdgeMatchedColor").value, "#abcdef");
+  } finally {
+    globalThis.document = oldDocument;
+    globalThis.chrome = oldChrome;
+  }
+});
+
+test("saving writes normalized visual preferences through sync storage", async () => {
+  const html = await readFile(new URL("../browser-extension/src/options.html", import.meta.url), "utf8");
+  const oldDocument = globalThis.document;
+  const oldChrome = globalThis.chrome;
+  const writes = [];
+  globalThis.document = new JSDOM(html).window.document;
+  document.querySelector('input[name="connectionMode"][value="standard"]').checked = true;
+  options.renderVisualPreferences({
+    highlightSearchResultRows: false,
+    enablePageGlow: true,
+    pageEdgeStyle: "solid",
+    pageEdgeWidth: 1,
+    pageEdgeErrorColor: "#ABCDEF"
+  });
+  globalThis.chrome = {
+    storage: {
+      sync: { set: async (value) => writes.push(value), remove: async () => {} },
+      local: { set: async () => {} }
+    }
+  };
+  try {
+    await options.save();
+    assert.equal(writes[0].highlightSearchResultRows, false);
+    assert.equal(writes[0].enablePageGlow, true);
+    assert.equal(writes[0].pageEdgeStyle, "solid");
+    assert.equal(writes[0].pageEdgeWidth, 1);
+    assert.equal(writes[0].pageEdgeErrorColor, "#abcdef");
+  } finally {
+    globalThis.document = oldDocument;
+    globalThis.chrome = oldChrome;
+  }
 });
 
 test("developer mode is opt-in and reveals a local log panel", async () => {

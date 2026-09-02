@@ -1,16 +1,17 @@
 var optionsI18n = globalThis.PLCI18n || (typeof require === "function" ? require("./common/i18n.js") : null);
 var optionsRequestAuth = globalThis.PLCRequestAuth ||
   (typeof require === "function" ? require("./common/request-auth.js") : null);
+var optionsVisualPreferences = globalThis.PLCVisualPreferences ||
+  (typeof require === "function" ? require("./common/visual-preferences.js") : null);
 
-var DEFAULT_OPTIONS = {
+var DEFAULT_OPTIONS = Object.assign({
   endpoint: "http://127.0.0.1:23119/zotero-checker",
   connectionMode: "auto",
   translationServerMode: "auto",
   developerMode: false,
-  enablePageGlow: false,
   autoCheckReferenceLists: false,
   broadPageDetection: false
-};
+}, optionsVisualPreferences.DEFAULT_VISUAL_PREFERENCES);
 var indexStatusTimer = null;
 
 function validateEndpoint(value) {
@@ -90,7 +91,7 @@ async function load() {
   var mode = options.translationServerMode || "auto";
   var radio = document.querySelector(`input[name="translationServerMode"][value="${mode}"]`);
   if (radio) radio.checked = true;
-  document.querySelector("#enablePageGlow").checked = !!options.enablePageGlow;
+  renderVisualPreferences(options);
   document.querySelector("#autoCheckReferenceLists").checked = !!options.autoCheckReferenceLists;
   document.querySelector("#broadPageDetection").checked = !!options.broadPageDetection;
   document.querySelector("#developerMode").checked = !!options.developerMode;
@@ -165,11 +166,12 @@ async function save() {
       token: document.querySelector("#token").value.trim()
     });
     var modeRadio = document.querySelector("input[name=\"translationServerMode\"]:checked");
+    var visual = readVisualPreferences();
     await chrome.storage.sync.set({
       ...connection.sync,
+      ...visual,
       translationServerMode: modeRadio ? modeRadio.value : "auto",
       developerMode: document.querySelector("#developerMode").checked,
-      enablePageGlow: document.querySelector("#enablePageGlow").checked,
       autoCheckReferenceLists: document.querySelector("#autoCheckReferenceLists").checked,
       broadPageDetection: document.querySelector("#broadPageDetection").checked
     });
@@ -181,6 +183,53 @@ async function save() {
   } catch (error) {
     setStatus(error.message, true);
   }
+}
+
+function updatePageEdgeWidthOutput() {
+  var input = document.querySelector("#pageEdgeWidth");
+  var output = document.querySelector("#pageEdgeWidthOutput");
+  if (input && output) output.textContent = String(input.value) + " px";
+}
+
+function renderVisualPreferences(value) {
+  var visual = optionsVisualPreferences.normalizeVisualPreferences(value);
+  document.querySelector("#highlightSearchResultRows").checked = visual.highlightSearchResultRows;
+  document.querySelector("#searchResultMatchedBackground").value = visual.searchResultMatchedBackground;
+  document.querySelector("#searchResultPossibleBackground").value = visual.searchResultPossibleBackground;
+  document.querySelector("#enablePageGlow").checked = visual.enablePageGlow;
+  document.querySelector("#pageEdgeStyle").value = visual.pageEdgeStyle;
+  document.querySelector("#pageEdgeWidth").value = String(visual.pageEdgeWidth);
+  document.querySelector("#pageEdgeMatchedColor").value = visual.pageEdgeMatchedColor;
+  document.querySelector("#pageEdgePossibleColor").value = visual.pageEdgePossibleColor;
+  document.querySelector("#pageEdgeMissingColor").value = visual.pageEdgeMissingColor;
+  document.querySelector("#pageEdgeUnknownColor").value = visual.pageEdgeUnknownColor;
+  document.querySelector("#pageEdgeErrorColor").value = visual.pageEdgeErrorColor;
+  updatePageEdgeWidthOutput();
+  return visual;
+}
+
+function readVisualPreferences() {
+  return optionsVisualPreferences.normalizeVisualPreferences({
+    highlightSearchResultRows: document.querySelector("#highlightSearchResultRows").checked,
+    searchResultMatchedBackground: document.querySelector("#searchResultMatchedBackground").value,
+    searchResultPossibleBackground: document.querySelector("#searchResultPossibleBackground").value,
+    enablePageGlow: document.querySelector("#enablePageGlow").checked,
+    pageEdgeStyle: document.querySelector("#pageEdgeStyle").value,
+    pageEdgeWidth: document.querySelector("#pageEdgeWidth").value,
+    pageEdgeMatchedColor: document.querySelector("#pageEdgeMatchedColor").value,
+    pageEdgePossibleColor: document.querySelector("#pageEdgePossibleColor").value,
+    pageEdgeMissingColor: document.querySelector("#pageEdgeMissingColor").value,
+    pageEdgeUnknownColor: document.querySelector("#pageEdgeUnknownColor").value,
+    pageEdgeErrorColor: document.querySelector("#pageEdgeErrorColor").value
+  });
+}
+
+async function resetVisualPreferences() {
+  var defaults = Object.assign({}, optionsVisualPreferences.DEFAULT_VISUAL_PREFERENCES);
+  renderVisualPreferences(defaults);
+  await chrome.storage.sync.set(defaults);
+  setStatus(optionsI18n.t("visualPreferencesReset"), false);
+  return defaults;
 }
 
 function updateDeveloperPanel(enabled) {
@@ -261,6 +310,8 @@ if (typeof document !== "undefined") {
   document.querySelector("#developerMode").addEventListener("change", (event) => updateDeveloperPanel(event.target.checked));
   document.querySelector("#refreshDeveloperLog").addEventListener("click", () => refreshDeveloperLog().catch((error) => setStatus(error.message, true)));
   document.querySelector("#clearDeveloperLog").addEventListener("click", () => clearDeveloperLog().catch((error) => setStatus(error.message, true)));
+  document.querySelector("#pageEdgeWidth").addEventListener("input", updatePageEdgeWidthOutput);
+  document.querySelector("#resetVisualPreferences").addEventListener("click", () => resetVisualPreferences().catch((error) => setStatus(error.message, true)));
   document.querySelector("#refreshIndex").addEventListener("click", () => runIndexAction("start-index-build"));
   document.querySelector("#clearIndex").addEventListener("click", () => runIndexAction("clear-index"));
   document.querySelector("#rebuildIndex").addEventListener("click", () => runIndexAction("clear-and-rebuild-index"));
@@ -279,7 +330,11 @@ if (typeof module !== "undefined" && module.exports) module.exports = {
   formatDeveloperEntry,
   formatIndexDate,
   isCompatibleAddonVersion,
+  load,
   normalizeConnectionMode,
+  readVisualPreferences,
+  renderVisualPreferences,
+  resetVisualPreferences,
   indexStateKey,
   refreshIndexStatus,
   renderIndexStatus,
@@ -287,6 +342,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {
   save,
   testConnection,
   updateDeveloperPanel,
+  updatePageEdgeWidthOutput,
   updateConnectionFields,
   validateEndpoint
 };
