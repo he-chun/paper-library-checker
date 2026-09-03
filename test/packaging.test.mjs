@@ -63,6 +63,7 @@ test("builds and inspects release artifacts", () => {
     "_locales/en/messages.json",
     "_locales/zh_CN/messages.json",
     "src/common/i18n.js",
+    "src/common/visual-preferences.js",
     "src/common/ui-state.js",
     "src/common/page-controller.js",
     "src/common/sender-security.js",
@@ -85,6 +86,7 @@ test("builds and inspects release artifacts", () => {
     "src/index/index-build-progress.js"
   ]) assert(inventory.extension.entries.includes(name), name);
   assert(inventory.plugin.entries.includes("src/i18n.js"));
+  assert.equal(inventory.plugin.entries.includes("src/common/visual-preferences.js"), false);
   assert.equal(inventory.plugin.dataDescriptorEntries, 0);
   assert.equal(inventory.extension.dataDescriptorEntries, 0);
   for (const artifact of Object.values(inventory)) {

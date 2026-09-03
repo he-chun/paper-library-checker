@@ -62,7 +62,7 @@ test("stale index misses are not rendered as not saved and refresh completion re
     }
   };
   for (const name of [
-    "common/i18n.js", "common/backend-contract.js", "common/ui-state.js", "common/page-controller.js", "common/sender-security.js",
+    "common/i18n.js", "common/visual-preferences.js", "common/backend-contract.js", "common/ui-state.js", "common/page-controller.js", "common/sender-security.js",
     "common/normalization.js", "extractors/cnki.js", "extractors/generic.js", "extractors/runner.js",
     "adapters/cnki.js", "adapters/sciencedirect.js", "content.js"
   ]) dom.window.eval(await source(name));
@@ -108,7 +108,7 @@ test("Direct misses are rendered as incomplete rather than not saved", async () 
     }
   };
   for (const name of [
-    "common/i18n.js", "common/backend-contract.js", "common/ui-state.js", "common/page-controller.js",
+    "common/i18n.js", "common/visual-preferences.js", "common/backend-contract.js", "common/ui-state.js", "common/page-controller.js",
     "common/sender-security.js", "common/normalization.js", "extractors/cnki.js", "extractors/generic.js",
     "extractors/runner.js", "adapters/cnki.js", "adapters/sciencedirect.js", "content.js"
   ]) dom.window.eval(await source(name));
@@ -150,6 +150,7 @@ test("CNKI reference and citation blocks produce a batch message", async () => {
   };
   for (const name of [
     "common/i18n.js",
+    "common/visual-preferences.js",
     "common/backend-contract.js",
     "common/ui-state.js",
     "common/page-controller.js",
@@ -195,6 +196,7 @@ test("repeated forced scheduling does not send the same reference batch while it
   };
   for (const name of [
     "common/i18n.js",
+    "common/visual-preferences.js",
     "common/backend-contract.js",
     "common/ui-state.js",
     "common/page-controller.js",
@@ -251,6 +253,7 @@ test("reference results render incrementally while the final batch response is p
   };
   for (const name of [
     "common/i18n.js",
+    "common/visual-preferences.js",
     "common/backend-contract.js",
     "common/ui-state.js",
     "common/page-controller.js",
@@ -338,6 +341,7 @@ test("automatic foreground and DOM triggers do not resend a completed reference 
   };
   for (const name of [
     "common/i18n.js",
+    "common/visual-preferences.js",
     "common/backend-contract.js",
     "common/ui-state.js",
     "common/page-controller.js",
@@ -411,6 +415,7 @@ test("an all-error reference batch is not force-retried during its cooldown", as
   };
   for (const name of [
     "common/i18n.js",
+    "common/visual-preferences.js",
     "common/backend-contract.js",
     "common/ui-state.js",
     "common/page-controller.js",
@@ -457,6 +462,7 @@ test("manual recheck returns an unrecognized page to its final state", async () 
   };
   for (const name of [
     "common/i18n.js",
+    "common/visual-preferences.js",
     "common/backend-contract.js",
     "common/ui-state.js",
     "common/page-controller.js",

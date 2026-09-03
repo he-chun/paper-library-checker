@@ -261,6 +261,7 @@
       var item = parsed[i];
       var identity = candidateSignature(item.candidate);
       var sourceId = "zcr-scopus-search-" + (item.scopusId || stableHash(identity));
+      item.container.classList.add("zotero-check-search-result-row");
       item.container.dataset.zoteroCheckId = sourceId;
       item.container.dataset.zoteroCheckKind = "search-result";
       item.container.dataset.zoteroCheckState = "checking";
@@ -288,6 +289,7 @@
     var hasList = false;
     var parts = [];
     for (var i = 0; i < parsed.length; i++) {
+      parsed[i].container.classList.add("zotero-check-search-result-row");
       hasTable = hasTable || parsed[i].mode === "table";
       hasList = hasList || parsed[i].mode === "list";
       parts.push(parsed[i].scopusId || candidateSignature(parsed[i].candidate));
@@ -373,6 +375,7 @@
       if (!container) continue;
 
       var mapped = mapResult(result);
+      container.classList.add("zotero-check-search-result-row");
       container.dataset.zoteroCheckKind = "search-result";
       container.dataset.zoteroCheckState = mapped.state;
       container.dataset.zoteroCheckResultState = mapped.resultState;

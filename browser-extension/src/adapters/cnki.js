@@ -265,6 +265,7 @@
       var identity = candidateSignature(parsed.candidate);
       var sourceId = searchSourceId(targets.length, identity);
       rememberSearchIdentity(sourceId, identity);
+      rows[i].classList.add("zotero-check-search-result-row");
       rows[i].dataset.zoteroCheckId = sourceId;
       markChecking(rows[i], rows[i], "search");
       var oldStatus = (rows[i].querySelector("td.name") || rows[i]).querySelector(
@@ -349,6 +350,7 @@
       if (parsed) {
         var identity = candidateSignature(parsed.candidate);
         var sourceId = searchSourceId(parts.length, identity);
+        rows[i].classList.add("zotero-check-search-result-row");
         var shouldRehydrate = rows[i].dataset.zoteroCheckId !== sourceId;
         rows[i].dataset.zoteroCheckId = sourceId;
         rows[i].dataset.zoteroCheckKind = "search";
@@ -471,6 +473,7 @@
   function renderSearchResult(row, result, mapped) {
     var anchor = findTitleLink(row);
     if (!anchor) return;
+    row.classList.add("zotero-check-search-result-row");
     row.dataset.zoteroCheckState = mapped.state;
     row.dataset.zoteroCheckResultState = mapped.resultState;
 

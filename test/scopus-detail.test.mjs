@@ -34,6 +34,7 @@ async function loadExtractionDOM(url = "https://www.scopus.com/pages/publication
 
 const contentScripts = [
   "common/i18n.js",
+  "common/visual-preferences.js",
   "common/backend-contract.js",
   "common/ui-state.js",
   "common/page-controller.js",
